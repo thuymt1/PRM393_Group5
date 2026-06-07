@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Hồ sơ khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ứng dụng Test Hồ Sơ',
-      debugShowCheckedModeBanner: false, // Ẩn banner chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập màu sắc nâu chủ đạo
-        useMaterial3: true, // Kích hoạt quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const ProfilePage(), // Đặt ProfilePage làm màn hình hiển thị đầu tiên khi mở app
-    );
-  }
-}
-
-// Màn hình hiển thị Hồ sơ cá nhân của người dùng
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
 

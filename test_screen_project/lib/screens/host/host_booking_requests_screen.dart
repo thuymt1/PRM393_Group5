@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Yêu Cầu Đặt Phòng khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Yêu Cầu Đặt Phòng',
-      debugShowCheckedModeBanner: false, // Ẩn biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập tông màu nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const HostBookingRequestsScreen(), // Đặt HostBookingRequestsScreen làm màn hình mặc định khi khởi động
-    );
-  }
-}
-
-// Màn hình hiển thị danh sách các yêu cầu đặt phòng cần xử lý của chủ nhà
 class HostBookingRequestsScreen extends StatefulWidget {
   const HostBookingRequestsScreen({super.key});
 

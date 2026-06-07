@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm khởi chạy đầu tiên của ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình ứng dụng (MaterialApp) bọc quanh màn hình Login
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ứng dụng Test Đăng Nhập',
-      debugShowCheckedModeBanner: false, // Ẩn banner chữ DEBUG ở góc màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Màu chủ đạo của hệ thống
-        useMaterial3: true, // Kích hoạt giao diện Material 3 mới nhất
-      ),
-      home: const LoginScreen(), // Đặt LoginScreen làm màn hình mặc định khi khởi động
-    );
-  }
-}
-
-// Màn hình Đăng nhập chính
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -32,23 +8,20 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Trạng thái dùng để ẩn hoặc hiện mật khẩu (true: ẩn, false: hiện)
   bool _obscureText = true;
-
-  // Bộ điều khiển để lấy dữ liệu từ các ô nhập liệu
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Màu nền tổng thể phong cách nhẹ nhàng
+      backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Làm trong suốt thanh AppBar
-        elevation: 0, // Xóa bỏ bóng đổ của thanh AppBar
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context), // Quay lại màn hình trước đó
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
@@ -57,17 +30,17 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 20),
-            _buildHeader(), // Hiển thị dòng chữ chào mừng
+            _buildHeader(),
             const SizedBox(height: 48),
-            _buildLoginForm(), // Hiển thị form nhập tài khoản & mật khẩu
+            _buildLoginForm(),
             const SizedBox(height: 16),
-            _buildForgotPassword(), // Hiển thị nút quên mật khẩu
+            _buildForgotPassword(),
             const SizedBox(height: 40),
-            _buildLoginButton(), // Nút bấm thực hiện đăng nhập
+            _buildLoginButton(),
             const SizedBox(height: 32),
-            _buildSocialLogin(), // Khu vực đăng nhập bằng mạng xã hội
+            _buildSocialLogin(),
             const SizedBox(height: 40),
-            _buildSignUpLink(), // Liên kết dẫn đến màn hình đăng ký
+            _buildSignUpLink(),
             const SizedBox(height: 40),
           ],
         ),
@@ -75,7 +48,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Khối giao diện tiêu đề (Header)
   Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: Color(0xFF6D4C41),
-            fontFamily: 'BeVietnamPro', // Cần cấu hình font này trong pubspec.yaml nếu muốn hiển thị chuẩn
+            fontFamily: 'BeVietnamPro',
           ),
         ),
         const SizedBox(height: 12),
@@ -94,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'Đăng nhập để tiếp tục hành trình khám phá những chân trời mới.',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey.shade600,
+            color: Colors.grey,
             height: 1.5,
           ),
         ),
@@ -102,7 +74,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Khối form nhập liệu chứa các TextField
   Widget _buildLoginForm() {
     return Column(
       children: [
@@ -124,7 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Hàm tùy biến dùng chung để tạo ra các ô nhập liệu (TextField) đẹp mắt
   Widget _buildTextField({
     required String label,
     required String hint,
@@ -158,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: TextField(
             controller: controller,
-            obscureText: isPassword ? _obscureText : false, // Ẩn văn bản nếu là mật khẩu
+            obscureText: isPassword ? _obscureText : false,
             style: const TextStyle(fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
@@ -166,17 +136,17 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 22),
               suffixIcon: isPassword
                   ? IconButton(
-                icon: Icon(
-                  _obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                  size: 20,
-                ),
-                onPressed: () => setState(() => _obscureText = !_obscureText), // Đảo ngược trạng thái ẩn/hiện
-              )
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscureText = !_obscureText),
+                    )
                   : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none, // Ẩn viền mặc định đi để dùng viền của Container
+                borderSide: BorderSide.none,
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 18),
             ),
@@ -186,14 +156,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Thành phần text link "Quên mật khẩu?"
   Widget _buildForgotPassword() {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: () {
-          // Xử lý sự kiện quên mật khẩu tại đây
-        },
+        onPressed: () {},
         child: const Text(
           'Quên mật khẩu?',
           style: TextStyle(
@@ -206,17 +173,16 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Nút bấm thực hiện hành động Đăng nhập
   Widget _buildLoginButton() {
     return ElevatedButton(
       onPressed: () {
-        // Thực hiện kết nối API hoặc kiểm tra tài khoản mật khẩu tại đây
         print("Email nhập vào: ${_emailController.text}");
         print("Mật khẩu nhập vào: ${_passwordController.text}");
+        Navigator.pushNamed(context, '/choose-role');
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
-        minimumSize: const Size(double.infinity, 56), // Chiều rộng tối đa, chiều cao là 56
+        minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
@@ -232,13 +198,12 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Khối đăng nhập bằng các tài khoản Mạng xã hội thứ ba
   Widget _buildSocialLogin() {
     return Column(
       children: [
         Row(
           children: [
-            const Expanded(child: Divider()), // Đường vạch kẻ bên trái
+            const Expanded(child: Divider()),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
@@ -246,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
               ),
             ),
-            const Expanded(child: Divider()), // Đường vạch kẻ bên phải
+            const Expanded(child: Divider()),
           ],
         ),
         const SizedBox(height: 24),
@@ -262,7 +227,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Hàm hỗ trợ vẽ ô tròn chứa icon của mạng xã hội
   Widget _socialIcon(String url) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -271,11 +235,10 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Image.network(url, width: 24, height: 24), // Tải ảnh trực tiếp từ đường dẫn internet
+      child: Image.network(url, width: 24, height: 24),
     );
   }
 
-  // Thành phần text điều hướng sang trang Đăng ký (Sign Up)
   Widget _buildSignUpLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -286,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         GestureDetector(
           onTap: () {
-            // Chuyển hướng người dùng qua trang Đăng ký tại đây
+            Navigator.pushNamed(context, '/register');
           },
           child: const Text(
             'Đăng ký ngay',

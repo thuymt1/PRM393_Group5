@@ -1,28 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Chi tiết Homestay khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Chi Tiết Homestay',
-      debugShowCheckedModeBanner: false, // Ẩn biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập tông màu nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const HomestayDetailPage(), // Đặt HomestayDetailPage làm màn hình mặc định khi khởi động
-    );
-  }
-}
-
 // Màn hình hiển thị thông tin chi tiết của một căn Homestay cụ thể
 class HomestayDetailPage extends StatelessWidget {
   const HomestayDetailPage({super.key});
@@ -58,7 +35,7 @@ class HomestayDetailPage extends StatelessWidget {
           ),
         ],
       ),
-      bottomSheet: _buildBottomBookingBar(), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
+      bottomSheet: _buildBottomBookingBar(context), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
     );
   }
 
@@ -76,7 +53,7 @@ class HomestayDetailPage extends StatelessWidget {
               'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000&auto=format&fit=crop',
               fit: BoxFit.cover, // Cắt và kéo dãn ảnh phủ kín khung không gian AppBar
             ),
-            // Lớp phủ màu chuyển sắc (Gradient) giúp làm dịu và tăng độ tương phản rõ nét cho các nút bấm
+            // Lớp phủ màu chuyển sắc (Gradient) giúp làm dịu và tăng độ contrast rõ nét cho các nút bấm
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -364,7 +341,7 @@ class HomestayDetailPage extends StatelessWidget {
                 fit: BoxFit.cover,
               ),
             ),
-            // Tâm vòng tròn điểm nhấn ghim định vị màu cam nổi bần bật giữa bản đồ
+            // Tâm vòng tròn điểm nhấn ghim định vị màu cam nổi bật giữa bản đồ
             child: Center(
               child: Container(
                 padding: const EdgeInsets.all(12),
@@ -379,7 +356,7 @@ class HomestayDetailPage extends StatelessWidget {
   }
 
   // Thanh điều khiển chứa thông tin chi phí và nút hành động lớn "Đặt ngay" cố định phía đáy màn hình
-  Widget _buildBottomBookingBar() {
+  Widget _buildBottomBookingBar(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32), // Đệm thêm khoảng cách đáy 32 đơn vị bảo toàn phần tai thỏ / thanh vuốt hệ thống (Navigation Bar)
       decoration: BoxDecoration(
@@ -414,8 +391,7 @@ class HomestayDetailPage extends StatelessWidget {
           // Nút bấm lớn kích hoạt tiến trình book/đặt chỗ homestay nhanh
           ElevatedButton(
             onPressed: () {
-              // TODO: Điều phối luồng dữ liệu sang màn hình PaymentScreen hóa đơn thanh toán
-              print("Bắt đầu khởi chạy tiến trình Đặt phòng homestay");
+              Navigator.pushNamed(context, '/booking-form');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống

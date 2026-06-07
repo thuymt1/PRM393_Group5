@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình ứng dụng (MaterialApp) bọc quanh màn hình Đăng ký để chạy test độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ứng dụng Test Đăng Ký',
-      debugShowCheckedModeBanner: false, // Ẩn banner chữ DEBUG ở góc màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập màu sắc chủ đạo
-        useMaterial3: true, // Áp dụng các quy chuẩn giao diện Material 3
-      ),
-      home: const RegisterScreen(), // Đặt RegisterScreen làm màn hình khởi chạy đầu tiên
-    );
-  }
-}
-
-// Màn hình Đăng ký tài khoản mới
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -277,6 +253,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         print("Họ tên: ${_nameController.text}");
         print("Email: ${_emailController.text}");
         print("Số điện thoại: ${_phoneController.text}");
+        Navigator.pushNamed(context, '/choose-role');
       } : null, // Gán giá trị null để vô hiệu hóa nút bấm tạm thời khi chưa tích chọn điều khoản
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),

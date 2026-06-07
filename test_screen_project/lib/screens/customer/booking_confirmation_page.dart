@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Xác nhận khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Xác Nhận Đặt Phòng',
-      debugShowCheckedModeBanner: false, // Ẩn biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập tông màu nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const BookingConfirmationPage(), // Đặt BookingConfirmationPage làm màn hình mặc định khi khởi động
-    );
-  }
-}
-
-// Màn hình rà soát và xác nhận thông tin đặt phòng trước khi tiến hành thanh toán
 class BookingConfirmationPage extends StatelessWidget {
   const BookingConfirmationPage({super.key});
 
@@ -248,8 +224,7 @@ class BookingConfirmationPage extends StatelessWidget {
         // Nút bấm lớn màu nâu thực hiện tiến hành chuyển tiếp sang bước thanh toán hóa đơn
         ElevatedButton(
           onPressed: () {
-            // TODO: Bổ sung logic điều phối Navigator chuyển sang luồng thanh toán (PaymentScreen)
-            print("Xác nhận thông tin thành công! Chuyển tiếp sang màn hình thanh toán hóa đơn.");
+            Navigator.pushNamed(context, '/payment');
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6D4C41), // Màu sắc nâu đậm chủ đạo hệ thống

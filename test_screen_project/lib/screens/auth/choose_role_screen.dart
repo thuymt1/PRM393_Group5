@@ -1,29 +1,6 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm khởi chạy chính thức của ứng dụng
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình lựa chọn vai trò khi test độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'H hearth & Horizon - Chọn Vai Trò',
-      debugShowCheckedModeBanner: false, // Loại bỏ biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Định hình tông màu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ giao diện Material 3 tiêu chuẩn
-      ),
-      home: const ChooseRoleScreen(), // Đặt ChooseRoleScreen làm màn hình hiển thị đầu tiên
-    );
-  }
-}
-
-// Màn hình cho phép người dùng lựa chọn vai trò (Khách hàng / Chủ nhà)
+// Màn hình cho phép người dùng lựa chọn vai trò (Khách hàng / Chủ nhà / Tác giả)
 class ChooseRoleScreen extends StatelessWidget {
   const ChooseRoleScreen({super.key});
 
@@ -47,20 +24,28 @@ class ChooseRoleScreen extends StatelessWidget {
                 Icons.person_outline,
                 'Khách hàng',
                 'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
-                    () {
-                  // TODO: Bổ sung logic chuyển hướng sang luồng Khách hàng (Customer Flow) tại đây
-                  print("Người dùng chọn vai trò: Khách hàng");
+                () {
+                  Navigator.pushNamed(context, '/customer-home');
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               _roleCard(
                 context,
                 Icons.home_work_outlined,
                 'Chủ nhà',
                 'Quản lý homestay, đón tiếp khách hàng và bắt đầu kinh doanh hiệu quả.',
-                    () {
-                  // TODO: Bổ sung logic chuyển hướng sang luồng Chủ nhà (Host Flow) tại đây
-                  print("Người dùng chọn vai trò: Chủ nhà");
+                () {
+                  Navigator.pushNamed(context, '/host-dashboard');
+                },
+              ),
+              const SizedBox(height: 16),
+              _roleCard(
+                context,
+                Icons.edit_note_outlined,
+                'Người viết bài',
+                'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
+                () {
+                  Navigator.pushNamed(context, '/author-dashboard');
                 },
               ),
               const Spacer(), // Đẩy phần footer xuống sát mép dưới cùng của màn hình

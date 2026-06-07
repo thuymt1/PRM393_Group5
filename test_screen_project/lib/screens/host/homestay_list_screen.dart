@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm khởi chạy chính thức của ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Danh sách Homestay khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Danh Sách Homestay',
-      debugShowCheckedModeBanner: false, // Ẩn biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập tông màu nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const HomestayListScreen(), // Đặt HomestayListScreen làm màn hình mặc định khi khởi động
-    );
-  }
-}
-
-// Màn hình hiển thị toàn bộ danh sách các Homestay theo dạng lưới (Grid)
 class HomestayListScreen extends StatefulWidget {
   const HomestayListScreen({super.key});
 

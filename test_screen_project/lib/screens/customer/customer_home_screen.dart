@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Trang chủ khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Trang Chủ Khách Hàng',
-      debugShowCheckedModeBanner: false, // Ẩn banner chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập màu sắc nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const CustomerHomeScreen(), // Đặt CustomerHomeScreen làm màn hình hiển thị đầu tiên
-    );
-  }
-}
-
-// Màn hình trang chủ chính dành cho luồng giao diện khách hàng (Customer)
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
 

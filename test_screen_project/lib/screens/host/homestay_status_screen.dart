@@ -1,29 +1,5 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Trạng thái Bài đăng khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Trạng Thái Bài Đăng',
-      debugShowCheckedModeBanner: false, // Ẩn biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập tông màu nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const HomestayStatusScreen(), // Đặt HomestayStatusScreen làm màn hình mặc định khi khởi động
-    );
-  }
-}
-
-// Màn hình kiểm tra trạng thái và quản lý bài đăng Homestay dành cho Chủ nhà
 class HomestayStatusScreen extends StatefulWidget {
   const HomestayStatusScreen({super.key});
 

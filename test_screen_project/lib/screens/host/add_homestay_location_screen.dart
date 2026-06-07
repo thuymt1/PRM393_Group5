@@ -1,42 +1,17 @@
 import 'package:flutter/material.dart';
 
-// Hàm main() - Điểm xuất phát khởi chạy ứng dụng Flutter
-void main() {
-  runApp(const MyApp());
-}
-
-// Lớp cấu hình MaterialApp dùng để bọc màn hình Giá & Quy định khi kiểm thử độc lập
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class AddHomestayLocationScreen extends StatefulWidget {
+  const AddHomestayLocationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Hearth & Horizon - Thiết Lập Giá & Quy Định',
-      debugShowCheckedModeBanner: false, // Ẩn biểu tượng chữ DEBUG ở góc phải màn hình
-      theme: ThemeData(
-        primaryColor: const Color(0xFF6D4C41), // Thiết lập tông màu nâu chủ đạo hệ thống
-        useMaterial3: true, // Kích hoạt bộ quy chuẩn giao diện Material 3 mới nhất
-      ),
-      home: const AddHomestayPriceRulesScreen(), // Đặt AddHomestayPriceRulesScreen làm màn hình mặc định khi khởi động
-    );
-  }
+  State<AddHomestayLocationScreen> createState() => _AddHomestayLocationScreenState();
 }
 
-// Màn hình Bước 4: Thiết lập chi phí phòng và các quy tắc hoạt động dành cho Chủ nhà
-class AddHomestayPriceRulesScreen extends StatefulWidget {
-  const AddHomestayPriceRulesScreen({super.key});
-
-  @override
-  State<AddHomestayPriceRulesScreen> createState() => _AddHomestayPriceRulesScreenState();
-}
-
-class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScreen> {
-  // Bộ điều khiển dữ liệu nhập vào cho các trường thông tin
-  final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _checkInController = TextEditingController(text: '14:00'); // Khởi tạo giờ nhận phòng mặc định
-  final TextEditingController _checkOutController = TextEditingController(text: '12:00'); // Khởi tạo giờ trả phòng mặc định
-  final TextEditingController _rulesController = TextEditingController();
+class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
+  // Bộ điều khiển dữ liệu nhập vào cho các ô địa chỉ, thành phố và quận huyện
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _districtController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +44,7 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Giá & Quy định',
+                    'Vị trí homestay',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -78,58 +53,57 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Thiết lập chi phí và các quy tắc để khách hàng có trải nghiệm tốt nhất.',
+                    'Địa chỉ chính xác giúp khách hàng dễ dàng tìm thấy bạn.',
                     style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 32),
-                  // Ô nhập chi phí thuê phòng mỗi đêm (Chỉ cho phép nhập số)
+                  // Trường nhập địa chỉ cụ thể (Số nhà, tên đường...)
                   _buildInputField(
-                    label: 'Giá mỗi đêm (VND)',
-                    hint: 'VD: 1.200.000',
-                    controller: _priceController,
-                    icon: Icons.payments_outlined,
-                    keyboardType: TextInputType.number, // Tối ưu cấu hình bàn phím hiển thị các nút số
+                    label: 'Địa chỉ cụ thể',
+                    hint: 'Số nhà, tên đường...',
+                    controller: _addressController,
+                    icon: Icons.location_on_outlined,
                   ),
                   const SizedBox(height: 24),
-                  // Hàng ngang kết hợp song song hai trường cấu hình thời gian Check-in và Check-out
+                  // Hàng ngang kết hợp song song hai trường Quận/Huyện và Tỉnh/Thành phố thông qua Expanded
                   Row(
                     children: [
                       Expanded(
                         child: _buildInputField(
-                          label: 'Giờ nhận phòng',
-                          hint: '14:00',
-                          controller: _checkInController,
-                          icon: Icons.login_rounded,
+                          label: 'Quận / Huyện',
+                          hint: 'VD: Phường 4',
+                          controller: _districtController,
+                          icon: Icons.map_outlined,
                         ),
                       ),
-                      const SizedBox(width: 16), // Khoảng hở đệm giữa hai ô nhập thời gian
+                      const SizedBox(width: 16), // Khoảng hở đệm giữa hai ô nhập liệu
                       Expanded(
                         child: _buildInputField(
-                          label: 'Giờ trả phòng',
-                          hint: '12:00',
-                          controller: _checkOutController,
-                          icon: Icons.logout_rounded,
+                          label: 'Thành phố / Tỉnh',
+                          hint: 'VD: Đà Lạt',
+                          controller: _cityController,
+                          icon: Icons.location_city_outlined,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  // Ô nhập liệu văn bản ghi chú các nội quy chung tại homestay (Cho phép nhập nhiều dòng)
-                  _buildInputField(
-                    label: 'Quy định chung',
-                    hint: 'VD: Không hút thuốc, không thú cưng, giữ yên lặng sau 22h...',
-                    controller: _rulesController,
-                    maxLines: 4, // Thiết lập chiều cao mở rộng ô nhập liệu lên 4 dòng
-                    icon: Icons.gavel_outlined,
-                  ),
                   const SizedBox(height: 32),
-                  _buildTermsNotice(), // Khối hiển thị thông báo lưu ý ràng buộc điều khoản hệ thống
+                  const Text(
+                    'Chọn vị trí trên bản đồ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6D4C41),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMapPlaceholder(), // Khối hiển thị vùng bản đồ định vị giả lập
                   const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
-          _buildBottomActions(), // Thanh điều hướng tác vụ ("Hoàn tất") cố định dưới đáy màn hình
+          _buildBottomActions(), // Thanh điều phối hành động quay lại hoặc tiếp tục dưới đáy màn hình
         ],
       ),
     );
@@ -138,10 +112,10 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
   // Thanh hiển thị tiến trình hoàn thiện hồ sơ (Linear Progress Indicator)
   Widget _buildProgressBar() {
     return LinearProgressIndicator(
-      value: 1.0, // Đạt mốc tối đa biểu thị đã hoàn thành tất cả các bước (Bước 4 của 4 bước)
+      value: 0.50, // Thể hiện đang hoàn thành 50% chặng đường (Bước 2 của 4 bước)
       backgroundColor: Colors.grey.shade200,
-      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE07A5F)), // Sắc cam cam biểu thị tiến độ hành trình
-      minHeight: 6, // Đổi độ dày thanh tiến trình
+      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE07A5F)), // Sắc cam thương hiệu biểu thị tiến độ
+      minHeight: 6, // Độ dày của thanh tiến trình
     );
   }
 
@@ -150,9 +124,7 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
     required String label,
     required String hint,
     required TextEditingController controller,
-    int maxLines = 1,
     required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,8 +152,6 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
           ),
           child: TextField(
             controller: controller,
-            maxLines: maxLines,
-            keyboardType: keyboardType,
             style: const TextStyle(fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
@@ -199,26 +169,49 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
     );
   }
 
-  // Khối thông báo lưu ý nhỏ nhắc nhở về chính sách hoạt động của cộng đồng
-  Widget _buildTermsNotice() {
+  // Khối giao diện hộp đồ họa mô phỏng không gian bản đồ định vị
+  Widget _buildMapPlaceholder() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      height: 220,
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F4E1), // Sắc nền be vàng nhạt nhã nhặn phù hợp khối thông tin lưu ý
-        borderRadius: BorderRadius.circular(16),
+        color: const Color(0xFFF7F4E1),
+        borderRadius: BorderRadius.circular(24), // Bo tròn 4 góc của khung bản đồ
+        border: Border.all(color: Colors.grey.shade200),
+        image: const DecorationImage(
+          image: NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000&auto=format&fit=crop'), // Ảnh sơ đồ vệ tinh giả lập
+          fit: BoxFit.cover, // Cắt cúp ảnh phủ kín không gian Container
+          opacity: 0.6, // Làm mờ nhẹ hình nền để làm nổi bật hệ thống nút bấm tương tác bên trên
+        ),
       ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: Color(0xFF6D4C41), size: 20), // Biểu tượng dấu chấm hỏi thông tin mờ
-          SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Bằng cách hoàn tất, bạn đồng ý với các Điều khoản dịch vụ và Chính sách hoạt động của Hearth & Horizon.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6D4C41), height: 1.4),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Biểu tượng vòng tròn tâm ghim định vị màu cam trắng
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.my_location, color: Color(0xFFE07A5F), size: 28),
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            // Nút bấm tương tác giả lập hành động ghim vị trí hiện tại
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6D4C41), // Nền màu nâu đậm chủ đạo
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Ghim vị trí hiện tại',
+                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -240,7 +233,7 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Nút quay lại màn hình cấu hình Bước 3 trước đó
+          // Nút quay lại màn hình cấu hình Bước 1 trước đó
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
@@ -248,26 +241,25 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
             ),
           ),
-          // Nút bấm xác nhận hoàn tất quy trình lưu trữ dữ liệu và gửi tin đăng
+          // Nút bấm xác nhận chuyển tiếp sang Bước 3 (Đăng tải hình ảnh không gian)
           ElevatedButton(
             onPressed: () {
-              // In log kiểm thử toàn bộ thông tin giá tiền và quy định đã nhập trước khi đẩy lên Server/API
-              print("--- Tiến trình Hoàn Tất Đăng Tin ---");
-              print("Giá thuê/đêm: ${_priceController.text} VND");
-              print("Thời gian Check-in: ${_checkInController.text}");
-              print("Thời gian Check-out: ${_checkOutController.text}");
-              print("Nội quy homestay: ${_rulesController.text}");
+              // In log kiểm thử thông tin dữ liệu địa chỉ đã nhập
+              print("--- Dữ liệu Bước 2 ---");
+              print("Địa chỉ cụ thể: ${_addressController.text}");
+              print("Quận/Huyện: ${_districtController.text}");
+              print("Thành phố/Tỉnh: ${_cityController.text}");
 
-              // TODO: Triển khai gọi API kết nối DB để lưu trữ thông tin homestay mới và điều hướng về trang chủ quản lý của Host
+              // TODO: Điều phối kết nối Navigator chuyển tiếp sang bước tiếp theo (Hình ảnh - Add Photos Screen)
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống
-              minimumSize: const Size(160, 56), // Độ rộng tối thiểu 160 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
+              minimumSize: const Size(140, 56), // Độ rộng tối thiểu 140 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               elevation: 0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
             ),
             child: const Text(
-              'Hoàn tất',
+              'Tiếp theo',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,

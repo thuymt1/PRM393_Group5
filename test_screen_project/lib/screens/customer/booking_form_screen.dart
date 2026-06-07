@@ -252,7 +252,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   Widget _buildSubmitButton() {
     return ElevatedButton(
       onPressed: () {
-        // Điều hướng đến Booking Confirm Screen
+        Navigator.pushNamed(context, '/booking-confirmation');
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
