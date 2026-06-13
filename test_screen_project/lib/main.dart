@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 // Auth screens
+import 'screens/auth/intro_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/choose_role_screen.dart';
+import 'screens/auth/forgot_password_otp_screen.dart';
 
 // Customer screens
 import 'screens/customer/customer_home_screen.dart';
@@ -52,11 +54,13 @@ class MyApp extends StatelessWidget {
       title: 'Hearth & Horizon',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getTheme(AppTheme.accentOrange),
-      initialRoute: '/login',
+      initialRoute: '/intro',
       routes: {
+        '/intro': (context) => const IntroScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/choose-role': (context) => const ChooseRoleScreen(),
+        '/forgot-password-otp': (context) => const ForgotPasswordOtpScreen(),
         
         // Customer flow
         '/customer-home': (context) => const CustomerHomeScreen(),

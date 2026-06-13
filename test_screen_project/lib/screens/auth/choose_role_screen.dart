@@ -9,48 +9,52 @@ class ChooseRoleScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7), // Màu nền nhẹ (Surface color từ design system)
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 40),
-              _buildLogo(), // Hiển thị biểu tượng Logo dạng vòng tròn đổ bóng
-              const SizedBox(height: 40),
-              _buildHeader(), // Hiển thị dòng tiêu đề hỏi vai trò người dùng
-              const SizedBox(height: 48),
-              _roleCard(
-                context,
-                Icons.person_outline,
-                'Khách hàng',
-                'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
-                () {
-                  Navigator.pushNamed(context, '/customer-home');
-                },
-              ),
-              const SizedBox(height: 16),
-              _roleCard(
-                context,
-                Icons.home_work_outlined,
-                'Chủ nhà',
-                'Quản lý homestay, đón tiếp khách hàng và bắt đầu kinh doanh hiệu quả.',
-                () {
-                  Navigator.pushNamed(context, '/host-dashboard');
-                },
-              ),
-              const SizedBox(height: 16),
-              _roleCard(
-                context,
-                Icons.edit_note_outlined,
-                'Người viết bài',
-                'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
-                () {
-                  Navigator.pushNamed(context, '/author-dashboard');
-                },
-              ),
-              const Spacer(), // Đẩy phần footer xuống sát mép dưới cùng của màn hình
-              _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò
-            ],
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 40),
+                _buildLogo(), // Hiển thị biểu tượng Logo dạng vòng tròn đổ bóng
+                const SizedBox(height: 40),
+                _buildHeader(), // Hiển thị dòng tiêu đề hỏi vai trò người dùng
+                const SizedBox(height: 48),
+                _roleCard(
+                  context,
+                  Icons.person_outline,
+                  'Khách hàng',
+                  'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
+                  () {
+                    Navigator.pushNamed(context, '/customer-home');
+                  },
+                ),
+                const SizedBox(height: 16),
+                _roleCard(
+                  context,
+                  Icons.home_work_outlined,
+                  'Chủ nhà',
+                  'Quản lý homestay, đón tiếp khách hàng và bắt đầu kinh doanh hiệu quả.',
+                  () {
+                    Navigator.pushNamed(context, '/host-dashboard');
+                  },
+                ),
+                const SizedBox(height: 16),
+                _roleCard(
+                  context,
+                  Icons.edit_note_outlined,
+                  'Người viết bài',
+                  'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
+                  () {
+                    Navigator.pushNamed(context, '/author-dashboard');
+                  },
+                ),
+                const SizedBox(height: 24),
+                _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò
+              ],
+            ),
           ),
         ),
       ),
@@ -66,7 +70,7 @@ class ChooseRoleScreen extends StatelessWidget {
         shape: BoxShape.circle, // Định dạng khung hình tròn
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE07A5F).withOpacity(0.15), // Bóng đổ mang sắc cam nhạt
+            color: const Color(0xFFE07A5F).withValues(alpha: 0.15), // Bóng đổ mang sắc cam nhạt
             blurRadius: 20,
             spreadRadius: 5,
           )
@@ -125,7 +129,7 @@ class ChooseRoleScreen extends StatelessWidget {
           border: Border.all(color: Colors.grey.shade100), // Đường viền xám siêu mảnh
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04), // Đổ bóng nhẹ phía dưới tạo chiều sâu
+              color: Colors.black.withValues(alpha: 0.04), // Đổ bóng nhẹ phía dưới tạo chiều sâu
               blurRadius: 15,
               offset: const Offset(0, 8),
             )
@@ -192,3 +196,4 @@ class ChooseRoleScreen extends StatelessWidget {
     );
   }
 }
+

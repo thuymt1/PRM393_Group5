@@ -1,21 +1,26 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class ForgotPasswordOtpScreen extends StatefulWidget {
+  const ForgotPasswordOtpScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<ForgotPasswordOtpScreen> createState() => _ForgotPasswordOtpScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  bool _obscureText = true;
+class _ForgotPasswordOtpScreenState extends State<ForgotPasswordOtpScreen> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
-    _passwordController.dispose();
+    _otpController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -41,35 +46,69 @@ class _LoginScreenState extends State<LoginScreen> {
             _buildBrandMark(),
             const SizedBox(height: 28),
             _buildHeader(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
             _buildCard(
               child: Column(
                 children: [
                   _buildTextField(
-                    label: 'Email',
-                    hint: 'alexandria.b@example.com',
-                    icon: Icons.alternate_email_rounded,
+                    label: 'Email nhận mã',
+                    hint: 'your@email.com',
+                    icon: Icons.mail_outline_rounded,
                     controller: _emailController,
                   ),
                   const SizedBox(height: 20),
                   _buildTextField(
-                    label: 'Mật khẩu',
-                    hint: '••••••••',
-                    icon: Icons.key_rounded,
-                    isPassword: true,
-                    controller: _passwordController,
+                    label: 'Mã OTP',
+                    hint: 'Nhập 6 chữ số',
+                    icon: Icons.lock_reset_rounded,
+                    controller: _otpController,
+                    keyboardType: TextInputType.number,
                   ),
-                  const SizedBox(height: 6),
-                  _buildForgotPassword(),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    label: 'Mật khẩu mới',
+                    hint: 'Nhập mật khẩu mới',
+                    icon: Icons.key_rounded,
+                    controller: _newPasswordController,
+                    isPassword: true,
+                    obscureText: _obscureNewPassword,
+                    onToggleObscure: () {
+                      setState(() => _obscureNewPassword = !_obscureNewPassword);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    label: 'Xác nhận mật khẩu',
+                    hint: 'Nhập lại mật khẩu mới',
+                    icon: Icons.verified_user_outlined,
+                    controller: _confirmPasswordController,
+                    isPassword: true,
+                    obscureText: _obscureConfirmPassword,
+                    onToggleObscure: () {
+                      setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {},
+                      child: const Text(
+                        'Gửi lại mã',
+                        style: TextStyle(
+                          color: Color(0xFFE07A5F),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-            _buildLoginButton(),
-            const SizedBox(height: 24),
-            _buildSocialLogin(),
-            const SizedBox(height: 24),
-            _buildSignUpLink(),
+            _buildActionButton(),
+            const SizedBox(height: 16),
+            _buildBackToLogin(),
           ],
         ),
       ),
@@ -116,10 +155,10 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Text(
-          'Chào mừng trở lại!',
+          'Lấy lại mật khẩu',
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 30,
             fontWeight: FontWeight.bold,
             color: Color(0xFF6D4C41),
             fontFamily: 'BeVietnamPro',
@@ -127,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Đăng nhập để tiếp tục hành trình khám phá những chân trời mới.',
+          'Nhập mã OTP đã được gửi qua email để đặt lại mật khẩu.',
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: 16,
@@ -162,8 +201,11 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     required String hint,
     required IconData icon,
-    bool isPassword = false,
     required TextEditingController controller,
+    TextInputType keyboardType = TextInputType.text,
+    bool isPassword = false,
+    bool obscureText = false,
+    VoidCallback? onToggleObscure,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +221,8 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 10),
         TextField(
           controller: controller,
-          obscureText: isPassword ? _obscureText : false,
+          keyboardType: keyboardType,
+          obscureText: isPassword ? obscureText : false,
           style: const TextStyle(fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,
@@ -198,11 +241,11 @@ class _LoginScreenState extends State<LoginScreen> {
             suffixIcon: isPassword
                 ? IconButton(
                     icon: Icon(
-                      _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                       color: Colors.grey.shade600,
                       size: 20,
                     ),
-                    onPressed: () => setState(() => _obscureText = !_obscureText),
+                    onPressed: onToggleObscure,
                   )
                 : null,
             border: OutlineInputBorder(
@@ -224,40 +267,9 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildForgotPassword() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton.icon(
-        onPressed: () {
-          Navigator.pushNamed(context, '/forgot-password-otp');
-        },
-        icon: const Icon(
-          Icons.help_outline_rounded,
-          size: 18,
-          color: Color(0xFFE07A5F),
-        ),
-        label: const Text(
-          'Quên mật khẩu?',
-          style: TextStyle(
-            color: Color(0xFFE07A5F),
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          minimumSize: const Size(0, 36),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoginButton() {
+  Widget _buildActionButton() {
     return ElevatedButton.icon(
-      onPressed: () {
-        Navigator.pushNamed(context, '/choose-role');
-      },
+      onPressed: () {},
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
         minimumSize: const Size(double.infinity, 56),
@@ -265,9 +277,9 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
       ),
-      icon: const Icon(Icons.login_rounded, color: Colors.white, size: 20),
+      icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
       label: const Text(
-        'Đăng nhập',
+        'Xác nhận OTP',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -277,92 +289,18 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSocialLogin() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Hoặc đăng nhập với',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-              ),
-            ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _socialButton(
-              icon: Icons.public_rounded,
-              name: 'Google',
-              accent: const Color(0xFFEA4335),
-            ),
-            const SizedBox(width: 20),
-            _socialButton(
-              icon: Icons.facebook,
-              name: 'Facebook',
-              accent: const Color(0xFF1877F2),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _socialButton({
-    required IconData icon,
-    required String name,
-    required Color accent,
-  }) {
-    return Semantics(
-      label: name,
-      button: true,
-      child: Container(
-        width: 68,
-        height: 56,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(icon, color: accent, size: 26),
-      ),
-    );
-  }
-
-  Widget _buildSignUpLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'Chưa có tài khoản? ',
-          style: TextStyle(color: Colors.grey.shade600),
-        ),
-        GestureDetector(
-          onTap: () {
-            Navigator.pushNamed(context, '/register');
-          },
-          child: const Text(
-            'Đăng ký ngay',
-            style: TextStyle(
-              color: Color(0xFFE07A5F),
-              fontWeight: FontWeight.bold,
-            ),
+  Widget _buildBackToLogin() {
+    return Center(
+      child: TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text(
+          'Quay lại đăng nhập',
+          style: TextStyle(
+            color: Color(0xFFE07A5F),
+            fontWeight: FontWeight.bold,
           ),
         ),
-      ],
+      ),
     );
   }
 }
