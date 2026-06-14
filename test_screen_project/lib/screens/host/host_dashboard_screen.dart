@@ -1,133 +1,290 @@
 import 'package:flutter/material.dart';
 
-// Màn hình bảng điều khiển chính dành cho luồng giao diện Chủ nhà (Host Dashboard)
-class HostDashboardScreen extends StatelessWidget {
+class HostDashboardScreen extends StatefulWidget {
   const HostDashboardScreen({super.key});
+
+  @override
+  State<HostDashboardScreen> createState() => _HostDashboardScreenState();
+}
+
+class _HostDashboardScreenState extends State<HostDashboardScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _slideController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
-      appBar: AppBar(
-        backgroundColor: Colors.transparent, // Làm trong suốt thanh AppBar phía trên
-        elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
-        title: const Text(
-          'Host Dashboard',
-          style: TextStyle(
-            color: Color(0xFF6D4C41), // Tông màu nâu đậm chủ đạo cho văn bản tiêu đề
-            fontWeight: FontWeight.bold,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: Color(0xFF6D4C41)), // Chuông thông báo của chủ nhà
-            onPressed: () {
-              Navigator.pushNamed(context, '/notifications');
-            },
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-              child: const CircleAvatar(
-                radius: 18, // Ảnh đại diện thu nhỏ của chủ nhà góc trên bên phải AppBar
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=host_julian'),
+      backgroundColor: const Color(0xFFF5F0E8),
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(),
+          SliverToBoxAdapter(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildStatsGrid(),
+                      const SizedBox(height: 28),
+                      _buildRevenueChart(),
+                      const SizedBox(height: 28),
+                      _buildSectionHeader('Yêu cầu đặt phòng mới', () {
+                        Navigator.pushNamed(context, '/host-booking-requests');
+                      }),
+                      const SizedBox(height: 12),
+                      _buildBookingRequestItem(context),
+                      const SizedBox(height: 28),
+                      _buildSectionHeader('Homestay của tôi', () {
+                        Navigator.pushNamed(context, '/homestay-list');
+                      }),
+                      const SizedBox(height: 12),
+                      _buildMyHomestayCard(context),
+                      const SizedBox(height: 100),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20), // Tạo biên đệm 20 đơn vị bao quanh toàn bộ nội dung body
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildEarningsCard(), // Khối thẻ hiển thị tổng thu nhập tháng hiện tại (Màu nâu lớn)
-            const SizedBox(height: 24),
-            _buildStatsGrid(), // Khối lưới hiển thị 4 chỉ số vận hành (Lượt xem, Đặt phòng, Đánh giá, Phản hồi)
-            const SizedBox(height: 32),
-            _buildSectionHeader('Yêu cầu đặt phòng mới', () {
-              Navigator.pushNamed(context, '/host-booking-requests');
-            }),
-            const SizedBox(height: 12),
-            _buildBookingRequestItem(context), // Khối hiển thị thông tin chi tiết một lượt yêu cầu đặt chỗ mới
-            const SizedBox(height: 32),
-            _buildSectionHeader('Homestay của tôi', () {
-              Navigator.pushNamed(context, '/homestay-list');
-            }),
-            const SizedBox(height: 12),
-            _buildMyHomestayCard(context), // Khối hiển thị thẻ thông tin căn nhà đang cho thuê của chủ nhà
-            const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che khuất bởi nút nổi FAB rộng
-          ],
-        ),
-      ),
-      // Nút bấm nổi mở rộng ghim cố định góc phải đáy màn hình để tạo mới bài đăng homestay
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.pushNamed(context, '/add-homestay-basic-info');
-        },
-        backgroundColor: const Color(0xFFE07A5F), // Sắc cam cam thương hiệu nổi bật hành động tạo mới
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Đăng tin mới',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ),
-      bottomNavigationBar: _buildBottomNavBar(context), // Thanh thực đơn điều hướng chuyển đổi tab ở đáy màn hình chủ nhà
+      floatingActionButton: _buildFAB(context),
+      bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
 
-  // Khối giao diện hiển thị tổng quan doanh thu tài chính thu nhập trong tháng
-  Widget _buildEarningsCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF6D4C41), // Nền màu nâu thẫm đồng điệu định hướng phong cách thiết kế
-        borderRadius: BorderRadius.circular(24), // Bo tròn góc thẻ 24 đơn vị
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6D4C41).withOpacity(0.2), // Đổ bóng mờ mịn mang sắc độ nâu nhạt
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Tổng thu nhập tháng này',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            '24.500.000đ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
+  Widget _buildSliverAppBar() {
+    return SliverAppBar(
+      expandedHeight: 220,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: const Color(0xFF5D3A2E),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF8B4A35), Color(0xFF5D3A2E), Color(0xFF3D2318)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
-          const SizedBox(height: 16),
-          // Nhãn Badge hiển thị phần trăm tăng trưởng so với kỳ trước (Trending Up Badge)
+          child: Stack(
+            children: [
+              // Decorative circles
+              Positioned(
+                top: -40,
+                right: -40,
+                child: Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.05),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -20,
+                left: -30,
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.04),
+                  ),
+                ),
+              ),
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Chào buổi tối, Julian 👋',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.8),
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Host Dashboard',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              _appBarIconButton(Icons.notifications_outlined, () {
+                                Navigator.pushNamed(context, '/notifications');
+                              }, badge: '3'),
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () => Navigator.pushNamed(context, '/profile'),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: const Color(0xFFE07A5F), width: 2.5),
+                                  ),
+                                  child: const CircleAvatar(
+                                    radius: 18,
+                                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=host_julian'),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      // Earnings card inline in appbar
+                      _buildEarningsInline(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      title: const Text(
+        'Host Dashboard',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+      ),
+    );
+  }
+
+  Widget _appBarIconButton(IconData icon, VoidCallback onTap, {String? badge}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1), // Nền trắng trong suốt 10% tạo độ sâu hài hòa
+              color: Colors.white.withOpacity(0.12),
               borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          if (badge != null)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE07A5F),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  badge,
+                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningsInline() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.15)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Thu nhập tháng này',
+                style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '24.500.000đ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.greenAccent.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.greenAccent.withOpacity(0.3)),
+            ),
             child: const Row(
-              mainAxisSize: MainAxisSize.min, // Thu nhỏ kích thước hàng vừa khít với nội dung nhãn
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.trending_up, color: Colors.greenAccent, size: 16), // Icon mũi tên tăng trưởng xanh
+                Icon(Icons.trending_up, color: Colors.greenAccent, size: 14),
                 SizedBox(width: 4),
                 Text(
-                  '+12% so với tháng trước',
-                  style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.w500),
+                  '+12%',
+                  style: TextStyle(color: Colors.greenAccent, fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -137,55 +294,153 @@ class HostDashboardScreen extends StatelessWidget {
     );
   }
 
-  // Khối lưới hiển thị tổ hợp 4 chỉ số thống kê kinh doanh (Stats Grid)
   Widget _buildStatsGrid() {
     return GridView.count(
-      shrinkWrap: true, // Cho phép GridView tự thu hẹp không gian vừa vặn số lượng ô con
-      physics: const NeverScrollableScrollPhysics(), // Nhường quyền cuộn màn hình lại cho SingleChildScrollView body cha
-      crossAxisCount: 2, // Phân chia dạng lưới đều đặn gồm 2 cột hàng dọc
-      crossAxisSpacing: 16, // Khoảng hở đệm giữa hai cột kế hông nhau
-      mainAxisSpacing: 16, // Khoảng hở đệm giữa hàng trên và hàng dưới
-      childAspectRatio: 1.4, // Tỷ lệ cân đối giữa chiều rộng và chiều cao của ô thống kê nhỏ
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 14,
+      mainAxisSpacing: 14,
+      childAspectRatio: 1.55,
       children: [
-        _statItem('Lượt xem', '1.240', Icons.visibility_outlined),
-        _statItem('Đặt phòng', '18', Icons.book_online_outlined),
-        _statItem('Đánh giá', '4.9', Icons.star_outline),
-        _statItem('Phản hồi', '98%', Icons.chat_bubble_outline),
+        _statItem('Lượt xem', '1.240', Icons.visibility_outlined, const Color(0xFF6366F1), '+8%'),
+        _statItem('Đặt phòng', '18', Icons.book_online_outlined, const Color(0xFFE07A5F), '+3'),
+        _statItem('Đánh giá', '4.9 ⭐', Icons.star_outline, const Color(0xFFF59E0B), 'Xuất sắc'),
+        _statItem('Phản hồi', '98%', Icons.chat_bubble_outline, const Color(0xFF10B981), 'Rất nhanh'),
       ],
     );
   }
 
-  // Hàm thiết kế dùng chung cấu trúc cho từng ô vuông chỉ số thống kê nhỏ lẻ độc lập
-  Widget _statItem(String label, String val, IconData icon) {
+  Widget _statItem(String label, String val, IconData icon, Color color, String sub) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10), // Đổ bóng mờ siêu nhẹ 2%
+          BoxShadow(color: color.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: const Color(0xFFE07A5F), size: 22), // Biểu tượng cam thương hiệu đặc trưng chỉ số
-          const SizedBox(height: 8),
-          Text(
-            val,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 16),
+              ),
+              Text(
+                sub,
+                style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                val,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+              ),
+              Text(
+                label,
+                style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Hàm thiết kế dùng chung cấu trúc thanh tiêu đề phân mục lớn kèm link văn bản "Xem tất cả"
+  Widget _buildRevenueChart() {
+    // Mini bar chart using containers
+    final data = [0.4, 0.6, 0.5, 0.8, 0.7, 0.9, 0.75];
+    final labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 6))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Doanh thu tuần này',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF374151), fontSize: 15),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text('7 ngày', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11, fontWeight: FontWeight.w500)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 80,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(data.length, (i) {
+                final isToday = i == 5;
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        AnimatedContainer(
+                          duration: Duration(milliseconds: 400 + i * 80),
+                          curve: Curves.easeOutCubic,
+                          height: data[i] * 60,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: isToday
+                                  ? [const Color(0xFFE07A5F), const Color(0xFF8B4A35)]
+                                  : [const Color(0xFFEDE9FE), const Color(0xFFC4B5FD)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          labels[i],
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isToday ? const Color(0xFFE07A5F) : const Color(0xFF9CA3AF),
+                            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSectionHeader(String title, VoidCallback onTap) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -193,127 +448,255 @@ class HostDashboardScreen extends StatelessWidget {
         Text(
           title,
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF6D4C41),
+            color: Color(0xFF374151),
+            letterSpacing: -0.3,
           ),
         ),
-        TextButton(
-          onPressed: onTap,
-          child: const Text(
-            'Xem tất cả',
-            style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold),
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE07A5F).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Text(
+              'Xem tất cả',
+              style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 12),
+            ),
           ),
         ),
       ],
     );
   }
 
-  // Khối giao diện hiển thị thông tin tóm tắt của một yêu cầu duyệt thuê chỗ ở mới từ khách hàng
   Widget _buildBookingRequestItem(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
       ),
-      child: Row(
+      child: Column(
         children: [
-          const CircleAvatar(
-            radius: 24, // Ảnh đại diện của vị khách hàng gửi đơn đặt phòng
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user_an_nhien'),
-          ),
-          const SizedBox(width: 16),
-          // Khối chữ hiển thị danh tính khách, số lượng đêm và ngày thuê phòng dự kiến
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Trần An Nhiên',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          Row(
+            children: [
+              Stack(
+                children: [
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user_an_nhien'),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Trần An Nhiên',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1F2937)),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      '2 đêm • 2 khách • 20/06 – 22/06',
+                      style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                    ),
+                  ],
                 ),
-                Text(
-                  '2 đêm • 2 khách • 20/06 - 22/06',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
-            ),
+                child: const Text(
+                  'Chờ duyệt',
+                  style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
-          // Nút bấm xem chi tiết đơn phòng dạng phẳng phẳng mượt tiệp màu nền be nhạt
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/host-booking-requests');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF7F4E1), // Nền màu be nhạt nhẹ nhàng quý phái
-              foregroundColor: const Color(0xFF6D4C41), // Sắc nâu thẫm cho chữ
-              elevation: 0, // Khử đổ bóng mặc định để nút phẳng tinh tế
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 14),
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              const Icon(Icons.home_outlined, size: 14, color: Color(0xFF9CA3AF)),
+              const SizedBox(width: 6),
+              const Text('The Terracotta Nest', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+              const Spacer(),
+              const Text(
+                '2.550.000đ',
+                style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: () => Navigator.pushNamed(context, '/host-booking-requests'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF5D3A2E),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  // Khối hiển thị thẻ Card tóm tắt hình ảnh và trạng thái hoạt động thực tế của Homestay sở hữu
   Widget _buildMyHomestayCard(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.pushNamed(context, '/homestay-status');
-      },
+      onTap: () => Navigator.pushNamed(context, '/homestay-status'),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24), // Thiết lập bo cong tròn bốn góc thẻ Card 24 đơn vị
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 6))],
         ),
         child: Column(
           children: [
-            // Phần hình ảnh thu nhỏ không gian homestay (Cắt bo góc tròn phía trên)
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              child: Image.network(
-                'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
-                height: 160,
-                width: double.infinity,
-                fit: BoxFit.cover, // Cắt cúp ảnh cân xứng lấp đầy khung ngang hình chữ nhật
-              ),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  child: Image.network(
+                    'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
+                    height: 170,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                // Gradient overlay
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black.withOpacity(0.35)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Rating badge
+                Positioned(
+                  top: 14,
+                  left: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star, color: Color(0xFFF59E0B), size: 13),
+                        SizedBox(width: 3),
+                        Text('4.9', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+                // Active status
+                Positioned(
+                  top: 14,
+                  right: 14,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle, color: Colors.white, size: 6),
+                        SizedBox(width: 5),
+                        Text('Hoạt động', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-            // Khối chữ hiển thị tên homestay và chấm tròn nhãn chỉ báo trạng thái 'Đang hoạt động' màu xanh lá
             Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'The Terracotta Nest',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1F2937)),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF9CA3AF)),
+                            const SizedBox(width: 3),
+                            Text('Đà Lạt, Lâm Đồng', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Row(
                     children: [
-                      const Text(
-                        'The Terracotta Nest',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.circle, color: Colors.green, size: 8), // Chấm tròn tín hiệu nhỏ màu xanh lá cây
-                          const SizedBox(width: 6),
-                          const Text(
-                            'Đang hoạt động',
-                            style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
+                      _quickActionBtn(Icons.edit_outlined, () {}),
+                      const SizedBox(width: 8),
+                      _quickActionBtn(Icons.more_vert, () {}),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.more_vert, color: Colors.grey), // Biểu tượng ba dấu chấm tùy chọn cấu hình nâng cao
-                    onPressed: () {},
-                  ),
+                ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F0E8),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  _homestayQuickStat('18', 'Đặt phòng', Icons.book_online_outlined),
+                  _dividerVertical(),
+                  _homestayQuickStat('1.25M', 'Giá/đêm', Icons.payments_outlined),
+                  _dividerVertical(),
+                  _homestayQuickStat('98%', 'Phản hồi', Icons.speed_outlined),
                 ],
               ),
             ),
@@ -323,28 +706,78 @@ class HostDashboardScreen extends StatelessWidget {
     );
   }
 
-  // Thanh điều hướng cố định ghim dưới chân đáy dành cho giao diện ứng dụng của Chủ nhà (Host Bottom Navigation Bar)
+  Widget _homestayQuickStat(String val, String label, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 15, color: const Color(0xFF8B4A35)),
+          const SizedBox(height: 4),
+          Text(val, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF374151))),
+          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _dividerVertical() {
+    return Container(width: 1, height: 36, color: const Color(0xFFE5E7EB));
+  }
+
+  Widget _quickActionBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, size: 17, color: const Color(0xFF6B7280)),
+      ),
+    );
+  }
+
+  Widget _buildFAB(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () => Navigator.pushNamed(context, '/add-homestay-basic-info'),
+      backgroundColor: const Color(0xFFE07A5F),
+      elevation: 4,
+      icon: const Icon(Icons.add, color: Colors.white),
+      label: const Text(
+        'Đăng tin mới',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.3),
+      ),
+    );
+  }
+
   Widget _buildBottomNavBar(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed, // Cố định kiến trúc tránh hiệu ứng nhảy dịch vị trí khi chạm bấm
-      selectedItemColor: const Color(0xFFE07A5F), // Sắc cam làm nổi bật icon tab đang đứng hoạt động tích cực
-      unselectedItemColor: Colors.grey, // Sắc xám nhẹ cho các danh mục tab còn lại chưa được lựa chọn
-      currentIndex: 0, // Thiết lập vị trí mặc định nằm tại trang tiên phong đầu tiên (Tab Dashboard)
-      onTap: (index) {
-        if (index == 1) {
-          Navigator.pushNamed(context, '/host-booking-requests');
-        } else if (index == 2) {
-          Navigator.pushNamed(context, '/homestay-list');
-        } else if (index == 3) {
-          Navigator.pushNamed(context, '/profile');
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
-        BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), activeIcon: Icon(Icons.calendar_today), label: 'Lịch'),
-        BottomNavigationBarItem(icon: Icon(Icons.home_work_outlined), activeIcon: Icon(Icons.home_work), label: 'Nhà của tôi'),
-        BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
-      ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, -4))],
+      ),
+      child: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFFE07A5F),
+        unselectedItemColor: const Color(0xFF9CA3AF),
+        currentIndex: 0,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+        unselectedLabelStyle: const TextStyle(fontSize: 11),
+        onTap: (index) {
+          if (index == 1) Navigator.pushNamed(context, '/host-booking-requests');
+          else if (index == 2) Navigator.pushNamed(context, '/homestay-list');
+          else if (index == 3) Navigator.pushNamed(context, '/profile');
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), activeIcon: Icon(Icons.calendar_today), label: 'Lịch'),
+          BottomNavigationBarItem(icon: Icon(Icons.home_work_outlined), activeIcon: Icon(Icons.home_work), label: 'Nhà của tôi'),
+          BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),
+        ],
+      ),
     );
   }
 }

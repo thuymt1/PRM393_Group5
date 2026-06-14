@@ -6,143 +6,177 @@ class HostBookingDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
-        backgroundColor: Colors.white, // Nền trắng giúp phần thanh công cụ phía trên hiển thị sạch sẽ
-        elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại trang trước đó
-          onPressed: () => Navigator.pop(context),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.arrow_back, color: Color(0xFF374151), size: 20),
+          ),
         ),
         title: const Text(
           'Chi tiết yêu cầu',
           style: TextStyle(
-            color: Color(0xFF6D4C41),
+            color: Color(0xFF1F2937),
             fontWeight: FontWeight.bold,
             fontSize: 18,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
           ),
         ),
-        centerTitle: true, // Căn giữa tiêu đề của AppBar
+        centerTitle: true,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.share_outlined, color: Color(0xFF374151), size: 19),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng nội dung body
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatusBanner(), // Khối biểu ngữ cảnh báo trạng thái chờ duyệt của đơn phòng
-            const SizedBox(height: 24),
-            _buildGuestInfoSection(), // Thẻ hiển thị thông tin chân dung khách hàng và nút chat nhanh
-            const SizedBox(height: 24),
-            _buildBookingSummarySection(), // Thẻ tóm tắt chi tiết lịch trình phòng ở, thời gian và số khách
-            const SizedBox(height: 24),
-            _buildPaymentSummarySection(), // Thẻ tóm tắt chi tiết hóa đơn chi phí doanh thu thu nhập
-            const SizedBox(height: 32),
-            _buildMessageFromGuest(), // Khối hiển thị thông điệp, lời nhắn gửi từ vị khách đặt phòng
-            const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh BottomSheet
+            _buildStatusBanner(),
+            const SizedBox(height: 20),
+            _buildGuestInfoSection(context),
+            const SizedBox(height: 20),
+            _buildBookingSummarySection(),
+            const SizedBox(height: 20),
+            _buildPaymentSummarySection(),
+            const SizedBox(height: 20),
+            _buildMessageFromGuest(),
           ],
         ),
       ),
-      bottomSheet: _buildActionButtons(context), // Cụm nút đôi tác vụ duyệt hoặc từ chối ghim cố định đáy màn hình
+      bottomNavigationBar: _buildActionButtons(context),
     );
   }
 
-  // Khối giao diện hiển thị thanh biểu ngữ thông báo trạng thái chờ xử lý (Status Banner)
   Widget _buildStatusBanner() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50, // Nền màu cam nhạt tạo tín hiệu lưu ý kiểm duyệt
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.shade100), // Đường viền sắc cam nhạt
+        gradient: LinearGradient(
+          colors: [Colors.orange.shade50, Colors.orange.shade50.withOpacity(0.5)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.orange.shade100),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.pending_actions, color: Colors.orange), // Icon biểu tượng chờ duyệt
-          SizedBox(width: 12),
-          Text(
-            'Yêu cầu đang chờ bạn phê duyệt',
-            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.pending_actions, color: Colors.orange, size: 20),
           ),
-        ],
-      ),
-    );
-  }
-
-  // Khối giao diện hiển thị thẻ thông tin liên hệ và lý lịch cơ bản của khách hàng đặt phòng
-  Widget _buildGuestInfoSection() {
-    return _buildSectionCard(
-      'Thông tin khách hàng',
-      Row(
-        children: [
-          const CircleAvatar(
-            radius: 30, // Bán kính vòng tròn ảnh chân dung vị khách
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user1'),
-          ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Trần An Nhiên',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                  'Đang chờ phê duyệt',
+                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14),
                 ),
+                SizedBox(height: 2),
                 Text(
-                  'Khách hàng từ 2023 • 12 chuyến đi',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                  'Yêu cầu này cần được bạn xem xét và phê duyệt',
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 11),
                 ),
               ],
             ),
           ),
-          // Nút bấm nhắn tin trò chuyện trao đổi trực tiếp với vị khách
-          IconButton(
-            icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFE07A5F)), // Điểm xuyết sắc cam thương hiệu cho nút chat
-            onPressed: () {
-              // Xử lý mở luồng màn hình hội thoại riêng biệt
-            },
-          ),
         ],
       ),
     );
   }
 
-  // Khối giao diện tóm tắt chi tiết lịch trình phòng ốc lưu trú thông qua cấu trúc danh sách hàng dọc
-  Widget _buildBookingSummarySection() {
+  Widget _buildGuestInfoSection(BuildContext context) {
     return _buildSectionCard(
-      'Chi tiết đặt phòng',
+      'Thông tin khách hàng',
+      Icons.person_outline,
       Column(
         children: [
-          _buildInfoRow(Icons.home_work_outlined, 'Homestay', 'The Terracotta Nest'),
-          const Divider(height: 32), // Đường vạch kẻ ngang phân tách mảnh tạo không gian thông thoáng
-          _buildInfoRow(Icons.calendar_today_outlined, 'Thời gian', '20/06 - 22/06/2026 (2 đêm)'),
-          const Divider(height: 32),
-          _buildInfoRow(Icons.people_outline, 'Số khách', '2 Người lớn'),
-        ],
-      ),
-    );
-  }
-
-  // Khối giao diện tóm tắt chi tiết hóa đơn tài chính dòng thu nhập dự tính thực nhận của chủ nhà
-  Widget _buildPaymentSummarySection() {
-    return _buildSectionCard(
-      'Tóm tắt thanh toán',
-      Column(
-        children: [
-          _buildDataRow('Giá phòng (2 đêm)', '2.500.000đ'),
-          _buildDataRow('Phí dịch vụ', '50.000đ'),
-          const Divider(height: 32),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Row(
             children: [
-              Text(
-                'Tổng thu nhập của bạn',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+              Stack(
+                children: [
+                  const CircleAvatar(
+                    radius: 32,
+                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user1'),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 14,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                '2.550.000đ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFE07A5F)), // Làm nổi bật số tiền thu nhập bằng sắc cam cam
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Trần An Nhiên',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Khách hàng từ 2023',
+                      style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
+              GestureDetector(
+                onTap: () {},
+                child: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE07A5F).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.chat_bubble_outline, color: Color(0xFFE07A5F), size: 20),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _guestStat('12', 'Chuyến đi', Icons.flight_outlined),
+              _divider(),
+              _guestStat('4.9', 'Đánh giá', Icons.star_outline),
+              _divider(),
+              _guestStat('100%', 'Phản hồi', Icons.speed_outlined),
             ],
           ),
         ],
@@ -150,41 +184,146 @@ class HostBookingDetailScreen extends StatelessWidget {
     );
   }
 
-  // Khối văn bản hiển thị lời giới thiệu hoặc tâm thư nhắn nhủ ngắn gọn đi kèm từ vị khách đặt phòng
+  Widget _guestStat(String val, String label, IconData icon) {
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFFE07A5F)),
+          const SizedBox(height: 4),
+          Text(val, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1F2937))),
+          Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider() {
+    return Container(width: 1, height: 36, color: const Color(0xFFE5E7EB));
+  }
+
+  Widget _buildBookingSummarySection() {
+    return _buildSectionCard(
+      'Chi tiết đặt phòng',
+      Icons.calendar_today_outlined,
+      Column(
+        children: [
+          _buildInfoRow(Icons.home_work_outlined, 'Homestay', 'The Terracotta Nest'),
+          const SizedBox(height: 16),
+          Container(height: 1, color: const Color(0xFFF3F4F6)),
+          const SizedBox(height: 16),
+          _buildInfoRow(Icons.calendar_today_outlined, 'Thời gian', '20/06 – 22/06/2026\n(2 đêm)'),
+          const SizedBox(height: 16),
+          Container(height: 1, color: const Color(0xFFF3F4F6)),
+          const SizedBox(height: 16),
+          _buildInfoRow(Icons.people_outline, 'Số khách', '2 Người lớn'),
+          const SizedBox(height: 16),
+          Container(height: 1, color: const Color(0xFFF3F4F6)),
+          const SizedBox(height: 16),
+          _buildInfoRow(Icons.access_time_outlined, 'Nhận phòng', '14:00 – Trả phòng: 12:00'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSummarySection() {
+    return _buildSectionCard(
+      'Tóm tắt thanh toán',
+      Icons.payments_outlined,
+      Column(
+        children: [
+          _buildDataRow('Giá phòng (2 đêm)', '2.500.000đ', false),
+          const SizedBox(height: 12),
+          _buildDataRow('Phí dịch vụ', '50.000đ', false),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF3EE), Color(0xFFFAE8E0)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tổng thu nhập', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                    Text('Sau phí nền tảng', style: TextStyle(fontSize: 10, color: Color(0xFF9CA3AF))),
+                  ],
+                ),
+                Text(
+                  '2.550.000đ',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFE07A5F)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageFromGuest() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Lời nhắn từ khách',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+        Row(
+          children: [
+            const Icon(Icons.message_outlined, size: 16, color: Color(0xFF5D3A2E)),
+            const SizedBox(width: 8),
+            const Text(
+              'Lời nhắn từ khách',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        // Hộp Container nền màu be vàng nhạt nhã nhặn bao bọc văn bản lời nhắn chữ nghiêng
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFFF7F4E1),
-            borderRadius: BorderRadius.circular(16),
+            color: const Color(0xFFF5F0E8),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE5E0D0)),
           ),
-          child: const Text(
-            '"Chào chủ nhà, mình và bạn muốn thuê phòng để kỷ niệm ngày kỷ niệm của tụi mình. Hy vọng bạn sẽ đồng ý yêu cầu nhé. Cảm ơn bạn!"',
-            style: TextStyle(color: Color(0xFF424242), height: 1.5, fontStyle: FontStyle.italic), // Giãn cách dòng 1.5 kết hợp chữ in nghiêng tinh tế
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.format_quote, color: Color(0xFFE07A5F), size: 20),
+              const SizedBox(height: 6),
+              const Text(
+                'Chào chủ nhà, mình và bạn muốn thuê phòng để kỷ niệm ngày kỷ niệm của tụi mình. Hy vọng bạn sẽ đồng ý yêu cầu nhé. Cảm ơn bạn!',
+                style: TextStyle(
+                  color: Color(0xFF374151),
+                  height: 1.6,
+                  fontStyle: FontStyle.italic,
+                  fontSize: 13,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  // Hàm thiết kế dùng chung cấu trúc một khối thẻ Card nền trắng bo góc mềm mại có đổ bóng mờ nhẹ
-  Widget _buildSectionCard(String title, Widget content) {
+  Widget _buildSectionCard(String title, IconData icon, Widget content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+        Row(
+          children: [
+            Icon(icon, size: 16, color: const Color(0xFF5D3A2E)),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         Container(
@@ -193,7 +332,7 @@ class HostBookingDetailScreen extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 14, offset: const Offset(0, 5)),
             ],
           ),
           child: content,
@@ -202,76 +341,104 @@ class HostBookingDetailScreen extends StatelessWidget {
     );
   }
 
-  // Hàm hỗ trợ vẽ một hàng thông tin gồm Icon sắc cam, nhãn xám mờ và giá trị in đậm phía dưới
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: const Color(0xFFE07A5F)), // Đặt màu sắc cam thương hiệu cho các biểu tượng đầu dòng
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE07A5F).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 16, color: const Color(0xFFE07A5F)),
+        ),
         const SizedBox(width: 12),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Text(label, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11)),
+            const SizedBox(height: 3),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Color(0xFF374151))),
           ],
         ),
       ],
     );
   }
 
-  // Hàm hỗ trợ vẽ một hàng hóa đơn gồm nhãn văn bản bên trái và chi phí đối ứng hàng dọc bên phải
-  Widget _buildDataRow(String label, String value) {
+  Widget _buildDataRow(String label, String value, bool isBold) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+        Text(label, style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+            fontSize: 13,
+            color: const Color(0xFF374151),
+          ),
+        ),
       ],
     );
   }
 
-  // Thanh phím đôi tác vụ ("Từ chối" / "Phê duyệt") cố định dưới chân mép đáy màn hình thông qua cơ chế BottomSheet
   Widget _buildActionButtons(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ / thanh vuốt hệ thống
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)) // Hiệu ứng đổ bóng đổ ngược lên trên
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, -4)),
         ],
       ),
       child: Row(
         children: [
-          // Nút bấm tác vụ "Từ chối" dạng viền nét vẽ màu đỏ nổi bật tác vụ hủy bỏ đơn
           Expanded(
-            child: OutlinedButton(
-              onPressed: () => _showRejectDialog(context), // Gọi bật mở cửa sổ pop-up hộp thoại lấy lý do từ chối
+            child: OutlinedButton.icon(
+              onPressed: () => _showRejectDialog(context),
+              icon: const Icon(Icons.close, size: 16),
+              label: const Text('Từ chối', style: TextStyle(fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
-                side: const BorderSide(color: Colors.red), // Viền đỏ bao quanh nút bấm
-                minimumSize: const Size(0, 56), // Chiều cao hộp nút bấm chuẩn là 56 đơn vị
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                side: const BorderSide(color: Colors.red),
+                minimumSize: const Size(0, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Từ chối', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
-          const SizedBox(width: 16), // Khoảng trống phân tách giữa hai phím nút bấm
-          // Nút bấm lớn màu nâu hệ thống thực hiện phê duyệt đồng ý tiếp nhận lịch đặt đơn phòng của khách
+          const SizedBox(width: 14),
           Expanded(
-            child: ElevatedButton(
+            flex: 2,
+            child: ElevatedButton.icon(
               onPressed: () {
-                // TODO: Xử lý gọi kết nối API cập nhật trạng thái đơn phòng thành công và gửi thông báo cho khách
-                print("Phê duyệt đơn đặt chỗ thành công!");
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.white, size: 18),
+                        SizedBox(width: 8),
+                        Text('Đã phê duyệt thành công!'),
+                      ],
+                    ),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6D4C41), // Sắc màu nâu đậm chủ đạo hệ thống
-                minimumSize: const Size(0, 56),
-                elevation: 0, // Triệt tiêu đổ bóng mặc định giúp phím phẳng mượt tinh tế tiệp vào nền trắng BottomSheet
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+              label: const Text(
+                'Phê duyệt ngay',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
               ),
-              child: const Text(
-                'Phê duyệt',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5D3A2E),
+                minimumSize: const Size(0, 52),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -280,64 +447,68 @@ class HostBookingDetailScreen extends StatelessWidget {
     );
   }
 
-  // Hàm tạo lập và mở cửa sổ pop-up hộp thoại tiếp nhận thông tin lý do khước từ đơn hàng (Alert Dialog)
   void _showRejectDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // Thiết lập bo cong góc hộp hội thoại 24 đơn vị
-        title: const Text(
-          'Lý do từ chối',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.cancel_outlined, color: Colors.red, size: 22),
+            SizedBox(width: 10),
+            Text('Lý do từ chối', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1F2937), fontSize: 16)),
+          ],
         ),
         content: Column(
-          mainAxisSize: MainAxisSize.min, // Thu hẹp chiều cao hộp thoại khít vừa số lượng phần tử con bên trong
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
               'Vui lòng cho khách biết lý do bạn không thể nhận đơn này.',
-              style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4), // Giãn dòng 1.4 thông thoáng văn bản
+              style: TextStyle(fontSize: 13, color: Color(0xFF6B7280), height: 1.5),
             ),
             const SizedBox(height: 16),
-            // Ô TextField tiếp nhận thông tin lý do giải trình gỡ đơn phòng từ phía chủ nhà
             TextField(
-              maxLines: 3, // Giới hạn chiều cao ô hiển thị mặc định rộng 3 dòng chữ nhập
+              maxLines: 3,
               decoration: InputDecoration(
                 hintText: 'Nhập lý do...',
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
                 filled: true,
-                fillColor: Colors.grey.shade100, // Phủ lớp nền màu xám nhạt mịn màng sạch sẽ
+                fillColor: const Color(0xFFF9FAFB),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none, // Triệt tiêu đường viền mặc định của khung TextField
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE07A5F)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: Colors.grey.shade200),
                 ),
               ),
             ),
           ],
         ),
         actions: [
-          // Nút phím bấm chữ hỗ trợ thoát hủy bỏ tác vụ đóng cửa sổ pop-up
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+            child: const Text('Hủy', style: TextStyle(color: Color(0xFF6B7280))),
           ),
-          // Nút bấm lớn màu đỏ xác thực thực thi hành động hủy bỏ đơn hàng đặt phòng thực sự
           ElevatedButton(
             onPressed: () {
-              // TODO: Triển khai gửi dữ liệu lý do từ chối lên Server/API hệ thống
-              Navigator.pop(context); // Đóng cửa sổ pop-up hộp thoại Dialog
-              print("Xác nhận gỡ bỏ từ chối đơn đặt phòng hoàn tất!");
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red, // Nền sắc đỏ nổi bật hành động gỡ bỏ
+              backgroundColor: Colors.red,
+              elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text(
-              'Xác nhận từ chối',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
+            child: const Text('Xác nhận từ chối', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
         ],
       ),
     );

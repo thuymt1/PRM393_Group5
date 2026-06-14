@@ -7,14 +7,22 @@ class HomestayListScreen extends StatefulWidget {
   State<HomestayListScreen> createState() => _HomestayListScreenState();
 }
 
-class _HomestayListScreenState extends State<HomestayListScreen> {
-  // Tập hợp danh sách dữ liệu mô phỏng thông tin các căn Homestay trên toàn hệ thống
+class _HomestayListScreenState extends State<HomestayListScreen>
+    with SingleTickerProviderStateMixin {
+  int _selectedFilter = 0;
+  bool _isGridView = true;
+  final TextEditingController _searchController = TextEditingController();
+
+  final List<String> _filters = ['Gần đây', 'Phổ biến', 'Giá thấp', 'Đánh giá cao'];
+
   final List<Map<String, dynamic>> _homestays = [
     {
       'name': 'The Pine Hill',
       'location': 'Phường 4, Đà Lạt',
       'price': '1.200.000',
       'rating': 4.8,
+      'reviews': 124,
+      'status': 'Hoạt động',
       'image': 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000&auto=format&fit=crop',
     },
     {
@@ -22,6 +30,8 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
       'location': 'Hồ Tuyền Lâm',
       'price': '2.500.000',
       'rating': 4.9,
+      'reviews': 87,
+      'status': 'Hoạt động',
       'image': 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=1000&auto=format&fit=crop',
     },
     {
@@ -29,6 +39,8 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
       'location': 'Sơn Trà, Đà Nẵng',
       'price': '1.850.000',
       'rating': 4.7,
+      'reviews': 63,
+      'status': 'Tạm ẩn',
       'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=1000&auto=format&fit=crop',
     },
     {
@@ -36,6 +48,8 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
       'location': 'Mai Anh Đào, Đà Lạt',
       'price': '850.000',
       'rating': 4.6,
+      'reviews': 39,
+      'status': 'Hoạt động',
       'image': 'https://images.unsplash.com/photo-1449156001437-3a1441df910b?q=80&w=1000&auto=format&fit=crop',
     },
     {
@@ -43,6 +57,8 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
       'location': 'Trại Mát, Đà Lạt',
       'price': '1.550.000',
       'rating': 4.9,
+      'reviews': 201,
+      'status': 'Hoạt động',
       'image': 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=1000&auto=format&fit=crop',
     },
     {
@@ -50,6 +66,8 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
       'location': 'Sapa, Lào Cai',
       'price': '1.100.000',
       'rating': 4.5,
+      'reviews': 55,
+      'status': 'Chờ duyệt',
       'image': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop',
     },
   ];
@@ -57,97 +75,141 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
-        backgroundColor: Colors.white, // Nền trắng cho thanh công cụ phía trên nhằm làm nổi bật ô tìm kiếm phía dưới
-        elevation: 0, // Khử bóng đổ của thanh AppBar
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context), // Quay lại giao diện màn hình trước đó
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.arrow_back, color: Color(0xFF374151), size: 20),
+          ),
         ),
         title: const Text(
-          'Tất cả Homestay',
+          'Homestay của tôi',
           style: TextStyle(
-            color: Color(0xFF6D4C41),
+            color: Color(0xFF1F2937),
             fontWeight: FontWeight.bold,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo cấu hình font tương ứng trong pubspec.yaml
+            fontSize: 18,
           ),
         ),
+        centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.tune, color: Color(0xFF6D4C41)), // Nút cấu hình nhanh bộ lọc nâng cao
-            onPressed: () {},
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildSearchAndFilter(), // Khối chứa ô nhập tìm kiếm và thanh lựa chọn nhanh tiêu chí (Chips)
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16), // Tạo biên đệm 16 đơn vị bao quanh vùng lưới ô cờ
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, // Thiết lập hiển thị cố định chia làm 2 cột hàng dọc
-                crossAxisSpacing: 16, // Khoảng cách trống giữa các cột kế bên nhau
-                mainAxisSpacing: 16, // Khoảng cách trống giữa các dòng phía trên và phía dưới
-                childAspectRatio: 0.72, // Tỷ lệ vàng tương quan giữa chiều rộng và chiều cao của mỗi ô Card
+          // Toggle grid/list
+          GestureDetector(
+            onTap: () => setState(() => _isGridView = !_isGridView),
+            child: Container(
+              margin: const EdgeInsets.only(right: 8),
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(10),
               ),
-              itemCount: _homestays.length, // Định số lượng thẻ cần vẽ dựa theo mảng dữ liệu đầu vào
-              itemBuilder: (context, index) {
-                return _buildHomestayCard(_homestays[index]); // Vẽ cấu trúc chi tiết từng thẻ ô cờ nhỏ
-              },
+              child: Icon(
+                _isGridView ? Icons.view_list_outlined : Icons.grid_view_outlined,
+                color: const Color(0xFF374151),
+                size: 19,
+              ),
             ),
           ),
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.tune_outlined, color: Color(0xFF374151), size: 19),
+          ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(112),
+          child: _buildSearchAndFilter(),
+        ),
+      ),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: _isGridView ? _buildGridView() : _buildListView(),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Xử lý kích hoạt luồng bản đồ vị trí trực quan
-          print("Mở chế độ hiển thị Bản đồ danh sách");
-        },
-        backgroundColor: const Color(0xFF6D4C41), // Màu sắc nâu chủ đạo cho nút bấm nổi
-        icon: const Icon(Icons.map_outlined, color: Colors.white), // Biểu tượng bản đồ
-        label: const Text('Bản đồ', style: TextStyle(color: Colors.white)), // Nhãn văn bản đi kèm nút rộng
+        onPressed: () => Navigator.pushNamed(context, '/add-homestay-basic-info'),
+        backgroundColor: const Color(0xFFE07A5F),
+        elevation: 3,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Thêm mới', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
 
-  // Khối giao diện kết hợp ô tìm kiếm TextField và thanh bộ lọc nhanh dạng hàng ngang
   Widget _buildSearchAndFilter() {
     return Container(
-      color: Colors.white, // Phủ màu nền trắng đồng điệu liên mạch với AppBar phía trên
+      color: Colors.white,
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F4E1), // Sắc be nhạt tương phản nhẹ giúp làm nổi bật ô nhập dữ liệu
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFF5F0E8),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: const TextField(
+              child: TextField(
+                controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: 'Tìm kiếm homestay...',
-                  border: InputBorder.none, // Xóa bỏ viền gạch chân mặc định của TextField
-                  icon: Icon(Icons.search, color: Color(0xFFE07A5F)), // Biểu tượng kính lúp sắc cam
+                  hintText: 'Tìm homestay...',
+                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                  border: InputBorder.none,
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFFE07A5F), size: 20),
+                  suffixIcon: _searchController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: Color(0xFF9CA3AF), size: 18),
+                          onPressed: () => setState(() => _searchController.clear()),
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
           ),
-          // Thanh danh mục bộ lọc nhanh hỗ trợ cuộn theo chiều ngang (Horizontal ListView)
           SizedBox(
-            height: 40, // Giới hạn chiều cao an toàn bao quanh các nút Filter Chip
+            height: 36,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: [
-                _buildFilterChip('Gần đây', true), // Thẻ mặc định giả định được kích hoạt
-                _buildFilterChip('Phổ biến', false),
-                _buildFilterChip('Giá thấp', false),
-                _buildFilterChip('Đánh giá cao', false),
-              ],
+              children: List.generate(_filters.length, (i) {
+                final isSelected = _selectedFilter == i;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedFilter = i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF5D3A2E) : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? Colors.transparent : const Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    child: Text(
+                      _filters[i],
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                );
+              }),
             ),
           ),
         ],
@@ -155,40 +217,48 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
     );
   }
 
-  // Hàm hỗ trợ thiết kế cấu trúc cho các nhãn lựa chọn nhanh tiêu chí lọc (Filter Chip)
-  Widget _buildFilterChip(String label, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8), // Tạo khoảng hở đệm giữa các nhãn kề nhau
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        // Đổi màu nền sang sắc cam nếu thẻ đó được người dùng nhấn chọn kích hoạt
-        color: isSelected ? const Color(0xFFE07A5F) : Colors.white,
-        borderRadius: BorderRadius.circular(20), // Tạo hình dáng viên thuốc bo tròn mềm mại
-        border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade300),
+  Widget _buildGridView() {
+    return GridView.builder(
+      key: const ValueKey('grid'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        childAspectRatio: 0.68,
       ),
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey.shade700, // Đổi màu chữ tương phản theo nền nhãn
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ),
+      itemCount: _homestays.length,
+      itemBuilder: (context, index) {
+        return _buildGridCard(_homestays[index]);
+      },
     );
   }
 
-  // Hàm thiết kế cấu trúc chi tiết của từng ô vuông hiển thị thông tin Homestay gọn gàng
-  Widget _buildHomestayCard(Map<String, dynamic> homestay) {
+  Widget _buildListView() {
+    return ListView.builder(
+      key: const ValueKey('list'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _homestays.length,
+      itemBuilder: (context, index) {
+        return _buildListCard(_homestays[index]);
+      },
+    );
+  }
+
+  Widget _buildGridCard(Map<String, dynamic> homestay) {
+    final isActive = homestay['status'] == 'Hoạt động';
+    final isPending = homestay['status'] == 'Chờ duyệt';
+
+    Color statusColor = isActive ? Colors.green : isPending ? Colors.orange : Colors.grey;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16), // Bo tròn bốn góc cho thẻ ô cờ 16 đơn vị
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ nhẹ tạo cảm giác nổi tinh tế
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -196,83 +266,206 @@ class _HomestayListScreenState extends State<HomestayListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Khu vực hiển thị Hình ảnh (Chiếm trọn không gian trống phía trên của Card thông qua Expanded)
           Expanded(
+            flex: 3,
             child: Stack(
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)), // Chỉ bo góc tròn phía trên của ảnh
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   child: Image.network(
                     homestay['image'],
                     width: double.infinity,
                     height: double.infinity,
-                    fit: BoxFit.cover, // Cắt cúp ảnh cân đối lấp đầy vùng chứa của ô lưới
+                    fit: BoxFit.cover,
                   ),
                 ),
-                // Nút bấm hình trái tim nhỏ ở góc phải bức ảnh tương tác lưu mục yêu thích
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
                 Positioned(
-                  top: 8,
-                  right: 8,
-                  child: CircleAvatar(
-                    backgroundColor: Colors.white.withOpacity(0.8), // Nền trắng mờ trong suốt
-                    radius: 14, // Kích thước vòng tròn bao quanh icon thu nhỏ gọn gàng
-                    child: const Icon(Icons.favorite_border, size: 16, color: Colors.black),
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      homestay['status'],
+                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 10,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 10),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${homestay['rating']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          // Khu vực hiển thị thông tin bằng văn bản chi tiết bên dưới ảnh của Homestay
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Hàng hiển thị Tên Homestay và Điểm số đánh giá trung bình
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        homestay['name'],
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        overflow: TextOverflow.ellipsis, // Xuất hiện dấu ba chấm ngắt quãng nếu tên quá rộng
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 12), // Biểu tượng ngôi sao vàng đánh giá
-                        Text(' ${homestay['rating']}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                // Hiển thị thông tin địa phương/vị trí địa lý căn nhà
-                Text(
-                  homestay['location'],
-                  style: const TextStyle(color: Colors.grey, fontSize: 11),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis, // Giới hạn nội dung địa chỉ hiển thị khít trên duy nhất 1 dòng
-                ),
-                const SizedBox(height: 8),
-                // Khối hiển thị chi phí giá thuê phòng phối trộn kích cỡ phông chữ linh hoạt
-                Text.rich(
-                  TextSpan(
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    homestay['name'],
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1F2937)),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Row(
                     children: [
-                      TextSpan(
-                        text: '${homestay['price']}đ',
-                        style: const TextStyle(
-                          color: Color(0xFFE07A5F), // Điểm xuyết sắc cam thương hiệu cho thông số giá cả
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                      const Icon(Icons.location_on_outlined, size: 10, color: Color(0xFF9CA3AF)),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          homestay['location'],
+                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const TextSpan(text: ' /đêm', style: TextStyle(color: Colors.grey, fontSize: 10)),
                     ],
                   ),
-                ),
-              ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${homestay['price']}đ',
+                                style: const TextStyle(
+                                  color: Color(0xFFE07A5F),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              const TextSpan(text: '/đêm', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 9)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F0E8),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.more_vert, size: 15, color: Color(0xFF6B7280)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListCard(Map<String, dynamic> homestay) {
+    final isActive = homestay['status'] == 'Hoạt động';
+    final isPending = homestay['status'] == 'Chờ duyệt';
+    Color statusColor = isActive ? Colors.green : isPending ? Colors.orange : Colors.grey;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+            child: Image.network(
+              homestay['image'],
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          homestay['name'],
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1F2937)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(homestay['location'], style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Color(0xFFF59E0B), size: 12),
+                      Text(' ${homestay['rating']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                      const SizedBox(width: 6),
+                      Text('(${homestay['reviews']} đánh giá)', style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10)),
+                      const Spacer(),
+                      Text(
+                        '${homestay['price']}đ',
+                        style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
