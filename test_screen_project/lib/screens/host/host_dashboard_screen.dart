@@ -303,11 +303,27 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
       mainAxisSpacing: 14,
       childAspectRatio: 1.55,
       children: [
-        _statItem('Lượt xem', '1.240', Icons.visibility_outlined, const Color(0xFF6366F1), '+8%'),
-        _statItem('Đặt phòng', '18', Icons.book_online_outlined, const Color(0xFFE07A5F), '+3'),
-        _statItem('Đánh giá', '4.9 ⭐', Icons.star_outline, const Color(0xFFF59E0B), 'Xuất sắc'),
-        _statItem('Phản hồi', '98%', Icons.chat_bubble_outline, const Color(0xFF10B981), 'Rất nhanh'),
+        _buildAnimatedStatItem(0, 'Lượt xem', '1.240', Icons.visibility_outlined, const Color(0xFF6366F1), '+8%'),
+        _buildAnimatedStatItem(1, 'Đặt phòng', '18', Icons.book_online_outlined, const Color(0xFFE07A5F), '+3'),
+        _buildAnimatedStatItem(2, 'Đánh giá', '4.9 ⭐', Icons.star_outline, const Color(0xFFF59E0B), 'Xuất sắc'),
+        _buildAnimatedStatItem(3, 'Phản hồi', '98%', Icons.chat_bubble_outline, const Color(0xFF10B981), 'Rất nhanh'),
       ],
+    );
+  }
+
+  Widget _buildAnimatedStatItem(int index, String label, String val, IconData icon, Color color, String sub) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 400 + (index * 100)),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (value * 0.2),
+          child: Opacity(
+            opacity: value,
+            child: _statItem(label, val, icon, color, sub),
+          ),
+        );
+      },
     );
   }
 
@@ -473,98 +489,101 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
   }
 
   Widget _buildBookingRequestItem(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Stack(
-                children: [
-                  const CircleAvatar(
-                    radius: 24,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user_an_nhien'),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.greenAccent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => Navigator.pushNamed(context, '/host-booking-detail'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Stack(
                   children: [
-                    Text(
-                      'Trần An Nhiên',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1F2937)),
+                    const CircleAvatar(
+                      radius: 24,
+                      backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user_an_nhien'),
                     ),
-                    SizedBox(height: 3),
-                    Text(
-                      '2 đêm • 2 khách • 20/06 – 22/06',
-                      style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(8),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Trần An Nhiên',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1F2937)),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        '2 đêm • 2 khách • 20/06 – 22/06',
+                        style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Text(
-                  'Chờ duyệt',
-                  style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Chờ duyệt',
+                    style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const Icon(Icons.home_outlined, size: 14, color: Color(0xFF9CA3AF)),
-              const SizedBox(width: 6),
-              const Text('The Terracotta Nest', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
-              const Spacer(),
-              const Text(
-                '2.550.000đ',
-                style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              const SizedBox(width: 12),
-              ElevatedButton(
-                onPressed: () => Navigator.pushNamed(context, '/host-booking-requests'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF5D3A2E),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: Color(0xFFF3F4F6)),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                const Icon(Icons.home_outlined, size: 14, color: Color(0xFF9CA3AF)),
+                const SizedBox(width: 6),
+                const Text('The Terracotta Nest', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                const Spacer(),
+                const Text(
+                  '2.550.000đ',
+                  style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14),
                 ),
-                child: const Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () => Navigator.pushNamed(context, '/host-booking-requests'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5D3A2E),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Chi tiết', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

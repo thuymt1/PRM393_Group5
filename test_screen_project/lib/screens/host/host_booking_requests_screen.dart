@@ -64,6 +64,24 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
     return _requests.where((r) => r['status'] == _filters[_selectedFilter]).toList();
   }
 
+  Widget _buildAnimatedRequestCard(BuildContext context, Map<String, dynamic> data, int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 350 + (index * 80)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - value) * 30),
+          child: Opacity(
+            opacity: value,
+            child: child,
+          ),
+        );
+      },
+      child: _buildRequestCard(context, data, index),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,7 +150,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
               itemCount: _filteredRequests.length,
               itemBuilder: (context, index) {
-                return _buildRequestCard(context, _filteredRequests[index], index);
+                return _buildAnimatedRequestCard(context, _filteredRequests[index], index);
               },
             ),
     );
@@ -151,7 +169,8 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
             return GestureDetector(
               onTap: () => setState(() => _selectedFilter = i),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
                 margin: const EdgeInsets.only(right: 10),
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 decoration: BoxDecoration(
@@ -327,33 +346,25 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
                   Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton.icon(
+                        child: _AnimatedButton(
                           onPressed: () => _showRejectDialog(context),
-                          icon: const Icon(Icons.close, size: 16),
-                          label: const Text('Từ chối'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            minimumSize: const Size(0, 46),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
+                          isOutlined: true,
+                          icon: Icons.close,
+                          label: 'Từ chối',
+                          color: Colors.red,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
+                        child: _AnimatedButton(
                           onPressed: () {
                             setState(() => _requests[_requests.indexOf(data)]['status'] = 'Đã duyệt');
                             _showSuccessSnackbar(context, 'Đã phê duyệt thành công!');
                           },
-                          icon: const Icon(Icons.check, size: 16, color: Colors.white),
-                          label: const Text('Phê duyệt', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5D3A2E),
-                            minimumSize: const Size(0, 46),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
+                          isOutlined: false,
+                          icon: Icons.check,
+                          label: 'Phê duyệt',
+                          color: const Color(0xFF5D3A2E),
                         ),
                       ),
                     ],
@@ -472,6 +483,86 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
           ),
           const SizedBox(width: 4),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedButton extends StatefulWidget {
+  final VoidCallback onPressed;
+  final bool isOutlined;
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _AnimatedButton({
+    required this.onPressed,
+    required this.isOutlined,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  State<_AnimatedButton> createState() => _AnimatedButtonState();
+}
+
+class _AnimatedButtonState extends State<_AnimatedButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onPressed();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: widget.isOutlined
+            ? OutlinedButton.icon(
+                onPressed: widget.onPressed,
+                icon: Icon(widget.icon, size: 16),
+                label: Text(widget.label),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: widget.color,
+                  side: BorderSide(color: widget.color),
+                  minimumSize: const Size(0, 46),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              )
+            : ElevatedButton.icon(
+                onPressed: widget.onPressed,
+                icon: Icon(widget.icon, size: 16, color: Colors.white),
+                label: Text(widget.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: widget.color,
+                  minimumSize: const Size(0, 46),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
       ),
     );
   }
