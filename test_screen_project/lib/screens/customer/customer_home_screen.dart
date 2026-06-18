@@ -1,0 +1,787 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/api_service.dart';
+import '../../models/homestay_model.dart';
+
+class CustomerHomeScreen extends StatefulWidget {
+  const CustomerHomeScreen({super.key});
+
+  @override
+  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
+}
+
+class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+  int _currentIndex = 0;
+  final ApiService _apiService = ApiService();
+  bool _initialized = false;
+  
+  // Lưu danh sách ID các homestay yêu thích (favorites) để quản lý tương tác trong phiên
+  final Set<int> _favoriteHomestayIds = {};
+
+  // Hàm chuyển đổi tab của Container chính
+  void _onTabTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_initialized) {
+      final initialTab = ModalRoute.of(context)?.settings.arguments as int?;
+      if (initialTab != null) {
+        _currentIndex = initialTab;
+      }
+      _initialized = true;
+    }
+
+    // 4 tab tương ứng: Khám phá, Yêu thích, Chuyến đi, Hồ sơ
+    final List<Widget> tabs = [
+      _buildExploreTab(),
+      _buildFavoritesTab(),
+      _buildBookingsTab(),
+      _buildProfileTab(),
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDFAE7), // Surface color từ design system
+      body: SafeArea(
+        child: tabs[_currentIndex],
+      ),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  // --- 1. TAB KHÁM PHÁ (EXPLORE TAB) ---
+  String _searchQuery = '';
+  String _selectedCategory = 'Tất cả';
+
+  Widget _buildExploreTab() {
+    return FutureBuilder<List<Homestay>>(
+      future: _apiService.getHomestays(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+          );
+        }
+        
+        final allHomestays = snapshot.data ?? [];
+        
+        // Thực hiện lọc theo danh mục và từ khóa tìm kiếm
+        final filteredHomestays = allHomestays.where((homestay) {
+          final matchesSearch = homestay.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              homestay.city.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              homestay.address.toLowerCase().contains(_searchQuery.toLowerCase());
+          
+          final matchesCategory = _selectedCategory == 'Tất cả' ||
+              homestay.category.toLowerCase() == _selectedCategory.toLowerCase();
+          
+          return matchesSearch && matchesCategory;
+        }).toList();
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            setState(() {});
+          },
+          color: const Color(0xFFE07A5F),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWelcomeHeader(),
+                _buildSearchSection(),
+                _buildCategoryFilter(),
+                _buildFeaturedSection(filteredHomestays),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWelcomeHeader() {
+    final user = Supabase.instance.client.auth.currentUser;
+    final String displayName = user?.email?.split('@').first ?? 'Alexandria';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Chào $displayName,',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF424242),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tìm kiếm homestay hoàn hảo cho kỳ nghỉ của bạn.',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: TextField(
+          onChanged: (val) {
+            setState(() {
+              _searchQuery = val;
+            });
+          },
+          decoration: InputDecoration(
+            hintText: 'Bạn muốn đi đâu?',
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            border: InputBorder.none,
+            icon: const Icon(Icons.search, color: Color(0xFFE07A5F)),
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.tune, color: Color(0xFF6D4C41)),
+              onPressed: () {
+                Navigator.pushNamed(context, '/filter');
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryFilter() {
+    final categories = [
+      {'icon': Icons.grid_view_rounded, 'label': 'Tất cả'},
+      {'icon': Icons.beach_access, 'label': 'Biển'},
+      {'icon': Icons.terrain, 'label': 'Núi'},
+      {'icon': Icons.apartment, 'label': 'Thành phố'},
+      {'icon': Icons.forest, 'label': 'Rừng'},
+    ];
+
+    return SizedBox(
+      height: 90,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        itemCount: categories.length,
+        itemBuilder: (context, index) {
+          final label = categories[index]['label'] as String;
+          final isSelected = _selectedCategory == label;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 20),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedCategory = label;
+                });
+              },
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFFE07A5F).withOpacity(0.1) : const Color(0xFFF7F4E1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: isSelected ? Border.all(color: const Color(0xFFE07A5F)) : null,
+                    ),
+                    child: Icon(
+                      categories[index]['icon'] as IconData,
+                      color: isSelected ? const Color(0xFFE07A5F) : const Color(0xFF6D4C41),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? const Color(0xFFE07A5F) : Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFeaturedSection(List<Homestay> homestays) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+          child: Text(
+            'Homestay nổi bật',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+          ),
+        ),
+        if (homestays.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(40.0),
+            child: Center(
+              child: Text(
+                'Không tìm thấy homestay phù hợp.',
+                style: TextStyle(color: Colors.grey, fontSize: 14),
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: homestays.length,
+            itemBuilder: (context, index) {
+              return _buildHomestayCard(homestays[index]);
+            },
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHomestayCard(Homestay homestay) {
+    final isFav = _favoriteHomestayIds.contains(homestay.id);
+    final String imageUrl = homestay.images.isNotEmpty 
+        ? homestay.images.first 
+        : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(context, '/homestay-detail', arguments: homestay);
+        },
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              child: Stack(
+                children: [
+                  Image.network(
+                    imageUrl,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.white70,
+                      child: IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: isFav ? Colors.red : Colors.black,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (isFav) {
+                              _favoriteHomestayIds.remove(homestay.id);
+                            } else {
+                              _favoriteHomestayIds.add(homestay.id);
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            '4.8',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          homestay.name,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                '${homestay.address}, ${homestay.city}',
+                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${homestay.pricePerNight.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ',
+                          style: const TextStyle(
+                            color: Color(0xFFE07A5F),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const TextSpan(text: '/đêm', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- 2. TAB YÊU THÍCH (FAVORITES TAB) ---
+  Widget _buildFavoritesTab() {
+    return FutureBuilder<List<Homestay>>(
+      future: _apiService.getHomestays(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
+        }
+        
+        final allHomestays = snapshot.data ?? [];
+        final favHomestays = allHomestays.where((h) => _favoriteHomestayIds.contains(h.id)).toList();
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFFDFAE7),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: const Text(
+              'Danh sách yêu thích',
+              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold),
+            ),
+            centerTitle: true,
+          ),
+          body: favHomestays.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite_border, size: 80, color: Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Chưa có homestay yêu thích nào.',
+                        style: TextStyle(color: Colors.grey, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: favHomestays.length,
+                  itemBuilder: (context, index) {
+                    return _buildHomestayCard(favHomestays[index]);
+                  },
+                ),
+        );
+      },
+    );
+  }
+
+  // --- 3. TAB CHUYẾN ĐI (BOOKINGS TAB) ---
+  Widget _buildBookingsTab() {
+    return FutureBuilder<List<dynamic>>(
+      future: _apiService.getMyBookings(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
+        }
+        
+        final bookings = snapshot.data ?? [];
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFFDFAE7),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            title: const Text(
+              'Chuyến đi của tôi',
+              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            centerTitle: true,
+          ),
+          body: bookings.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.event_note_outlined, size: 80, color: Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Chưa có lịch sử đặt phòng nào',
+                        style: TextStyle(color: Colors.grey, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    final homestay = booking['homestays'];
+                    final checkIn = DateTime.parse(booking['check_in']);
+                    final checkOut = DateTime.parse(booking['check_out']);
+                    final double totalPrice = (booking['total_price'] ?? 0.0).toDouble();
+
+                    // Xác định ảnh homestay từ liên kết
+                    String imageUrl = 'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
+                    if (homestay != null && homestay['homestay_images'] != null && (homestay['homestay_images'] as List).isNotEmpty) {
+                      imageUrl = homestay['homestay_images'][0]['url'];
+                    }
+
+                    Color statusColor = Colors.orange;
+                    if (booking['status'] == 'confirmed') statusColor = Colors.green;
+                    if (booking['status'] == 'cancelled') statusColor = Colors.red;
+
+                    final String checkInStr = '${checkIn.day}/${checkIn.month}/${checkIn.year}';
+                    final String checkOutStr = '${checkOut.day}/${checkOut.month}/${checkOut.year}';
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                            child: Stack(
+                              children: [
+                                Image.network(
+                                  imageUrl,
+                                  height: 140,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                ),
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      booking['status'] == 'confirmed' ? 'Đã xác nhận' : (booking['status'] == 'cancelled' ? 'Đã hủy' : 'Đang xử lý'),
+                                      style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      homestay?['name'] ?? 'The Terracotta Nest',
+                                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                                    ),
+                                    Text(
+                                      '${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFE07A5F)),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${homestay?['address'] ?? ''}, ${homestay?['city'] ?? ''}',
+                                      style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF6D4C41)),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '$checkInStr - $checkOutStr',
+                                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF6D4C41)),
+                                    ),
+                                    const Spacer(),
+                                    if (booking['status'] == 'confirmed')
+                                      TextButton(
+                                        onPressed: () {
+                                          _apiService.updateBookingStatus(booking['id'], 'cancelled').then((_) {
+                                            setState(() {});
+                                          });
+                                        },
+                                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
+                                        child: const Text('Hủy phòng', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold)),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        );
+      },
+    );
+  }
+
+  // --- 4. TAB HỒ SƠ (PROFILE TAB) ---
+  Widget _buildProfileTab() {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _apiService.getMyProfile(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
+        }
+
+        final profile = snapshot.data;
+        final String fullName = profile?['full_name'] ?? 'Alexandria Bennett';
+        final String email = profile?['email'] ?? 'alexandria.b@homestay.com';
+        final String phone = profile?['phone'] ?? '+84 987 654 321';
+        final String? avatarUrl = profile?['avatar_url'];
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFFDFAE7),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: const Text(
+              'Hồ sơ cá nhân',
+              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold),
+            ),
+            centerTitle: true,
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                                ? NetworkImage(avatarUrl)
+                                : const NetworkImage('https://i.pravatar.cc/150?u=alexandria'),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(color: Color(0xFFE07A5F), shape: BoxShape.circle),
+                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        fullName,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                      ),
+                      Text(
+                        email,
+                        style: const TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE07A5F).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified, color: Color(0xFFE07A5F), size: 16),
+                            const SizedBox(width: 8),
+                            Text(
+                              profile?['role'] == 'customer'
+                                  ? 'Khách hàng'
+                                  : (profile?['role'] == 'host' ? 'Chủ nhà' : 'Tác giả'),
+                              style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Các thông tin chi tiết liên hệ
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildContactRow(Icons.phone_iphone, 'Số điện thoại', phone),
+                      const Divider(height: 24),
+                      _buildContactRow(Icons.email_outlined, 'Email liên hệ', email),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (!mounted) return;
+                    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.white, size: 20),
+                  label: const Text('Đăng xuất', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6D4C41),
+                    minimumSize: const Size(double.infinity, 56),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 2,
+                    shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContactRow(IconData icon, String label, String val) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF6D4C41), size: 20),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 2),
+            Text(val, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF424242))),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // --- MENU ĐIỀU HƯỚNG BOTTOMNAVBAR ---
+  Widget _buildBottomNavBar() {
+    return BottomNavigationBar(
+      type: BottomNavigationBarType.fixed,
+      selectedItemColor: const Color(0xFFE07A5F),
+      unselectedItemColor: Colors.grey,
+      currentIndex: _currentIndex,
+      onTap: _onTabTapped,
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Khám phá'),
+        BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Yêu thích'),
+        BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Đặt chỗ'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Hồ sơ'),
+      ],
+    );
+  }
+}
