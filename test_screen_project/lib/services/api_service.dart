@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/homestay_model.dart';
 
@@ -61,9 +62,29 @@ class ApiService {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập');
 
-    await _supabase.from('profiles').update({
-      'role': role,
-    }).eq('id', user.id);
+    try {
+      // Cố gắng tạo mới (Dành cho người đăng nhập qua MagicLink chưa có profile)
+      await _supabase.from('profiles').insert({
+        'id': user.id,
+        'email': user.email ?? '',
+        'full_name': 'Người dùng mới',
+        'phone': '',
+        'role': role,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } on PostgrestException catch (e) {
+      // 23505: Duplicate key -> Có nghĩa là profile ĐÃ TỒN TẠI (do RegisterScreen tạo)
+      if (e.code == '23505') {
+        // Chuyển sang chế độ cập nhật
+        await _supabase.from('profiles').update({
+          'role': role,
+        }).eq('id', user.id);
+      } else {
+        rethrow;
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 
 
@@ -286,5 +307,86 @@ class ApiService {
       'status': 'published',
       'created_at': DateTime.now().toIso8601String(),
     });
+  }
+
+
+  // --- HỆ THỐNG QUÊN MẬT KHẨU & CẬP NHẬT PROFILE ---
+
+  // 17. Gửi email đặt lại mật khẩu (link mở thẳng app qua Deep Link hoặc Web)
+  Future<void> sendPasswordResetOtp(String email) async {
+    String redirectTo = 'io.supabase.test_screen_project://login-callback/?type=recovery';
+    if (kIsWeb) {
+      // Trên Web, tự động lấy origin và cổng hiện tại của trang đang chạy
+      redirectTo = '${Uri.base.origin}/?type=recovery';
+    }
+
+    await _supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: redirectTo,
+    );
+  }
+
+  // 18. Cập nhật thông tin Profile (tên, số điện thoại, avatar)
+  Future<void> updateProfile({
+    String? fullName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập');
+
+    final Map<String, dynamic> updates = {};
+    if (fullName != null) updates['full_name'] = fullName;
+    if (phone != null) updates['phone'] = phone;
+    if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
+    if (updates.isEmpty) return;
+
+    await _supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+  }
+
+  // --- PHÂN HỆ YÊU THÍCH (FAVORITES) ---
+
+  // 19. Lấy danh sách ID các homestay đã lưu vào mục yêu thích
+  Future<List<int>> getMyFavoriteHomestayIds() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final response = await _supabase
+          .from('favorites')
+          .select('homestay_id')
+          .eq('user_id', user.id);
+      
+      return (response as List).map((item) => item['homestay_id'] as int).toList();
+    } catch (e) {
+      print('Error fetching favorite homestays: $e');
+      return [];
+    }
+  }
+
+  // 20. Thêm homestay vào mục yêu thích
+  Future<void> addFavorite(int homestayId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập');
+
+    await _supabase.from('favorites').insert({
+      'user_id': user.id,
+      'homestay_id': homestayId,
+    });
+  }
+
+  // 21. Xoá homestay khỏi mục yêu thích
+  Future<void> removeFavorite(int homestayId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập');
+
+    await _supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('homestay_id', homestayId);
   }
 }

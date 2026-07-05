@@ -526,9 +526,17 @@ class _AuthorDashboardScreenState extends State<AuthorDashboardScreen> {
         }
 
         final profile = snapshot.data;
-        final String fullName = profile?['full_name'] ?? 'Emma';
-        final String email = profile?['email'] ?? 'emma@example.com';
-        final String phone = profile?['phone'] ?? '+84 987 654 321';
+        final currentUser = Supabase.instance.client.auth.currentUser;
+        
+        final String rawName = profile?['full_name'] ?? '';
+        final String fullName = rawName.isEmpty ? (currentUser?.email?.split('@').first ?? 'Người dùng') : rawName;
+        
+        final String rawEmail = profile?['email'] ?? '';
+        final String email = rawEmail.isEmpty ? (currentUser?.email ?? 'Chưa cập nhật email') : rawEmail;
+        
+        final String rawPhone = profile?['phone'] ?? '';
+        final String phone = rawPhone.isEmpty ? 'Chưa cập nhật SĐT' : rawPhone;
+        
         final String? avatarUrl = profile?['avatar_url'];
 
         return Scaffold(

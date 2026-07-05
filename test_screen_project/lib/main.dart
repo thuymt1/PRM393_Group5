@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Auth screens
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/choose_role_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
+import 'screens/auth/reset_password_screen.dart';
 
 // Customer screens
 import 'screens/customer/customer_home_screen.dart';
@@ -35,16 +38,21 @@ import 'screens/author/article_detail_screen.dart';
 // Common screens
 import 'screens/common/profile_page.dart';
 import 'screens/common/notification_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/common/edit_profile_screen.dart';
+
 // Theme
 import 'widgets/app_theme.dart';
+
+// Navigator key dùng để điều hướng từ bên ngoài widget tree
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://vsmlzmwgqyaduavrisme.supabase.co', 
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzbWx6bXdncXlhZHVhdnJpc21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTc0MTIsImV4cCI6MjA5NzIzMzQxMn0.MQqxeMaxp3i7uJXZ4kWN2UxyUmul3N5E7_XWZ2FIcfU',
+    url: 'https://vsmlzmwgqyaduavrisme.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzbWx6bXdncXlhZHVhdnJpc21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTc0MTIsImV4cCI6MjA5NzIzMzQxMn0.MQqxeMaxp3i7uJXZ4kWN2UxyUmul3N5E7_XWZ2FIcfU',
   );
 
   runApp(const MyApp());
@@ -59,12 +67,15 @@ class MyApp extends StatelessWidget {
       title: 'Hearth & Horizon',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.getTheme(AppTheme.accentOrange),
+      navigatorKey: navigatorKey,
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/choose-role': (context) => const ChooseRoleScreen(),
-        
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/reset-password': (context) => const ResetPasswordScreen(),
+
         // Customer flow
         '/customer-home': (context) => const CustomerHomeScreen(),
         '/homestay-detail': (context) => const HomestayDetailPage(),
@@ -75,7 +86,7 @@ class MyApp extends StatelessWidget {
         '/my-bookings': (context) => const MyBookingsScreen(),
         '/cancel-booking': (context) => const CancelBookingPage(),
         '/create-review': (context) => const CreateReviewPage(),
-        
+
         // Host flow
         '/host-dashboard': (context) => const HostDashboardScreen(),
         '/host-booking-requests': (context) => const HostBookingRequestsScreen(),
@@ -85,16 +96,24 @@ class MyApp extends StatelessWidget {
         '/add-homestay-basic-info': (context) => const AddHomestayBasicInfoScreen(),
         '/add-homestay-location': (context) => const AddHomestayLocationScreen(),
         '/add-homestay-price-rules': (context) => const AddHomestayPriceRulesScreen(),
-        
+
         // Author flow
         '/author-dashboard': (context) => const AuthorDashboardScreen(),
         '/article-list': (context) => const ArticleListScreen(),
         '/create-article': (context) => const CreateArticleScreen(),
         '/article-detail': (context) => const ArticleDetailScreen(),
-        
+
         // Common
         '/profile': (context) => const ProfilePage(),
         '/notifications': (context) => const NotificationScreen(),
+        '/edit-profile': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, String>?;
+          return EditProfileScreen(
+            currentName: args?['name'] ?? '',
+            currentPhone: args?['phone'] ?? '',
+          );
+        },
       },
     );
   }

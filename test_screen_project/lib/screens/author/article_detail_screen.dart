@@ -6,7 +6,7 @@ class ArticleDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Retrieve article arguments passed through navigation
-    final Map<String, dynamic> article = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final Map<String, dynamic> article = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
     
     const Color purpleColor = Color(0xFF8E24AA);
     const Color primaryBrown = Color(0xFF6D4C41);

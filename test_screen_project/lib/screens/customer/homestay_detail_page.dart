@@ -1,20 +1,85 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 import '../../models/homestay_model.dart';
 
-// Màn hình hiển thị thông tin chi tiết của một căn Homestay cụ thể
-class HomestayDetailPage extends StatelessWidget {
+/// Màn hình hiển thị thông tin chi tiết của một căn Homestay cụ thể
+class HomestayDetailPage extends StatefulWidget {
   const HomestayDetailPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final homestay = ModalRoute.of(context)!.settings.arguments as Homestay;
+  State<HomestayDetailPage> createState() => _HomestayDetailPageState();
+}
 
+class _HomestayDetailPageState extends State<HomestayDetailPage> {
+  final ApiService _apiService = ApiService();
+  bool _initialized = false;
+  late Homestay _homestay;
+  bool _isFavorite = false;
+  bool _isFavoriteLoading = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialized) {
+      _homestay = ModalRoute.of(context)!.settings.arguments as Homestay;
+      _checkIfFavorite();
+      _initialized = true;
+    }
+  }
+
+  Future<void> _checkIfFavorite() async {
+    try {
+      final favIds = await _apiService.getMyFavoriteHomestayIds();
+      if (mounted) {
+        setState(() {
+          _isFavorite = favIds.contains(_homestay.id);
+          _isFavoriteLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking favorite status: $e');
+      if (mounted) {
+        setState(() => _isFavoriteLoading = false);
+      }
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final originalState = _isFavorite;
+    setState(() {
+      _isFavorite = !originalState;
+    });
+
+    try {
+      if (originalState) {
+        await _apiService.removeFavorite(_homestay.id);
+      } else {
+        await _apiService.addFavorite(_homestay.id);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isFavorite = originalState;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi cập nhật danh sách yêu thích: ${e.toString()}'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
       body: CustomScrollView(
         // Sử dụng CustomScrollView kết hợp các Slivers để tạo hiệu ứng cuộn AppBar mượt mà
         slivers: [
-          _buildSliverAppBar(context, homestay), // Thanh AppBar chứa hình ảnh nền có thể thu phóng và ghim cố định
+          _buildSliverAppBar(context), // Thanh AppBar chứa hình ảnh nền có thể thu phóng và ghim cố định
           SliverToBoxAdapter(
             // Chuyển đổi khối Widget thông thường thành cấu trúc tương thích với Slivers
             child: Padding(
@@ -22,15 +87,15 @@ class HomestayDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeaderSection(homestay), // Khối tên nhà, chi phí thuê, địa chỉ và số sao đánh giá
+                  _buildHeaderSection(_homestay), // Khối tên nhà, chi phí thuê, địa chỉ và số sao đánh giá
                   const SizedBox(height: 24),
                   _buildHostSection(), // Khối thông tin chi tiết và nút liên hệ với chủ nhà (Host)
                   const SizedBox(height: 24),
-                  _buildIntroductionSection(homestay), // Khối văn bản mô tả giới thiệu chi tiết về homestay
+                  _buildIntroductionSection(_homestay), // Khối văn bản mô tả giới thiệu chi tiết về homestay
                   const SizedBox(height: 24),
                   _buildAmenitiesSection(), // Khối bọc (Wrap) hiển thị danh sách các tiện ích cung cấp
                   const SizedBox(height: 24),
-                  _buildLocationSection(homestay), // Khối bản đồ thu nhỏ hiển thị vị trí của căn homestay
+                  _buildLocationSection(_homestay), // Khối bản đồ thu nhỏ hiển thị vị trí của căn homestay
                   const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh đặt phòng
                 ],
               ),
@@ -38,14 +103,14 @@ class HomestayDetailPage extends StatelessWidget {
           ),
         ],
       ),
-      bottomSheet: _buildBottomBookingBar(context, homestay), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
+      bottomSheet: _buildBottomBookingBar(context, _homestay), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
     );
   }
 
   // Khối thiết kế thanh cuộn đầu trang linh hoạt (SliverAppBar) tích hợp ảnh nền
-  Widget _buildSliverAppBar(BuildContext context, Homestay homestay) {
-    final String imageUrl = homestay.images.isNotEmpty 
-        ? homestay.images.first 
+  Widget _buildSliverAppBar(BuildContext context) {
+    final String imageUrl = _homestay.images.isNotEmpty 
+        ? _homestay.images.first 
         : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
 
     return SliverAppBar(
@@ -98,8 +163,13 @@ class HomestayDetailPage extends StatelessWidget {
         CircleAvatar(
           backgroundColor: Colors.white,
           child: IconButton(
-            icon: const Icon(Icons.favorite_border, color: Color(0xFF6D4C41)),
-            onPressed: () {},
+            icon: Icon(
+              _isFavoriteLoading
+                  ? Icons.favorite_border
+                  : (_isFavorite ? Icons.favorite : Icons.favorite_border),
+              color: _isFavorite && !_isFavoriteLoading ? Colors.red : const Color(0xFF6D4C41),
+            ),
+            onPressed: _isFavoriteLoading ? null : _toggleFavorite,
           ),
         ),
         const SizedBox(width: 16),

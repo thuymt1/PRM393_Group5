@@ -18,11 +18,83 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   // Lưu danh sách ID các homestay yêu thích (favorites) để quản lý tương tác trong phiên
   final Set<int> _favoriteHomestayIds = {};
 
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final favIds = await _apiService.getMyFavoriteHomestayIds();
+      if (mounted) {
+        setState(() {
+          _favoriteHomestayIds.clear();
+          _favoriteHomestayIds.addAll(favIds);
+        });
+      }
+    } catch (e) {
+      print('Error loading favorites: $e');
+    }
+  }
+
+  Future<void> _toggleFavorite(Homestay homestay) async {
+    final isFav = _favoriteHomestayIds.contains(homestay.id);
+    
+    // 1. Cập nhật giao diện ngay lập tức (Optimistic UI)
+    setState(() {
+      if (isFav) {
+        _favoriteHomestayIds.remove(homestay.id);
+      } else {
+        _favoriteHomestayIds.add(homestay.id);
+      }
+    });
+
+    try {
+      if (isFav) {
+        await _apiService.removeFavorite(homestay.id);
+      } else {
+        await _apiService.addFavorite(homestay.id);
+      }
+    } catch (e) {
+      // 2. Nếu lỗi, hoàn tác trạng thái
+      if (mounted) {
+        setState(() {
+          if (isFav) {
+            _favoriteHomestayIds.add(homestay.id);
+          } else {
+            _favoriteHomestayIds.remove(homestay.id);
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lỗi cập nhật yêu thích: ${e.toString()}'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   // Hàm chuyển đổi tab của Container chính
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;
     });
+  }
+
+  Future<void> _openEditProfile(String name, String phone) async {
+    final navigator = Navigator.of(context);
+    final result = await navigator.pushNamed(
+      '/edit-profile',
+      arguments: {'name': name, 'phone': phone},
+    );
+
+    if (result == true && mounted) {
+      // Tải lại thông tin cá nhân
+      setState(() {});
+    }
   }
 
   @override
@@ -285,7 +357,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       ),
       child: InkWell(
         onTap: () {
-          Navigator.pushNamed(context, '/homestay-detail', arguments: homestay);
+          Navigator.pushNamed(context, '/homestay-detail', arguments: homestay).then((_) {
+            _loadFavorites();
+          });
         },
         borderRadius: BorderRadius.circular(24),
         child: Column(
@@ -310,15 +384,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           isFav ? Icons.favorite : Icons.favorite_border,
                           color: isFav ? Colors.red : Colors.black,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            if (isFav) {
-                              _favoriteHomestayIds.remove(homestay.id);
-                            } else {
-                              _favoriteHomestayIds.add(homestay.id);
-                            }
-                          });
-                        },
+                        onPressed: () => _toggleFavorite(homestay),
                       ),
                     ),
                   ),
@@ -625,9 +691,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         }
 
         final profile = snapshot.data;
-        final String fullName = profile?['full_name'] ?? 'Alexandria Bennett';
-        final String email = profile?['email'] ?? 'alexandria.b@homestay.com';
-        final String phone = profile?['phone'] ?? '+84 987 654 321';
+        final currentUser = Supabase.instance.client.auth.currentUser;
+        
+        final String rawName = profile?['full_name'] ?? '';
+        final String fullName = rawName.isEmpty ? (currentUser?.email?.split('@').first ?? 'Người dùng') : rawName;
+        
+        final String rawEmail = profile?['email'] ?? '';
+        final String email = rawEmail.isEmpty ? (currentUser?.email ?? 'Chưa cập nhật email') : rawEmail;
+        
+        final String rawPhone = profile?['phone'] ?? '';
+        final String phone = rawPhone.isEmpty ? 'Chưa cập nhật SĐT' : rawPhone;
+        
         final String? avatarUrl = profile?['avatar_url'];
 
         return Scaffold(
@@ -706,6 +780,16 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      OutlinedButton.icon(
+                        onPressed: () => _openEditProfile(fullName, phone),
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF6D4C41)),
+                        label: const Text('Chỉnh sửa hồ sơ', style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF6D4C41)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -728,9 +812,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
                   onPressed: () async {
+                    final navigator = Navigator.of(context);
                     await Supabase.instance.client.auth.signOut();
-                    if (!mounted) return;
-                    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                    navigator.pushNamedAndRemoveUntil('/login', (route) => false);
                   },
                   icon: const Icon(Icons.logout, color: Colors.white, size: 20),
                   label: const Text('Đăng xuất', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),

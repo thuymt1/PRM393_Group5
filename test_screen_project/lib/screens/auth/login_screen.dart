@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/api_service.dart';
+import '../../utils/validators.dart';
 
+import '../../utils/url_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,12 +14,64 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   bool _obscureText = true;
   bool _isLoading = false;
   final ApiService _apiService = ApiService();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  late final StreamSubscription<AuthState> _authSubscription;
 
+  @override
+  void initState() {
+    super.initState();
+    // 1. Kiểm tra trực tiếp URL (hữu ích cho Web khi Supabase tự đổi code ở URL nhưng chưa kích hoạt AuthChangeEvent ngay)
+    _checkAndRedirectRecovery();
+
+    // 2. Lắng nghe sự kiện khôi phục mật khẩu trực tiếp tại màn hình Đăng nhập
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        if (mounted) {
+          // Xoá query parameters trên thanh địa chỉ trước khi chuyển trang
+          UrlHelper.clearQueryParameters();
+          Navigator.pushNamedAndRemoveUntil(context, '/reset-password', (route) => false);
+        }
+      }
+    });
+  }
+
+  void _checkAndRedirectRecovery() {
+    final uri = Uri.base;
+    if (uri.queryParameters['type'] == 'recovery' || uri.toString().contains('type=recovery')) {
+      // Xoá tham số URL ngay lập tức để tránh vòng lặp nếu quay lại hoặc tải lại
+      UrlHelper.clearQueryParameters();
+      _waitForSessionAndRedirect();
+    }
+  }
+
+  void _waitForSessionAndRedirect([int retries = 0]) {
+    // Dừng thử lại sau 40 lần (khoảng 6 giây) nếu không tải được session
+    if (retries > 40) return;
+
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (!mounted) return;
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        Navigator.pushNamedAndRemoveUntil(context, '/reset-password', (route) => false);
+      } else {
+        // Tiếp tục đợi đến khi Supabase tải xong session
+        _waitForSessionAndRedirect(retries + 1);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,30 +80,30 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            _buildHeader(),
-            const SizedBox(height: 48),
-            _buildLoginForm(),
-            const SizedBox(height: 16),
-            _buildForgotPassword(),
-            const SizedBox(height: 40),
-            _buildLoginButton(),
-            const SizedBox(height: 32),
-            _buildSocialLogin(),
-            const SizedBox(height: 40),
-            _buildSignUpLink(),
-            const SizedBox(height: 40),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              _buildHeader(),
+              const SizedBox(height: 48),
+              _buildLoginForm(),
+              const SizedBox(height: 8),
+              _buildForgotPassword(),
+              const SizedBox(height: 32),
+              _buildLoginButton(),
+              const SizedBox(height: 32),
+              _buildSocialLogin(),
+              const SizedBox(height: 40),
+              _buildSignUpLink(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
@@ -71,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'Đăng nhập để tiếp tục hành trình khám phá những chân trời mới.',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey,
+            color: Colors.grey.shade600,
             height: 1.5,
           ),
         ),
@@ -82,30 +138,35 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLoginForm() {
     return Column(
       children: [
-        _buildTextField(
+        _buildFormField(
           label: 'Email',
           hint: 'alexandria.b@example.com',
           icon: Icons.email_outlined,
           controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          validator: Validators.validateEmail,
         ),
-        const SizedBox(height: 24),
-        _buildTextField(
+        const SizedBox(height: 20),
+        _buildFormField(
           label: 'Mật khẩu',
           hint: '••••••••',
           icon: Icons.lock_outline,
-          isPassword: true,
           controller: _passwordController,
+          isPassword: true,
+          validator: Validators.validatePassword,
         ),
       ],
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildFormField({
     required String label,
     required String hint,
     required IconData icon,
-    bool isPassword = false,
     required TextEditingController controller,
+    bool isPassword = false,
+    TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,10 +192,13 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
-          child: TextField(
+          child: TextFormField(
             controller: controller,
             obscureText: isPassword ? _obscureText : false,
+            keyboardType: keyboardType,
             style: const TextStyle(fontSize: 15),
+            validator: validator,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
@@ -153,7 +217,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
               ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+              ),
               contentPadding: const EdgeInsets.symmetric(vertical: 18),
+              errorStyle: const TextStyle(fontSize: 12),
             ),
           ),
         ),
@@ -165,7 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: () {},
+        onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
         child: const Text(
           'Quên mật khẩu?',
           style: TextStyle(
@@ -209,22 +290,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() async {
+    // Chạy validation toàn form trước khi gửi request
+    if (!_formKey.currentState!.validate()) return;
+
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin')),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
 
     try {
       await _apiService.login(email, password);
       final profile = await _apiService.getMyProfile();
-      
+
       if (!mounted) return;
 
       if (profile != null) {
@@ -236,15 +313,21 @@ class _LoginScreenState extends State<LoginScreen> {
         } else if (role == 'author') {
           Navigator.pushNamedAndRemoveUntil(context, '/author-dashboard', (route) => false);
         } else {
-          Navigator.pushNamed(context, '/choose-role');
+          Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
         }
       } else {
-        Navigator.pushNamed(context, '/choose-role');
+        // Chưa có profile -> Mới đăng ký qua mạng xã hội hoặc lỗi chưa tạo profile
+        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đăng nhập thất bại: Tài khoản hoặc mật khẩu không chính xác')),
+        SnackBar(
+          content: const Text('Tài khoản hoặc mật khẩu không chính xác'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
       if (mounted) {
@@ -273,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _socialIcon('https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg'),
+            _socialIcon('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png'),
             const SizedBox(width: 24),
             _socialIcon('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png'),
           ],

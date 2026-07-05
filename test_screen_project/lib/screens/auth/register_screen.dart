@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../utils/validators.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -9,16 +10,21 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  // Trạng thái điều khiển việc ẩn/hiện văn bản cho ô nhập mật khẩu
+  final _formKey = GlobalKey<FormState>();
+
+  // Trạng thái ẩn/hiện mật khẩu
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
-  // Trạng thái kiểm tra xem người dùng đã đồng ý với điều khoản dịch vụ chưa
+  // Đồng ý điều khoản
   bool _agreeToTerms = false;
   bool _isLoading = false;
+
+  // Password strength tracking
+  int _passwordStrength = 0; // 0=Yếu, 1=Trung bình, 2=Mạnh
+
   final ApiService _apiService = ApiService();
 
-  // Các bộ điều khiển dữ liệu nhập vào cho từng TextField cụ thể
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -26,40 +32,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Màu nền nhẹ nhàng đồng bộ từ design system
+      backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Làm trong suốt thanh công cụ phía trên
-        elevation: 0, // Loại bỏ bóng đổ phía dưới thanh ứng dụng
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context), // Quay trở lại màn hình trước đó khi bấm
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
-            _buildHeader(), // Hiển thị khối chữ giới thiệu và tiêu đề
-            const SizedBox(height: 32),
-            _buildRegisterForm(), // Hiển thị danh sách các ô nhập thông tin tài khoản
-            const SizedBox(height: 16),
-            _buildTermsCheckbox(), // Hiển thị khu vực chọn đồng ý điều khoản bảo mật
-            const SizedBox(height: 32),
-            _buildRegisterButton(), // Nút bấm thực hiện tiến trình đăng ký
-            const SizedBox(height: 32),
-            _buildLoginLink(), // Đường dẫn quay lại màn hình đăng nhập nếu đã có tài khoản
-            const SizedBox(height: 40),
-          ],
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 10),
+              _buildHeader(),
+              const SizedBox(height: 32),
+              _buildRegisterForm(),
+              const SizedBox(height: 16),
+              _buildTermsCheckbox(),
+              const SizedBox(height: 32),
+              _buildRegisterButton(),
+              const SizedBox(height: 32),
+              _buildLoginLink(),
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Widget hiển thị tiêu đề chính của màn hình đăng ký
   Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             fontSize: 32,
             fontWeight: FontWeight.bold,
             color: Color(0xFF6D4C41),
-            fontFamily: 'BeVietnamPro', // Cần cấu hình font tương ứng trong pubspec.yaml để hiển thị chuẩn
+            fontFamily: 'BeVietnamPro',
           ),
         ),
         const SizedBox(height: 12),
@@ -86,66 +104,67 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Gom nhóm tập hợp toàn bộ các ô nhập thông tin đăng ký thành viên
   Widget _buildRegisterForm() {
     return Column(
       children: [
-        _buildTextField(
+        // ─── Họ và tên ───────────────────────────────────────────────────
+        _buildFormField(
           label: 'Họ và tên',
           hint: 'Nguyễn Văn A',
           icon: Icons.person_outline,
           controller: _nameController,
+          validator: Validators.validateFullName,
         ),
         const SizedBox(height: 20),
-        _buildTextField(
+        // ─── Email ───────────────────────────────────────────────────────
+        _buildFormField(
           label: 'Email',
           hint: 'alexandria.b@example.com',
           icon: Icons.email_outlined,
           controller: _emailController,
-          keyboardType: TextInputType.emailAddress, // Tối ưu bàn phím cho định dạng email
+          keyboardType: TextInputType.emailAddress,
+          validator: Validators.validateEmail,
         ),
         const SizedBox(height: 20),
-        _buildTextField(
+        // ─── Số điện thoại ───────────────────────────────────────────────
+        _buildFormField(
           label: 'Số điện thoại',
           hint: '0987 654 321',
           icon: Icons.phone_outlined,
           controller: _phoneController,
-          keyboardType: TextInputType.phone, // Tối ưu bàn phím hiển thị các phím số cuộc gọi
+          keyboardType: TextInputType.phone,
+          validator: Validators.validatePhone,
         ),
         const SizedBox(height: 20),
-        _buildTextField(
-          label: 'Mật khẩu',
-          hint: '••••••••',
-          icon: Icons.lock_outline,
-          isPassword: true,
-          obscureText: _obscurePassword,
-          onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword), // Đảo trạng thái ẩn/hiện
-          controller: _passwordController,
-        ),
+        // ─── Mật khẩu + strength indicator ──────────────────────────────
+        _buildPasswordField(),
         const SizedBox(height: 20),
-        _buildTextField(
+        // ─── Xác nhận mật khẩu ──────────────────────────────────────────
+        _buildFormField(
           label: 'Xác nhận mật khẩu',
           hint: '••••••••',
           icon: Icons.lock_reset_outlined,
+          controller: _confirmPasswordController,
           isPassword: true,
           obscureText: _obscureConfirmPassword,
-          onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword), // Đảo trạng thái ẩn/hiện
-          controller: _confirmPasswordController,
+          onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+          validator: (val) => Validators.validateConfirmPassword(val, _passwordController.text),
         ),
       ],
     );
   }
 
-  // Hàm thiết kế dùng chung cấu trúc cho ô nhập dữ liệu TextField dạng bo góc tròn có đổ bóng nhẹ
-  Widget _buildTextField({
+  // ─── TextFormField chuẩn ─────────────────────────────────────────────────
+  Widget _buildFormField({
     required String label,
     required String hint,
     required IconData icon,
+    required TextEditingController controller,
     bool isPassword = false,
     bool obscureText = false,
     VoidCallback? onToggleVisibility,
-    required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,30 +190,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
             ],
           ),
-          child: TextField(
+          child: TextFormField(
             controller: controller,
-            obscureText: isPassword ? obscureText : false, // Kiểm tra ẩn text đối với các trường mật khẩu
+            obscureText: isPassword ? obscureText : false,
             keyboardType: keyboardType,
             style: const TextStyle(fontSize: 15),
+            validator: validator,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 22), // Biểu tượng đầu ô nhập liệu
+              prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 22),
               suffixIcon: isPassword
                   ? IconButton(
-                icon: Icon(
-                  obscureText ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey,
-                  size: 20,
-                ),
-                onPressed: onToggleVisibility, // Kích hoạt hàm ẩn hiện khi click vào mắt biểu tượng
-              )
+                      icon: Icon(
+                        obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                      onPressed: onToggleVisibility,
+                    )
                   : null,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none, // Ẩn đường viền thô mặc định của TextField
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 18),
+              errorStyle: const TextStyle(fontSize: 12),
             ),
           ),
         ),
@@ -202,18 +240,157 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Thanh xác nhận tích chọn đồng ý tuân thủ quy chế và chính sách bảo mật thông tin ứng dụng
+  // ─── Mật khẩu với Password Strength Indicator ────────────────────────────
+  Widget _buildPasswordField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Mật khẩu',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF6D4C41),
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: TextFormField(
+            controller: _passwordController,
+            obscureText: _obscurePassword,
+            style: const TextStyle(fontSize: 15),
+            validator: Validators.validatePassword,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            onChanged: (val) {
+              setState(() {
+                _passwordStrength = Validators.passwordStrength(val);
+              });
+            },
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+              prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFE07A5F), size: 22),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                  size: 20,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 18),
+              errorStyle: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ),
+        // Password Strength Bar
+        if (_passwordController.text.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _buildPasswordStrengthBar(),
+        ],
+      ],
+    );
+  }
+
+  // ─── Thanh đánh giá độ mạnh mật khẩu ────────────────────────────────────
+  Widget _buildPasswordStrengthBar() {
+    final labels = ['Yếu', 'Trung bình', 'Mạnh'];
+    final colors = [Colors.red.shade400, Colors.orange.shade400, Colors.green.shade500];
+    final filledSegments = _passwordStrength + 1; // 1, 2, hoặc 3 đoạn
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: List.generate(3, (i) {
+            return Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 5,
+                margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                decoration: BoxDecoration(
+                  color: i < filledSegments
+                      ? colors[_passwordStrength]
+                      : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Text(
+                'Độ mạnh: ${labels[_passwordStrength]}',
+                key: ValueKey(_passwordStrength),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors[_passwordStrength],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const Spacer(),
+            if (_passwordStrength < 2)
+              Text(
+                _passwordStrength == 0
+                    ? 'Thêm chữ hoa & số để mạnh hơn'
+                    : 'Thêm ký tự đặc biệt để mạnh hơn',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Checkbox Điều khoản ─────────────────────────────────────────────────
   Widget _buildTermsCheckbox() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
           height: 24,
           width: 24,
           child: Checkbox(
             value: _agreeToTerms,
-            onChanged: (val) => setState(() => _agreeToTerms = val!), // Lưu trạng thái thay đổi tick chọn
+            onChanged: (val) => setState(() => _agreeToTerms = val!),
             activeColor: const Color(0xFFE07A5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)), // Bo góc nhẹ cho ô checkbox
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
         ),
         const SizedBox(width: 12),
@@ -228,7 +405,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(
                     color: Color(0xFFE07A5F),
                     fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline, // Gạch chân đường link
+                    decoration: TextDecoration.underline,
                   ),
                 ),
                 TextSpan(text: ' và '),
@@ -237,7 +414,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(
                     color: Color(0xFFE07A5F),
                     fontWeight: FontWeight.bold,
-                    decoration: TextDecoration.underline, // Gạch chân đường link
+                    decoration: TextDecoration.underline,
                   ),
                 ),
               ],
@@ -248,15 +425,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // Widget hiển thị nút Đăng ký tài khoản (Tự động kích hoạt khi trạng thái _agreeToTerms bằng true)
+  // ─── Nút Đăng ký ─────────────────────────────────────────────────────────
   Widget _buildRegisterButton() {
     return ElevatedButton(
-      onPressed: (_agreeToTerms && !_isLoading) ? _handleRegister : null, // Gán giá trị null để vô hiệu hóa nút bấm tạm thời khi chưa tích chọn điều khoản
+      onPressed: (_agreeToTerms && !_isLoading) ? _handleRegister : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
-        disabledBackgroundColor: Colors.grey.shade300, // Màu nền nút khi nút bị tắt kích hoạt
-        disabledForegroundColor: Colors.grey.shade500, // Màu chữ hiển thị khi nút bị tắt kích hoạt
-        minimumSize: const Size(double.infinity, 56), // Độ dài full hàng ngang, chiều cao ô nút 56
+        disabledBackgroundColor: Colors.grey.shade300,
+        disabledForegroundColor: Colors.grey.shade500,
+        minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
@@ -265,10 +442,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2.5,
-              ),
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
             )
           : const Text(
               'Đăng ký tài khoản',
@@ -281,40 +455,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // ─── Xử lý đăng ký ───────────────────────────────────────────────────────
   void _handleRegister() async {
+    // Chạy validation toàn form
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Vui lòng kiểm tra lại thông tin đã nhập'),
+          backgroundColor: Colors.orange.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
+    if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Vui lòng đồng ý với Điều khoản dịch vụ'),
+          backgroundColor: Colors.orange.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
     final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
-
-    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng điền đầy đủ tất cả thông tin')),
-      );
-      return;
-    }
-
-    if (password != confirmPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu xác nhận không khớp')),
-      );
-      return;
-    }
-
-    if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu phải từ 6 ký tự trở lên')),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
 
     try {
       final authResponse = await _apiService.register(email, password);
       final user = authResponse.user;
-      
+
       if (user != null) {
         // Tạo profile trong table profiles
         await _apiService.createProfile(
@@ -323,20 +501,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
           fullName: name,
           phone: phone,
         );
-        
+
         if (!mounted) return;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đăng ký tài khoản thành công!')),
+          SnackBar(
+            content: const Text('Đăng ký tài khoản thành công! 🎉'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
         );
-        Navigator.pushNamed(context, '/choose-role');
+        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
       } else {
         throw Exception('Không nhận được thông tin User');
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đăng ký thất bại: ${e.toString()}')),
+        SnackBar(
+          content: Text('Đăng ký thất bại: ${e.toString()}'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
     } finally {
       if (mounted) {
@@ -345,7 +533,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Dòng dẫn liên kết giúp người dùng quay ngược lại giao diện Đăng nhập hệ thống
+  // ─── Link đăng nhập ──────────────────────────────────────────────────────
   Widget _buildLoginLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -355,7 +543,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           style: TextStyle(color: Colors.grey.shade600),
         ),
         GestureDetector(
-          onTap: () => Navigator.pop(context), // Gọi pop để quay lại màn hình Login trước đó
+          onTap: () => Navigator.pop(context),
           child: const Text(
             'Đăng nhập ngay',
             style: TextStyle(
