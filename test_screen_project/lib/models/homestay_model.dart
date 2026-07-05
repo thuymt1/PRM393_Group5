@@ -9,6 +9,9 @@ class Homestay {
   final List<String> images;
   final String category;
   final String status;
+  final String hostId;
+  final String hostName;
+  final String? hostAvatar;
 
   Homestay({
     required this.id,
@@ -21,6 +24,9 @@ class Homestay {
     required this.images,
     required this.category,
     required this.status,
+    required this.hostId,
+    this.hostName = 'Chủ nhà',
+    this.hostAvatar,
   });
 
   factory Homestay.fromJson(Map<String, dynamic> json) {
@@ -43,6 +49,9 @@ class Homestay {
       images: imageList,
       category: json['categories']?['name'] ?? '', // Lấy tên category từ join
       status: json['status'] ?? 'active',
+      hostId: json['host_id'] ?? '',
+      hostName: json['profiles']?['full_name'] ?? 'Chủ nhà',
+      hostAvatar: json['profiles']?['avatar_url'],
     );
   }
 }

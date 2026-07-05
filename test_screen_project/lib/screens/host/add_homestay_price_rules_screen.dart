@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
@@ -294,15 +295,17 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
         'price_per_night': price,
       };
 
-      // Chọn ảnh mặc định từ Unsplash tùy theo StayType
-      String defaultImageUrl = 'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
-      if (args['stayType'] == 'Phòng riêng') {
-        defaultImageUrl = 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688';
-      } else if (args['stayType'] == 'Khách sạn') {
-        defaultImageUrl = 'https://images.unsplash.com/photo-1566073771259-6a8506099945';
+      String imageUrl = '';
+      if (args['imageBytes'] != null && args['imageName'] != null) {
+        final Uint8List bytes = args['imageBytes'];
+        final String name = args['imageName'];
+        imageUrl = await _apiService.uploadHomestayImage(bytes, name);
+      } else {
+        // Fallback an toàn (nếu lỗi ko truyền được ảnh)
+        imageUrl = 'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
       }
 
-      await _apiService.createHomestay(homestayData, defaultImageUrl);
+      await _apiService.createHomestay(homestayData, imageUrl);
 
       if (!mounted) return;
       _showSuccessDialog();
@@ -354,7 +357,7 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                 onPressed: () {
                   Navigator.pop(dialogContext); // Đóng pop-up Dialog
                   // Quay về trang chủ dashboard của Host
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),

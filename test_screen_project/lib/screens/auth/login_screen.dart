@@ -356,7 +356,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _socialIcon('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/48px-Google_%22G%22_logo.svg.png'),
+            _socialIcon('https://img.icons8.com/color/48/000000/google-logo.png'),
             const SizedBox(width: 24),
             _socialIcon('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png'),
           ],

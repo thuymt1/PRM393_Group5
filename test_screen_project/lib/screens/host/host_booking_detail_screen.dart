@@ -1,7 +1,24 @@
 import 'package:flutter/material.dart';
 
-class HostBookingDetailScreen extends StatelessWidget {
+import '../../services/api_service.dart';
+
+class HostBookingDetailScreen extends StatefulWidget {
   const HostBookingDetailScreen({super.key});
+
+  @override
+  State<HostBookingDetailScreen> createState() => _HostBookingDetailScreenState();
+}
+
+class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
+  final ApiService _apiService = ApiService();
+  late Map<String, dynamic> _booking;
+  bool _isLoading = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _booking = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,7 +29,7 @@ class HostBookingDetailScreen extends StatelessWidget {
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại trang trước đó
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(context, true),
         ),
         title: const Text(
           'Chi tiết yêu cầu',
@@ -71,25 +88,29 @@ class HostBookingDetailScreen extends StatelessWidget {
 
   // Khối giao diện hiển thị thẻ thông tin liên hệ và lý lịch cơ bản của khách hàng đặt phòng
   Widget _buildGuestInfoSection() {
+    final profile = _booking['profiles'];
+    final customerName = profile?['full_name'] ?? 'Khách hàng ẩn danh';
+    final avatarUrl = profile?['avatar_url'];
+
     return _buildSectionCard(
       'Thông tin khách hàng',
       Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 30, // Bán kính vòng tròn ảnh chân dung vị khách
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=user1'),
+            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : const NetworkImage('https://i.pravatar.cc/150?u=user1'),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Trần An Nhiên',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                  customerName,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
                 ),
-                Text(
-                  'Khách hàng từ 2023 • 12 chuyến đi',
+                const Text(
+                  'Thông tin chi tiết',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
@@ -109,15 +130,23 @@ class HostBookingDetailScreen extends StatelessWidget {
 
   // Khối giao diện tóm tắt chi tiết lịch trình phòng ốc lưu trú thông qua cấu trúc danh sách hàng dọc
   Widget _buildBookingSummarySection() {
+    final homestay = _booking['homestays'];
+    final homestayName = homestay?['name'] ?? 'Homestay';
+    
+    final checkIn = DateTime.parse(_booking['check_in']);
+    final checkOut = DateTime.parse(_booking['check_out']);
+    final nights = checkOut.difference(checkIn).inDays;
+    
+    final checkInStr = "${checkIn.day}/${checkIn.month}/${checkIn.year}";
+    final checkOutStr = "${checkOut.day}/${checkOut.month}/${checkOut.year}";
+
     return _buildSectionCard(
       'Chi tiết đặt phòng',
       Column(
         children: [
-          _buildInfoRow(Icons.home_work_outlined, 'Homestay', 'The Terracotta Nest'),
+          _buildInfoRow(Icons.home_work_outlined, 'Homestay', homestayName),
           const Divider(height: 32), // Đường vạch kẻ ngang phân tách mảnh tạo không gian thông thoáng
-          _buildInfoRow(Icons.calendar_today_outlined, 'Thời gian', '20/06 - 22/06/2026 (2 đêm)'),
-          const Divider(height: 32),
-          _buildInfoRow(Icons.people_outline, 'Số khách', '2 Người lớn'),
+          _buildInfoRow(Icons.calendar_today_outlined, 'Thời gian', '$checkInStr - $checkOutStr ($nights đêm)'),
         ],
       ),
     );
@@ -125,23 +154,38 @@ class HostBookingDetailScreen extends StatelessWidget {
 
   // Khối giao diện tóm tắt chi tiết hóa đơn tài chính dòng thu nhập dự tính thực nhận của chủ nhà
   Widget _buildPaymentSummarySection() {
+    final checkIn = DateTime.parse(_booking['check_in']);
+    final checkOut = DateTime.parse(_booking['check_out']);
+    final nights = checkOut.difference(checkIn).inDays;
+    final totalPrice = (_booking['total_price'] ?? 0.0).toDouble();
+    final fee = totalPrice * 0.1;
+    final income = totalPrice - fee;
+
+    String formatPrice(double price) {
+      return price.toInt().toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]}.',
+      );
+    }
+
     return _buildSectionCard(
       'Tóm tắt thanh toán',
       Column(
         children: [
-          _buildDataRow('Giá phòng (2 đêm)', '2.500.000đ'),
-          _buildDataRow('Phí dịch vụ', '50.000đ'),
+          _buildDataRow('Tổng giá trị đơn ($nights đêm)', '${formatPrice(totalPrice)}đ'),
+          const SizedBox(height: 8),
+          _buildDataRow('Phí dịch vụ nền tảng (10%)', '-${formatPrice(fee)}đ'),
           const Divider(height: 32),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Tổng thu nhập của bạn',
+              const Text(
+                'Thực nhận của bạn',
                 style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
               ),
               Text(
-                '2.550.000đ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFE07A5F)), // Làm nổi bật số tiền thu nhập bằng sắc cam cam
+                '${formatPrice(income)}đ',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFE07A5F)), // Làm nổi bật số tiền thu nhập bằng sắc cam cam
               ),
             ],
           ),
@@ -232,6 +276,44 @@ class HostBookingDetailScreen extends StatelessWidget {
 
   // Thanh phím đôi tác vụ ("Từ chối" / "Phê duyệt") cố định dưới chân mép đáy màn hình thông qua cơ chế BottomSheet
   Widget _buildActionButtons(BuildContext context) {
+    if (_booking['status'] != 'pending' && _booking['status'] != 'cancel_pending') {
+      String statusStr = _booking['status'];
+      if (statusStr == 'confirmed') statusStr = 'Đã duyệt';
+      if (statusStr == 'cancelled') statusStr = 'Đã hủy';
+      if (statusStr == 'refunded') statusStr = 'Đã báo hoàn tiền (chờ khách)';
+      return Container(
+        padding: const EdgeInsets.all(24),
+        child: Text('Trạng thái: $statusStr', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      );
+    }
+
+    if (_booking['status'] == 'cancel_pending') {
+      return Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
+        ),
+        child: ElevatedButton(
+          onPressed: () => _updateBookingStatus('refunded'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            minimumSize: const Size(double.infinity, 56),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          child: const Text('Xác nhận đã hoàn tiền', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+      );
+    }
+
+    if (_isLoading) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ / thanh vuốt hệ thống
       decoration: BoxDecoration(
@@ -245,7 +327,7 @@ class HostBookingDetailScreen extends StatelessWidget {
           // Nút bấm tác vụ "Từ chối" dạng viền nét vẽ màu đỏ nổi bật tác vụ hủy bỏ đơn
           Expanded(
             child: OutlinedButton(
-              onPressed: () => _showRejectDialog(context), // Gọi bật mở cửa sổ pop-up hộp thoại lấy lý do từ chối
+              onPressed: () => _updateBookingStatus('rejected'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red,
                 side: const BorderSide(color: Colors.red), // Viền đỏ bao quanh nút bấm
@@ -259,10 +341,7 @@ class HostBookingDetailScreen extends StatelessWidget {
           // Nút bấm lớn màu nâu hệ thống thực hiện phê duyệt đồng ý tiếp nhận lịch đặt đơn phòng của khách
           Expanded(
             child: ElevatedButton(
-              onPressed: () {
-                // TODO: Xử lý gọi kết nối API cập nhật trạng thái đơn phòng thành công và gửi thông báo cho khách
-                print("Phê duyệt đơn đặt chỗ thành công!");
-              },
+              onPressed: () => _updateBookingStatus('confirmed'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6D4C41), // Sắc màu nâu đậm chủ đạo hệ thống
                 minimumSize: const Size(0, 56),
@@ -278,6 +357,29 @@ class HostBookingDetailScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _updateBookingStatus(String newStatus) async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      await _apiService.updateBookingStatus(_booking['id'], newStatus);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã cập nhật trạng thái đơn!')));
+        Navigator.pop(context, true); // Trả về true để Refresh
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: \$e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   // Hàm tạo lập và mở cửa sổ pop-up hộp thoại tiếp nhận thông tin lý do khước từ đơn hàng (Alert Dialog)

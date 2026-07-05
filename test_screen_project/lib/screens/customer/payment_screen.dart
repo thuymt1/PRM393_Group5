@@ -224,10 +224,167 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  void _handlePayment(int homestayId, String checkIn, String checkOut, double totalPrice) async {
+  void _handlePayment(int homestayId, String checkIn, String checkOut, double totalPrice) {
+    if (_selectedPaymentMethod == 3) {
+      // Thẻ tín dụng chưa hỗ trợ
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tính năng thanh toán qua thẻ tín dụng đang được phát triển.')),
+      );
+      return;
+    }
+
+    _showQRCodeDialog(homestayId, checkIn, checkOut, totalPrice);
+  }
+
+  void _showQRCodeDialog(int homestayId, String checkIn, String checkOut, double totalPrice) {
+    final int amount = totalPrice.toInt();
+    final String transferContent = 'ThanhToanBK$homestayId';
+    // Ngân hàng MBBank (970422), STK: 0123456789
+    final String vietQrUrl = 'https://img.vietqr.io/image/970422-0123456789-compact2.jpg?amount=$amount&addInfo=$transferContent&accountName=NGUYEN%20VAN%20A';
+
+    final bool isMoMo = _selectedPaymentMethod == 0;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isMoMo ? 'Quét mã MoMo để thanh toán' : 'Quét mã để thanh toán',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: isMoMo 
+                    ? Image.asset(
+                        'assets/images/momo_qr.png',
+                        height: 250,
+                        width: 250,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const SizedBox(
+                          height: 250,
+                          width: 250,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                SizedBox(height: 8),
+                                Text('Thiếu file momo_qr.png', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : Image.network(
+                        vietQrUrl,
+                        height: 250,
+                        width: 250,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const SizedBox(
+                            height: 250,
+                            width: 250,
+                            child: Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F))),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => const SizedBox(
+                          height: 250,
+                          width: 250,
+                          child: Center(child: Icon(Icons.qr_code, size: 80, color: Colors.grey)),
+                        ),
+                      ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isMoMo ? 'Vui lòng kiểm tra kỹ số tiền và tên người nhận.' : 'Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống duyệt tự động nhanh nhất.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext); // Đóng pop-up QR
+                  _confirmPaymentAndCreateBooking(homestayId, checkIn, checkOut, totalPrice);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D4C41),
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Tôi đã thanh toán', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _confirmPaymentAndCreateBooking(int homestayId, String checkIn, String checkOut, double totalPrice) async {
     setState(() => _isLoading = true);
 
     try {
+      // Kiểm tra lần cuối trước khi tạo đơn (phòng trường hợp ai đó đặt trước)
+      final isAvailable = await _apiService.checkDateAvailability(
+        homestayId: homestayId,
+        checkIn: checkIn,
+        checkOut: checkOut,
+      );
+      if (!isAvailable) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                SizedBox(width: 12),
+                Text('Hết phòng', style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: const Text(
+              'Rất tiếc, homestay này đã có người đặt trong khoảng thời gian bạn chọn. Vui lòng quay lại và chọn ngày khác.',
+              style: TextStyle(height: 1.5),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.popUntil(context, ModalRoute.withName('/booking-form'));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D4C41),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Chọn ngày khác', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
       // Thực hiện chèn booking vào Supabase qua ApiService
       await _apiService.createBooking(
         homestayId: homestayId,
@@ -235,7 +392,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         checkOut: checkOut,
         totalPrice: totalPrice,
       );
-
       if (!mounted) return;
       _showSuccessDialog(context);
     } catch (e) {

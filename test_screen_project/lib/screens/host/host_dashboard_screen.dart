@@ -316,13 +316,20 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
     final checkOut = DateTime.parse(booking['check_out']);
     final int nights = checkOut.difference(checkIn).inDays;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-      ),
+    return InkWell(
+      onTap: () async {
+        final result = await Navigator.pushNamed(context, '/host-booking-detail', arguments: booking);
+        if (result == true) {
+          setState(() {}); // Làm mới màn hình khi quay lại nếu có thay đổi
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -355,13 +362,29 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                 decoration: BoxDecoration(
                   color: booking['status'] == 'confirmed'
                       ? Colors.green.shade50
-                      : (booking['status'] == 'cancelled' ? Colors.red.shade50 : Colors.orange.shade50),
+                      : (booking['status'] == 'cancelled' 
+                          ? Colors.red.shade50 
+                          : (booking['status'] == 'cancel_pending' 
+                              ? Colors.deepOrange.shade50 
+                              : (booking['status'] == 'refunded' ? Colors.blue.shade50 : Colors.orange.shade50))),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  booking['status'] == 'confirmed' ? 'Đã duyệt' : (booking['status'] == 'cancelled' ? 'Đã hủy' : 'Đang xử lý'),
+                  booking['status'] == 'confirmed' 
+                      ? 'Đã duyệt' 
+                      : (booking['status'] == 'cancelled' 
+                          ? 'Đã hủy' 
+                          : (booking['status'] == 'cancel_pending' 
+                              ? 'Yêu cầu hủy' 
+                              : (booking['status'] == 'refunded' ? 'Chờ khách xác nhận' : 'Đang xử lý'))),
                   style: TextStyle(
-                    color: booking['status'] == 'confirmed' ? Colors.green : (booking['status'] == 'cancelled' ? Colors.red : Colors.orange),
+                    color: booking['status'] == 'confirmed' 
+                        ? Colors.green 
+                        : (booking['status'] == 'cancelled' 
+                            ? Colors.red 
+                            : (booking['status'] == 'cancel_pending' 
+                                ? Colors.deepOrange 
+                                : (booking['status'] == 'refunded' ? Colors.blue : Colors.orange))),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
                   ),
@@ -397,8 +420,9 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
           ],
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _updateStatus(int bookingId, String status) async {
     setState(() => _isLoading = true);

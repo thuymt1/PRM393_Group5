@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 
 class CancelBookingPage extends StatefulWidget {
-  const CancelBookingPage({super.key});
+  final Map<String, dynamic> booking;
+  const CancelBookingPage({super.key, required this.booking});
 
   @override
   State<CancelBookingPage> createState() => _CancelBookingPageState();
@@ -14,7 +16,6 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
   // Bộ điều khiển dữ liệu nhập vào cho ô nhập chi tiết khi chọn lý do "Khác"
   final TextEditingController _otherReasonController = TextEditingController();
 
-  // Danh sách các lý do hủy phòng mẫu được hệ thống định nghĩa sẵn
   final List<String> _reasons = [
     'Thay đổi kế hoạch du lịch',
     'Tìm thấy lựa chọn khác tốt hơn',
@@ -23,6 +24,47 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
     'Nhầm lẫn khi đặt phòng',
     'Khác',
   ];
+
+  late DateTime checkIn;
+  late DateTime checkOut;
+  late int differenceDays;
+  late double totalPrice;
+  late double refundPercent;
+  late double refundAmount;
+
+  @override
+  void initState() {
+    super.initState();
+    _calculateRefund();
+  }
+
+  void _calculateRefund() {
+    checkIn = DateTime.parse(widget.booking['check_in']);
+    checkOut = DateTime.parse(widget.booking['check_out']);
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final checkInDate = DateTime(checkIn.year, checkIn.month, checkIn.day);
+    
+    differenceDays = checkInDate.difference(today).inDays;
+    totalPrice = (widget.booking['total_price'] ?? 0.0).toDouble();
+    
+    if (differenceDays >= 7) {
+      refundPercent = 1.0;
+    } else if (differenceDays >= 3) {
+      refundPercent = 0.7;
+    } else {
+      refundPercent = 0.0;
+    }
+    refundAmount = totalPrice * refundPercent;
+  }
+
+  String formatPrice(double price) {
+    return price.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,6 +129,13 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
 
   // Khối giao diện hiển thị thẻ tóm tắt thông tin cơ bản của đơn đặt phòng hiện hành
   Widget _buildBookingBrief() {
+    final homestay = widget.booking['homestays'];
+    final homestayName = homestay?['name'] ?? 'Homestay';
+    final images = homestay?['images'] as List<dynamic>? ?? [];
+    final imageUrl = images.isNotEmpty ? images.first : 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000';
+    final checkInStr = "${checkIn.day}/${checkIn.month}/${checkIn.year}";
+    final checkOutStr = "${checkOut.day}/${checkOut.month}/${checkOut.year}";
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -106,7 +155,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.network(
-              'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
+              imageUrl,
               width: 70,
               height: 70,
               fit: BoxFit.cover, // Điều chỉnh ảnh vừa vặn khít khung chứa
@@ -114,23 +163,25 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
           ),
           const SizedBox(width: 16),
           // Khối văn bản hiển thị tên biệt thự, mốc thời gian lưu trú và chi phí tổng
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'The Pine Hill Dalat',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  homestayName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '20/06 - 22/06/2026 • 2 khách',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                  '$checkInStr - $checkOutStr',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '2.550.000đ',
-                  style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold),
+                  '${formatPrice(totalPrice)}đ',
+                  style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -142,6 +193,15 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
 
   // Khối hộp thông tin hiển thị quy định và quyền lợi chính sách hoàn tiền của khách hàng
   Widget _buildRefundPolicyNotice() {
+    String policyText = '';
+    if (refundPercent == 1.0) {
+      policyText = 'Bạn đang hủy phòng trước 7 ngày. Bạn sẽ được hoàn trả 100% số tiền đã thanh toán (${formatPrice(refundAmount)}đ). Chủ nhà sẽ liên hệ để hoàn khoản tiền này.';
+    } else if (refundPercent == 0.7) {
+      policyText = 'Bạn đang hủy phòng trước 3 ngày. Bạn sẽ được hoàn trả 70% số tiền đã thanh toán (${formatPrice(refundAmount)}đ). Chủ nhà sẽ liên hệ để hoàn khoản tiền này.';
+    } else {
+      policyText = 'Bạn đang hủy phòng sát ngày (dưới 3 ngày). Rất tiếc, bạn sẽ không được hoàn lại tiền thanh toán theo chính sách của chúng tôi.';
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -149,14 +209,14 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE07A5F).withOpacity(0.1)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Color(0xFF6D4C41), size: 20), // Biểu tượng dấu chấm hỏi thông tin mờ
+              const Icon(Icons.info_outline, color: Color(0xFF6D4C41), size: 20), // Biểu tượng dấu chấm hỏi thông tin mờ
               const SizedBox(width: 12),
-              Text(
+              const Text(
                 'Chính sách hoàn tiền',
                 style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
               ),
@@ -164,8 +224,8 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Hủy miễn phí trước 24h kể từ ngày nhận phòng. Bạn sẽ được hoàn trả 100% số tiền đã thanh toán (khoảng 2.550.000đ) vào ví hoặc tài khoản gốc.',
-            style: TextStyle(fontSize: 13, color: Color(0xFF6D4C41), height: 1.5), // Giãn dòng 1.5 thông thoáng văn bản
+            policyText,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF6D4C41), height: 1.5), // Giãn dòng 1.5 thông thoáng văn bản
           ),
         ],
       ),
@@ -248,9 +308,8 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
       children: [
         // Nút bấm lớn màu nâu xác nhận hành động gỡ và hủy phòng (Vô hiệu hóa tạm thời nếu chưa tích chọn lý do)
         ElevatedButton(
-          onPressed: _selectedReason == null ? null : () {
-            // Thực thi tiến trình gọi hàm hiển thị cửa sổ hộp thoại Dialog thông báo thành công
-            _showSuccessDialog();
+          onPressed: _selectedReason == null || _isLoading ? null : () {
+            _askConfirmCancelDialog();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm thương hiệu hệ thống
@@ -260,10 +319,12 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
             shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
             disabledBackgroundColor: Colors.grey.shade300, // Đổi màu sắc xám mờ nút khi bị khóa tính năng
           ),
-          child: const Text(
-            'Xác nhận hủy phòng',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          child: _isLoading 
+            ? const CircularProgressIndicator(color: Colors.white)
+            : const Text(
+                'Xác nhận hủy phòng',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
         ),
         const SizedBox(height: 16),
         // Nút bấm văn bản hỗ trợ khách quay ngược về màn hình quản lý lịch trình, giữ lại phòng lưu trú
@@ -281,8 +342,63 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
     );
   }
 
+  bool _isLoading = false;
+
+  void _askConfirmCancelDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận hủy phòng', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41))),
+        content: Text(
+          'Bạn có chắc chắn muốn hủy đặt phòng này?\n\nSố tiền được hoàn lại: ${formatPrice(refundAmount)}đ\n\nBạn sẽ không thể hoàn tác hành động này.',
+          style: const TextStyle(fontSize: 14, height: 1.5),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Không', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _processCancelBooking();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            child: const Text('Đồng ý hủy', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _processCancelBooking() async {
+    setState(() => _isLoading = true);
+    try {
+      final api = ApiService();
+      // Nếu được hoàn tiền thì chuyển sang cancel_pending để chủ nhà duyệt trả tiền. Nếu không (0đ) thì hủy luôn thành cancelled.
+      String nextStatus = refundAmount > 0 ? 'cancel_pending' : 'cancelled';
+      await api.updateBookingStatus(widget.booking['id'], nextStatus);
+      if (mounted) {
+        _showSuccessDialog(nextStatus);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   // Hàm sinh dựng và khởi động hộp thoại pop-up thông báo gỡ đơn phòng thành công mĩ mãn (Alert Dialog)
-  void _showSuccessDialog() {
+  void _showSuccessDialog(String status) {
+    String message = status == 'cancel_pending' 
+        ? 'Chúng tôi đã ghi nhận yêu cầu hủy phòng của bạn. Chủ nhà sẽ liên hệ để hoàn khoản tiền ${formatPrice(refundAmount)}đ.'
+        : 'Chúng tôi đã ghi nhận yêu cầu hủy phòng của bạn. Đơn này sẽ không được hoàn tiền theo chính sách.';
+
     showDialog(
       context: context,
       barrierDismissible: false, // Khóa tính năng bấm ra vùng khoảng không bên ngoài để đóng hội thoại, bắt buộc click nút điều phối bên dưới
@@ -307,10 +423,10 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
             ),
             const SizedBox(height: 12),
-            const Text(
-              'Chúng tôi đã ghi nhận yêu cầu hủy phòng của bạn. Số tiền hoàn lại sẽ được xử lý trong vòng 3-5 ngày làm việc.',
+            Text(
+              message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey, fontSize: 14, height: 1.5),
+              style: const TextStyle(color: Colors.grey, fontSize: 14, height: 1.5),
             ),
             const SizedBox(height: 32),
             // Nút bấm lớn giúp điều hướng khách gỡ bỏ hoàn toàn ngăn xếp màn hình để về thẳng trang chủ ứng dụng

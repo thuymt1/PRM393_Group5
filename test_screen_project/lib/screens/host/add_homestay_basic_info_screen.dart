@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart'; // Thêm dòng này để hỗ trợ kIsWeb
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddHomestayBasicInfoScreen extends StatefulWidget {
   const AddHomestayBasicInfoScreen({super.key});
@@ -17,6 +19,21 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
 
   // Danh sách các loại hình lưu trú được hệ thống hỗ trợ đăng tải
   final List<String> _stayTypes = ['Toàn bộ nhà', 'Phòng riêng', 'Phòng chung', 'Khách sạn'];
+
+  Uint8List? _imageBytes;
+  String? _imageName;
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      setState(() {
+        _imageBytes = bytes;
+        _imageName = image.name;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +77,45 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                   const Text(
                     'Bắt đầu bằng những chi tiết cốt lõi về không gian của bạn.',
                     style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                  const SizedBox(height: 32),
+                  // Chọn ảnh homestay
+                  const Text(
+                    'Ảnh Homestay',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6D4C41),
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      width: double.infinity,
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade300, width: 2, style: BorderStyle.solid),
+                      ),
+                      child: _imageBytes != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.memory(_imageBytes!, fit: BoxFit.cover),
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey.shade400),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Bấm để tải ảnh từ thư viện',
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                    ),
                   ),
                   const SizedBox(height: 32),
                   // Ô nhập liệu Tên của Homestay
@@ -221,6 +277,13 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
               final name = _nameController.text.trim();
               final description = _descriptionController.text.trim();
 
+              if (_imageBytes == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vui lòng chọn ảnh homestay')),
+                );
+                return;
+              }
+
               if (name.isEmpty || description.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Vui lòng điền đầy đủ tên và mô tả homestay')),
@@ -235,6 +298,8 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                   'name': name,
                   'description': description,
                   'stayType': _selectedStayType,
+                  'imageBytes': _imageBytes,
+                  'imageName': _imageName,
                 },
               );
             },

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/homestay_model.dart';
@@ -44,11 +45,16 @@ class ApiService {
     final user = _supabase.auth.currentUser;
     if (user == null) return null;
     
+    return await getProfileById(user.id);
+  }
+
+  // Lấy Profile theo ID
+  Future<Map<String, dynamic>?> getProfileById(String id) async {
     try {
       final response = await _supabase
           .from('profiles')
           .select()
-          .eq('id', user.id)
+          .eq('id', id)
           .maybeSingle();
       return response;
     } catch (e) {
@@ -76,9 +82,13 @@ class ApiService {
       // 23505: Duplicate key -> Có nghĩa là profile ĐÃ TỒN TẠI (do RegisterScreen tạo)
       if (e.code == '23505') {
         // Chuyển sang chế độ cập nhật
-        await _supabase.from('profiles').update({
+        final res = await _supabase.from('profiles').update({
           'role': role,
-        }).eq('id', user.id);
+        }).eq('id', user.id).select();
+        
+        if (res.isEmpty) {
+          throw Exception('Không thể cập nhật vai trò do bị chặn bởi RLS. Vui lòng cấp quyền UPDATE cho bảng profiles.');
+        }
       } else {
         rethrow;
       }
@@ -90,10 +100,15 @@ class ApiService {
 
   // --- PHÂN HỆ HOMESTAY & TIỆN ÍCH ---
 
-  // 6. Lấy danh sách Homestay đang hoạt động kèm theo Ảnh và Category
-  Future<List<Homestay>> getHomestays() async {
+  // 6. Lấy danh sách Homestay đang hoạt động kèm theo Ảnh và Category (có phân trang & tìm kiếm)
+  Future<List<Homestay>> getHomestays({
+    int page = 0,
+    int pageSize = 10,
+    String? searchQuery,
+    String? category,
+  }) async {
     try {
-      final response = await _supabase
+      var query = _supabase
           .from('homestays')
           .select('''
             *,
@@ -101,8 +116,35 @@ class ApiService {
             categories(name)
           ''')
           .eq('status', 'active');
-      
-      return (response as List).map((json) => Homestay.fromJson(json)).toList();
+
+      // Tìm kiếm theo tên, địa chỉ, hoặc thành phố (server-side)
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = '%${searchQuery.trim()}%';
+        query = query.or('name.ilike.$q,address.ilike.$q,city.ilike.$q');
+      }
+
+      // Lọc theo category
+      if (category != null && category != 'Tất cả') {
+        query = query.eq('categories.name', category);
+      }
+
+      final from = page * pageSize;
+      final to = from + pageSize - 1;
+
+      final response = await query
+          .order('id', ascending: false)
+          .range(from, to);
+
+      // Filter out results where category join returned null (when filtering by category)
+      List<dynamic> results = response as List;
+      if (category != null && category != 'Tất cả') {
+        results = results.where((json) {
+          final cat = json['categories'];
+          return cat != null && cat['name'] != null;
+        }).toList();
+      }
+
+      return results.map((json) => Homestay.fromJson(json)).toList();
     } catch (e) {
       print('Error fetching homestays: $e');
       return [];
@@ -122,7 +164,8 @@ class ApiService {
             homestay_images(url),
             categories(name)
           ''')
-          .eq('host_id', user.id);
+          .eq('host_id', user.id)
+          .order('id', ascending: false);
       
       return (response as List).map((json) => Homestay.fromJson(json)).toList();
     } catch (e) {
@@ -131,8 +174,19 @@ class ApiService {
     }
   }
 
+  // Hàm upload ảnh lên Supabase Storage (Hỗ trợ cả Web & Mobile)
+  Future<String> uploadHomestayImage(Uint8List fileBytes, String fileName) async {
+    final uniqueName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
+    await _supabase.storage.from('homestays').uploadBinary(
+      uniqueName, 
+      fileBytes,
+      fileOptions: const FileOptions(contentType: 'image/jpeg'),
+    );
+    return _supabase.storage.from('homestays').getPublicUrl(uniqueName);
+  }
+
   // 8. Đăng tin Homestay mới
-  Future<void> createHomestay(Map<String, dynamic> homestayData, String defaultImageUrl) async {
+  Future<void> createHomestay(Map<String, dynamic> homestayData, String imageUrl) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập');
 
@@ -151,10 +205,10 @@ class ApiService {
     
     final int newHomestayId = response['id'];
 
-    // Chèn hình ảnh homestay mặc định
+    // Chèn hình ảnh homestay (ảnh vừa chọn)
     await _supabase.from('homestay_images').insert({
       'homestay_id': newHomestayId,
-      'url': defaultImageUrl,
+      'url': imageUrl,
     });
   }
 
@@ -171,15 +225,69 @@ class ApiService {
 
   // --- PHÂN HỆ ĐẶT PHÒNG (BOOKINGS) ---
 
-  // 10. Tạo đơn đặt phòng
+  // Kiểm tra ngày có trống không (chống trùng lịch)
+  Future<bool> checkDateAvailability({
+    required int homestayId,
+    required String checkIn,
+    required String checkOut,
+  }) async {
+    try {
+      // Tìm các booking đang hoạt động có ngày trùng lặp (overlap)
+      // Overlap condition: existing.check_in < requestedCheckOut AND existing.check_out > requestedCheckIn
+      final response = await _supabase
+          .from('bookings')
+          .select('id')
+          .eq('homestay_id', homestayId)
+          .not('status', 'in', '(cancelled,rejected,cancel_pending,refunded)')
+          .lt('check_in', checkOut)
+          .gt('check_out', checkIn);
+      
+      return (response as List).isEmpty; // true = available, false = already booked
+    } catch (e) {
+      print('Error checking availability: $e');
+      return false;
+    }
+  }
+
+  // Lấy danh sách các khoảng thời gian đã được đặt của một homestay
+  Future<List<Map<String, String>>> getBookedDateRanges(int homestayId) async {
+    try {
+      final response = await _supabase
+          .from('bookings')
+          .select('check_in, check_out')
+          .eq('homestay_id', homestayId)
+          .not('status', 'in', '(cancelled,rejected,cancel_pending,refunded)');
+      
+      return (response as List).map((json) => {
+        'check_in': json['check_in'] as String,
+        'check_out': json['check_out'] as String,
+      }).toList();
+    } catch (e) {
+      print('Error fetching booked dates: $e');
+      return [];
+    }
+  }
+
+  // 10. Tạo đơn đặt phòng (có kiểm tra trùng lịch)
   Future<void> createBooking({
     required int homestayId,
     required String checkIn,
     required String checkOut,
     required double totalPrice,
+    String status = 'pending',
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập');
+
+    // Kiểm tra trùng lịch trước khi tạo đơn
+    final isAvailable = await checkDateAvailability(
+      homestayId: homestayId,
+      checkIn: checkIn,
+      checkOut: checkOut,
+    );
+    if (!isAvailable) {
+      throw Exception('Homestay đã có người đặt trong khoảng thời gian này. Vui lòng chọn ngày khác.');
+    }
 
     await _supabase.from('bookings').insert({
       'homestay_id': homestayId,
@@ -187,7 +295,7 @@ class ApiService {
       'check_in': checkIn,
       'check_out': checkOut,
       'total_price': totalPrice,
-      'status': 'confirmed', // Xác nhận đặt chỗ thành công
+      'status': status,
       'created_at': DateTime.now().toIso8601String(),
     });
   }
@@ -233,21 +341,24 @@ class ApiService {
       if (homestayIds.isEmpty) return [];
 
       // Truy vấn bookings tương ứng
-      return await _supabase
+      final bookingsResponse = await _supabase
           .from('bookings')
           .select('''
             *,
-            profiles (
-              full_name,
-              email,
-              avatar_url
-            ),
             homestays (
               name
             )
           ''')
           .inFilter('homestay_id', homestayIds)
           .order('created_at', ascending: false);
+          
+      final bookings = List<Map<String, dynamic>>.from(bookingsResponse);
+      for (var booking in bookings) {
+        if (booking['customer_id'] != null) {
+          booking['profiles'] = await getProfileById(booking['customer_id']);
+        }
+      }
+      return bookings;
     } catch (e) {
       print('Error fetching host booking requests: $e');
       return [];
@@ -256,10 +367,15 @@ class ApiService {
 
   // 13. Cập nhật trạng thái Booking (Host phê duyệt/Hủy đơn)
   Future<void> updateBookingStatus(int bookingId, String status) async {
-    await _supabase
+    final response = await _supabase
         .from('bookings')
         .update({'status': status})
-        .eq('id', bookingId);
+        .eq('id', bookingId)
+        .select();
+        
+    if ((response as List).isEmpty) {
+      throw Exception('Không có quyền cập nhật hoặc không tìm thấy đơn phòng (Lỗi RLS)');
+    }
   }
 
 
@@ -341,10 +457,15 @@ class ApiService {
     if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
     if (updates.isEmpty) return;
 
-    await _supabase
+    final res = await _supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select();
+        
+    if (res.isEmpty) {
+      throw Exception('Không thể cập nhật hồ sơ do bị chặn bởi RLS. Vui lòng cấp quyền UPDATE cho bảng profiles.');
+    }
   }
 
   // --- PHÂN HỆ YÊU THÍCH (FAVORITES) ---
@@ -360,7 +481,10 @@ class ApiService {
           .select('homestay_id')
           .eq('user_id', user.id);
       
-      return (response as List).map((item) => item['homestay_id'] as int).toList();
+      return (response as List).map((item) {
+        // Ép kiểu an toàn, tránh lỗi cast String to int
+        return int.tryParse(item['homestay_id'].toString()) ?? 0;
+      }).toList();
     } catch (e) {
       print('Error fetching favorite homestays: $e');
       return [];
@@ -372,10 +496,17 @@ class ApiService {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập');
 
-    await _supabase.from('favorites').insert({
-      'user_id': user.id,
-      'homestay_id': homestayId,
-    });
+    try {
+      await _supabase.from('favorites').insert({
+        'user_id': user.id,
+        'homestay_id': homestayId,
+      });
+    } on PostgrestException catch (e) {
+      // 23505: Đã tồn tại trong DB, bỏ qua lỗi này để UI đồng bộ
+      if (e.code != '23505') {
+        rethrow;
+      }
+    }
   }
 
   // 21. Xoá homestay khỏi mục yêu thích
@@ -388,5 +519,87 @@ class ApiService {
         .delete()
         .eq('user_id', user.id)
         .eq('homestay_id', homestayId);
+  }
+
+  // --- THÔNG BÁO (NOTIFICATIONS) ---
+
+  // 22. Lấy thông báo tự động (Dựa trên booking)
+  Future<List<Map<String, dynamic>>> getNotifications() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      // Xác định vai trò của user (Khách hay Chủ)
+      final profile = await getMyProfile();
+      final String role = profile?['role'] ?? 'customer';
+
+      List<Map<String, dynamic>> notifications = [];
+
+      if (role == 'host') {
+        // Lấy danh sách booking đến homestay của tôi
+        final bookings = await getHostBookingRequests();
+        for (var b in bookings) {
+          if (b['status'] == 'pending') {
+            notifications.add({
+              'title': 'Yêu cầu thanh toán mới',
+              'desc': 'Khách hàng ${b['profiles']?['full_name'] ?? 'Ẩn danh'} đã báo chuyển khoản đặt phòng tại ${b['homestays']?['name']}. Vui lòng kiểm tra tài khoản và xác nhận.',
+              'time': b['created_at'],
+              'type': 'payment_pending',
+              'is_unread': true,
+            });
+          } else if (b['status'] == 'confirmed') {
+            notifications.add({
+              'title': 'Đặt phòng đã xác nhận',
+              'desc': 'Bạn đã xác nhận đặt phòng cho ${b['profiles']?['full_name'] ?? 'Ẩn danh'} tại ${b['homestays']?['name']}.',
+              'time': b['created_at'],
+              'type': 'payment_confirmed',
+              'is_unread': false,
+            });
+          }
+        }
+      } else {
+        // Thông báo cho Khách hàng
+        final bookings = await getMyBookings();
+        for (var b in bookings) {
+          if (b['status'] == 'confirmed') {
+            notifications.add({
+              'title': 'Thanh toán hoàn tất!',
+              'desc': 'Đơn đặt phòng tại ${b['homestays']?['name'] ?? 'homestay'} đã được chủ nhà xác nhận. Chúc bạn có một chuyến đi vui vẻ!',
+              'time': b['created_at'],
+              'type': 'payment_confirmed',
+              'is_unread': true,
+            });
+          } else if (b['status'] == 'pending') {
+             notifications.add({
+              'title': 'Đang chờ chủ nhà xác nhận',
+              'desc': 'Bạn đã gửi yêu cầu thanh toán cho ${b['homestays']?['name'] ?? 'homestay'}. Vui lòng chờ chủ nhà xác nhận giao dịch.',
+              'time': b['created_at'],
+              'type': 'payment_pending',
+              'is_unread': false,
+            });
+          } else if (b['status'] == 'rejected') {
+            notifications.add({
+              'title': 'Đặt phòng thất bại',
+              'desc': 'Chủ nhà đã từ chối yêu cầu đặt phòng tại ${b['homestays']?['name'] ?? 'homestay'}.',
+              'time': b['created_at'],
+              'type': 'payment_rejected',
+              'is_unread': false,
+            });
+          }
+        }
+      }
+      
+      // Sắp xếp thông báo mới nhất lên đầu
+      notifications.sort((a, b) {
+        DateTime timeA = DateTime.parse(a['time']);
+        DateTime timeB = DateTime.parse(b['time']);
+        return timeB.compareTo(timeA);
+      });
+
+      return notifications;
+    } catch (e) {
+      print('Error fetching notifications: $e');
+      return [];
+    }
   }
 }

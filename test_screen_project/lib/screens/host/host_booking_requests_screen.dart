@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../services/api_service.dart';
+
 class HostBookingRequestsScreen extends StatefulWidget {
   const HostBookingRequestsScreen({super.key});
 
@@ -8,36 +10,26 @@ class HostBookingRequestsScreen extends StatefulWidget {
 }
 
 class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
-  // Mảng dữ liệu giả lập (Mock data) chứa danh sách các lượt yêu cầu thuê phòng từ khách hàng
-  final List<Map<String, dynamic>> _requests = [
-    {
-      'guestName': 'Trần An Nhiên',
-      'avatar': 'https://i.pravatar.cc/150?u=user1',
-      'stayDate': '20 thg 06 - 22 thg 06, 2026',
-      'details': '2 đêm • 2 khách',
-      'price': '2.550.000đ',
-      'status': 'Chờ duyệt',
-      'homestay': 'The Terracotta Nest'
-    },
-    {
-      'guestName': 'Lê Minh Tâm',
-      'avatar': 'https://i.pravatar.cc/150?u=user2',
-      'stayDate': '25 thg 06 - 28 thg 06, 2026',
-      'details': '3 đêm • 1 khách',
-      'price': '3.750.000đ',
-      'status': 'Chờ duyệt',
-      'homestay': 'The Pine Hill Dalat'
-    },
-    {
-      'guestName': 'Phạm Hải Yến',
-      'avatar': 'https://i.pravatar.cc/150?u=user3',
-      'stayDate': '01 thg 07 - 02 thg 07, 2026',
-      'details': '1 đêm • 4 khách',
-      'price': '1.800.000đ',
-      'status': 'Đã duyệt',
-      'homestay': 'The Terracotta Nest'
-    },
-  ];
+  final ApiService _apiService = ApiService();
+  List<dynamic> _requests = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRequests();
+  }
+
+  Future<void> _fetchRequests() async {
+    setState(() => _isLoading = true);
+    final data = await _apiService.getHostBookingRequests();
+    if (mounted) {
+      setState(() {
+        _requests = data;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,20 +59,24 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildTabFilter(), // Khối chứa các nhãn phân loại nhanh trạng thái đặt phòng (Tất cả, Chờ duyệt...)
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(20), // Biên đệm 20 đơn vị xung quanh danh sách cuộn
-              itemCount: _requests.length,
-              itemBuilder: (context, index) {
-                return _buildRequestCard(context, _requests[index]); // Sinh dựng cấu trúc chi tiết từng thẻ yêu cầu
-              },
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
+          : Column(
+              children: [
+                _buildTabFilter(), // Khối chứa các nhãn phân loại nhanh trạng thái đặt phòng (Tất cả, Chờ duyệt...)
+                Expanded(
+                  child: _requests.isEmpty
+                      ? const Center(child: Text('Chưa có yêu cầu đặt phòng nào.', style: TextStyle(color: Colors.grey)))
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(20), // Biên đệm 20 đơn vị xung quanh danh sách cuộn
+                          itemCount: _requests.length,
+                          itemBuilder: (context, index) {
+                            return _buildRequestCard(context, _requests[index]); // Sinh dựng cấu trúc chi tiết từng thẻ yêu cầu
+                          },
+                        ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -129,23 +125,75 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
   }
 
   // Hàm thiết kế cấu trúc chi tiết thẻ Card chứa đầy đủ thông tin khách đặt và nút duyệt tác vụ
-  Widget _buildRequestCard(BuildContext context, Map<String, dynamic> data) {
-    bool isPending = data['status'] == 'Chờ duyệt'; // Kiểm tra xem đơn đặt phòng này có đang ở trạng thái đợi duyệt không
+  Widget _buildRequestCard(BuildContext context, dynamic data) {
+    bool isPending = data['status'] == 'pending';
+    bool isConfirmed = data['status'] == 'confirmed';
+    bool isCancelPending = data['status'] == 'cancel_pending';
+    bool isRefunded = data['status'] == 'refunded';
+    bool isCancelled = data['status'] == 'cancelled';
+    
+    final profiles = data['profiles'] ?? {};
+    final homestays = data['homestays'] ?? {};
+    final guestName = profiles['full_name'] ?? 'Ẩn danh';
+    final avatar = profiles['avatar_url'] ?? 'https://i.pravatar.cc/150?u=${data['customer_id']}';
+    final homestayName = homestays['name'] ?? 'Homestay';
+    
+    // Parse ngày tháng
+    final checkIn = DateTime.parse(data['check_in']);
+    final checkOut = DateTime.parse(data['check_out']);
+    final nights = checkOut.difference(checkIn).inDays;
+    final stayDate = '${checkIn.day}/${checkIn.month} - ${checkOut.day}/${checkOut.month}, ${checkIn.year}';
+    final details = '$nights đêm';
+    
+    final priceStr = data['total_price'].toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.') + 'đ';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20), // Khoảng trống đệm an toàn phân cách giữa các thẻ Card
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24), // Bo góc tròn thẻ hồ sơ 24 đơn vị
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ mịn siêu nhẹ 3% tạo chiều sâu nổi khối
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+    String statusText = 'Đã từ chối';
+    Color statusBg = Colors.red.shade50;
+    Color statusFg = Colors.red;
+
+    if (isPending) {
+      statusText = 'Chờ duyệt';
+      statusBg = Colors.orange.shade50;
+      statusFg = Colors.orange;
+    } else if (isConfirmed) {
+      statusText = 'Đã duyệt';
+      statusBg = Colors.green.shade50;
+      statusFg = Colors.green;
+    } else if (isCancelPending) {
+      statusText = 'Yêu cầu hủy';
+      statusBg = Colors.deepOrange.shade50;
+      statusFg = Colors.deepOrange;
+    } else if (isRefunded) {
+      statusText = 'Chờ khách xác nhận';
+      statusBg = Colors.blue.shade50;
+      statusFg = Colors.blue;
+    } else if (isCancelled) {
+      statusText = 'Đã hủy hoàn tất';
+      statusBg = Colors.grey.shade200;
+      statusFg = Colors.grey.shade800;
+    }
+
+    return InkWell(
+      onTap: () async {
+        final result = await Navigator.pushNamed(context, '/host-booking-detail', arguments: data);
+        if (result == true) {
+          _fetchRequests();
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 20), // Khoảng trống đệm an toàn phân cách giữa các thẻ Card
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24), // Bo góc tròn thẻ hồ sơ 24 đơn vị
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03), // Đổ bóng mờ mịn siêu nhẹ 3% tạo chiều sâu nổi khối
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -154,7 +202,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
             children: [
               CircleAvatar(
                 radius: 24, // Bán kính vòng tròn ảnh chân dung vị khách
-                backgroundImage: NetworkImage(data['avatar']),
+                backgroundImage: NetworkImage(avatar),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -162,7 +210,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      data['guestName'],
+                      guestName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -170,7 +218,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
                       ),
                     ),
                     Text(
-                      data['homestay'],
+                      homestayName,
                       style: const TextStyle(color: Colors.grey, fontSize: 12),
                     ),
                   ],
@@ -180,13 +228,13 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isPending ? Colors.orange.shade50 : Colors.green.shade50, // Sắc cam nhạt cho Chờ duyệt, sắc xanh cho Đã duyệt
+                  color: statusBg, // Đổi màu nền theo trạng thái
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  data['status'],
+                  statusText,
                   style: TextStyle(
-                    color: isPending ? Colors.orange : Colors.green, // Điểm màu chữ đồng bộ tương ứng
+                    color: statusFg, // Đổi màu chữ theo trạng thái
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -195,9 +243,9 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
             ],
           ),
           const Divider(height: 32), // Đường vạch kẻ ngang phân tách phần thông tin cơ bản với thông số lịch trình
-          _infoRow(Icons.calendar_today_outlined, data['stayDate']), // Dòng hiển thị mốc thời gian lưu trú
+          _infoRow(Icons.calendar_today_outlined, stayDate), // Dòng hiển thị mốc thời gian lưu trú
           const SizedBox(height: 12),
-          _infoRow(Icons.people_outline, data['details']), // Dòng hiển thị tổng số đêm và số lượng khách
+          _infoRow(Icons.people_outline, details), // Dòng hiển thị tổng số đêm và số lượng khách
           const SizedBox(height: 12),
           // Hàng hiển thị chi phí doanh thu thu nhập tổng cộng từ đơn phòng này
           Row(
@@ -208,7 +256,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
                 style: TextStyle(color: Colors.grey, fontSize: 14),
               ),
               Text(
-                data['price'],
+                priceStr,
                 style: const TextStyle(
                   color: Color(0xFFE07A5F), // Sắc cam cam làm điểm nhấn nổi bật thông tin số tiền giá trị
                   fontWeight: FontWeight.bold,
@@ -218,15 +266,35 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
             ],
           ),
 
-          // Điều kiện Render: Nếu đơn phòng đang ở trạng thái 'Chờ duyệt', hiển thị thêm cụm phím đôi Từ chối / Phê duyệt
-          if (isPending) ...[
+          // Điều kiện Render: Nếu đơn phòng đang ở trạng thái 'Yêu cầu hủy', hiển thị nút hoàn tiền
+          if (isCancelPending) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => _confirmRefunded(context, data['id']), 
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      minimumSize: const Size(0, 48), 
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('Xác nhận đã hoàn tiền', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (isPending) ...[
             const SizedBox(height: 24),
             Row(
               children: [
                 // Nút bấm "Từ chối" dạng viền nét vẽ màu đỏ nổi bật tác vụ hủy bỏ đơn
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _showRejectDialog(context), // Gọi mở cửa sổ pop-up lấy lý do từ chối đơn phòng
+                    onPressed: () => _showRejectDialog(context, data['id']), // Gọi mở cửa sổ pop-up lấy lý do từ chối đơn phòng
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
@@ -242,9 +310,15 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
                 // Nút bấm lớn màu nâu hệ thống thực hiện phê duyệt tiếp nhận đơn phòng thành công
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: Cập nhật gọi API xử lý đổi trạng thái status sang 'Đã duyệt'
-                      print("Phê duyệt đơn hàng thành công cho vị khách: ${data['guestName']}");
+                    onPressed: () async {
+                      // Cập nhật gọi API xử lý đổi trạng thái status sang 'Đã duyệt'
+                      try {
+                        await _apiService.updateBookingStatus(data['id'], 'confirmed');
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã phê duyệt thành công!')));
+                        _fetchRequests(); // Refresh list
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                      }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6D4C41), // Tông màu nâu đậm chủ đạo hệ thống
@@ -265,8 +339,9 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
           ],
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // Hàm thiết kế dùng chung hiển thị một hàng chứa Icon xám mờ và văn bản đối ứng đi kèm
   Widget _infoRow(IconData icon, String text) {
@@ -283,7 +358,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
   }
 
   // Hàm sinh dựng và mở hộp thoại pop-up lấy thông tin lý do từ chối đơn hàng của khách (Alert Dialog)
-  void _showRejectDialog(BuildContext context) {
+  void _showRejectDialog(BuildContext context, int bookingId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -325,10 +400,17 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
           ),
           // Nút bấm lớn màu đỏ xác thực thực thi tác vụ hủy bỏ đơn đặt phòng thực tế
           ElevatedButton(
-            onPressed: () {
-              // TODO: Xử lý gọi API chuyển đổi trạng thái đơn đặt phòng sang 'Đã từ chối' kèm thông điệp giải trình lý do
-              Navigator.pop(context); // Đóng cửa sổ pop-up hộp thoại AlertDialog
-              print("Hủy bỏ đơn đặt phòng hoàn tất!");
+            onPressed: () async {
+              // Xử lý gọi API chuyển đổi trạng thái đơn đặt phòng sang 'Đã từ chối'
+              try {
+                await _apiService.updateBookingStatus(bookingId, 'rejected');
+                Navigator.pop(context); // Đóng cửa sổ pop-up hộp thoại AlertDialog
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã từ chối đơn hàng!')));
+                _fetchRequests(); // Lấy lại dữ liệu mới
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red, // Nền màu đỏ nổi bật hành động xóa/bỏ
@@ -338,6 +420,46 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen> {
               'Xác nhận từ chối',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRefunded(BuildContext context, int bookingId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Xác nhận hoàn tiền', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41))),
+        content: const Text('Bạn xác nhận đã chuyển khoản hoàn tiền thành công cho khách qua ứng dụng ngân hàng khác?', style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Chưa', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await _apiService.updateBookingStatus(bookingId, 'refunded');
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xác nhận hoàn tiền!'), backgroundColor: Colors.green));
+                  _fetchRequests(); // Lấy lại dữ liệu mới
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Đã hoàn tiền', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 8),
         ],

@@ -16,14 +16,31 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
   late Homestay _homestay;
   bool _isFavorite = false;
   bool _isFavoriteLoading = true;
+  String _hostName = 'Chủ nhà';
+  String? _hostAvatar;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
       _homestay = ModalRoute.of(context)!.settings.arguments as Homestay;
+      _hostName = _homestay.hostName;
+      _hostAvatar = _homestay.hostAvatar;
       _checkIfFavorite();
+      _fetchHostProfile();
       _initialized = true;
+    }
+  }
+
+  Future<void> _fetchHostProfile() async {
+    if (_homestay.hostId.isNotEmpty) {
+      final profile = await _apiService.getProfileById(_homestay.hostId);
+      if (profile != null && mounted) {
+        setState(() {
+          _hostName = profile['full_name'] ?? _hostName;
+          _hostAvatar = profile['avatar_url'] ?? _hostAvatar;
+        });
+      }
     }
   }
 
@@ -92,10 +109,6 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
                   _buildHostSection(), // Khối thông tin chi tiết và nút liên hệ với chủ nhà (Host)
                   const SizedBox(height: 24),
                   _buildIntroductionSection(_homestay), // Khối văn bản mô tả giới thiệu chi tiết về homestay
-                  const SizedBox(height: 24),
-                  _buildAmenitiesSection(), // Khối bọc (Wrap) hiển thị danh sách các tiện ích cung cấp
-                  const SizedBox(height: 24),
-                  _buildLocationSection(_homestay), // Khối bản đồ thu nhỏ hiển thị vị trí của căn homestay
                   const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh đặt phòng
                 ],
               ),
@@ -238,17 +251,17 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             color: const Color(0xFFF7F4E1), // Nền màu vàng/be nhạt tinh tế
             borderRadius: BorderRadius.circular(12),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min, // Giới hạn chiều rộng co khít theo khối text bên trong
             children: [
-              Icon(Icons.star, color: Colors.amber, size: 18), // Biểu tượng ngôi sao vàng
-              SizedBox(width: 4),
+              const Icon(Icons.star, color: Colors.amber, size: 18), // Biểu tượng ngôi sao vàng
+              const SizedBox(width: 4),
               Text(
-                '4.8',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                homestay.rating > 0 ? homestay.rating.toStringAsFixed(1) : 'Chưa có',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
               ),
-              Text(
-                ' (128 Đánh giá)',
+              const Text(
+                ' đánh giá',
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
             ],
@@ -275,20 +288,20 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 24, // Ảnh đại diện hình tròn của chủ nhà
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=host_alex'),
+            backgroundImage: NetworkImage(_hostAvatar ?? 'https://i.pravatar.cc/150?u=host_alex'),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Alex Nguyen',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
+                  _hostName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
                 ),
-                Text(
+                const Text(
                   'Chủ nhà siêu cấp • Tham gia 2021',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
@@ -327,9 +340,7 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          homestay.description.isNotEmpty 
-              ? homestay.description 
-              : 'Tọa lạc tại khu vực lý tưởng, homestay mang lại không gian thoải mái, đầy đủ tiện nghi, thiết kế tinh tế giúp bạn có một kỳ nghỉ trọn vẹn và thư giãn.',
+          homestay.description,
           style: const TextStyle(color: Color(0xFF424242), height: 1.6, fontSize: 14), // Tăng height lên 1.6 giúp giãn cách dòng văn bản thông thoáng dễ đọc
         ),
       ],

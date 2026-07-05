@@ -18,6 +18,7 @@ import 'screens/customer/payment_screen.dart';
 import 'screens/customer/my_bookings_screen.dart';
 import 'screens/customer/cancel_booking_page.dart';
 import 'screens/customer/create_review_page.dart';
+import 'screens/customer/customer_booking_detail_screen.dart';
 
 // Host screens
 import 'screens/host/host_dashboard_screen.dart';
@@ -84,7 +85,7 @@ class MyApp extends StatelessWidget {
         '/booking-confirmation': (context) => const BookingConfirmationPage(),
         '/payment': (context) => const PaymentScreen(),
         '/my-bookings': (context) => const MyBookingsScreen(),
-        '/cancel-booking': (context) => const CancelBookingPage(),
+        '/customer-booking-detail': (context) => const CustomerBookingDetailScreen(),
         '/create-review': (context) => const CreateReviewPage(),
 
         // Host flow

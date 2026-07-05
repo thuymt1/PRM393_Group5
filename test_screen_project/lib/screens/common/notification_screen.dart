@@ -1,7 +1,35 @@
 import 'package:flutter/material.dart';
 
-class NotificationScreen extends StatelessWidget {
+import '../../services/api_service.dart';
+
+class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
+
+  @override
+  State<NotificationScreen> createState() => _NotificationScreenState();
+}
+
+class _NotificationScreenState extends State<NotificationScreen> {
+  final ApiService _apiService = ApiService();
+  List<Map<String, dynamic>> _notifications = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNotifications();
+  }
+
+  Future<void> _fetchNotifications() async {
+    setState(() => _isLoading = true);
+    final data = await _apiService.getNotifications();
+    if (mounted) {
+      setState(() {
+        _notifications = data;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,50 +66,61 @@ class NotificationScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildFilterTabs(), // Khối thanh danh mục bộ lọc nhanh dạng hàng ngang (Tất cả, Giao dịch...)
-          Expanded(
-            // Danh sách cuộn thông báo sử dụng ListView.separated để tự động chèn khoảng trống giữa các phần tử
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16), // Biên đệm 16 đơn vị bao quanh vùng danh sách
-              itemCount: 10, // Thiết lập số lượng phần tử giả lập hiển thị là 10 dòng
-              separatorBuilder: (context, index) => const SizedBox(height: 12), // Khoảng trống cao 12 đơn vị giữa các item
-              itemBuilder: (context, index) {
-                // Giả lập luân phiên phân chia các loại thông báo dựa trên chỉ mục (Index)
-                if (index % 3 == 0) {
-                  return _buildNotificationItem(
-                    title: 'Đặt phòng thành công!',
-                    desc: 'Đơn đặt phòng BK123456 tại The Pine Hill đã được xác nhận.',
-                    time: '2 giờ trước',
-                    icon: Icons.receipt_long, // Icon hóa đơn đặt phòng
-                    iconColor: const Color(0xFFE07A5F), // Sắc cam cam chủ đạo thương hiệu
-                    isUnread: index == 0, // Giả định riêng phần tử đầu tiên (index 0) là chưa đọc
-                  );
-                } else if (index % 3 == 1) {
-                  return _buildNotificationItem(
-                    title: 'Thanh toán hoàn tất',
-                    desc: 'Giao dịch chuyển khoản 3.450.000đ đã được hệ thống ghi nhận.',
-                    time: '5 giờ trước',
-                    icon: Icons.payment, // Icon thẻ thanh toán
-                    iconColor: Colors.green, // Sắc xanh lá an toàn cho giao dịch thành công
-                    isUnread: false,
-                  );
-                } else {
-                  return _buildNotificationItem(
-                    title: 'Ưu đãi mới dành cho bạn',
-                    desc: 'Giảm ngay 20% cho chuyến đi tiếp theo tại Đà Lạt. Khám phá ngay!',
-                    time: '1 ngày trước',
-                    icon: Icons.local_offer_outlined, // Icon nhãn mác khuyến mãi
-                    iconColor: Colors.orange, // Sắc cam sáng thu hút chú ý ưu đãi
-                    isUnread: false,
-                  );
-                }
-              },
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
+          : Column(
+              children: [
+                _buildFilterTabs(), // Khối thanh danh mục bộ lọc nhanh dạng hàng ngang (Tất cả, Giao dịch...)
+                Expanded(
+                  child: _notifications.isEmpty
+                      ? const Center(child: Text('Chưa có thông báo nào.', style: TextStyle(color: Colors.grey)))
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(16), // Biên đệm 16 đơn vị bao quanh vùng danh sách
+                          itemCount: _notifications.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12), // Khoảng trống cao 12 đơn vị giữa các item
+                          itemBuilder: (context, index) {
+                            final note = _notifications[index];
+                            
+                            // Xác định màu sắc và biểu tượng dựa trên loại thông báo
+                            IconData icon = Icons.notifications;
+                            Color iconColor = Colors.grey;
+                            
+                            if (note['type'] == 'payment_pending') {
+                              icon = Icons.payment;
+                              iconColor = Colors.orange;
+                            } else if (note['type'] == 'payment_confirmed') {
+                              icon = Icons.check_circle;
+                              iconColor = Colors.green;
+                            } else if (note['type'] == 'payment_rejected') {
+                              icon = Icons.cancel;
+                              iconColor = Colors.red;
+                            }
+
+                            // Tính thời gian giả lập
+                            final DateTime time = DateTime.parse(note['time']);
+                            final Duration diff = DateTime.now().difference(time);
+                            String timeStr = '${time.day}/${time.month}/${time.year}';
+                            if (diff.inMinutes < 60) {
+                              timeStr = '${diff.inMinutes} phút trước';
+                            } else if (diff.inHours < 24) {
+                              timeStr = '${diff.inHours} giờ trước';
+                            } else if (diff.inDays < 7) {
+                              timeStr = '${diff.inDays} ngày trước';
+                            }
+
+                            return _buildNotificationItem(
+                              title: note['title'],
+                              desc: note['desc'],
+                              time: timeStr,
+                              icon: icon,
+                              iconColor: iconColor,
+                              isUnread: note['is_unread'] ?? false,
+                            );
+                          },
+                        ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
