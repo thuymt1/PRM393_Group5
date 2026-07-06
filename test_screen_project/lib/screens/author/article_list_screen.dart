@@ -1,54 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../models/article_model.dart';
+import '../../viewmodels/article_viewmodel.dart';
 
-class ArticleListScreen extends StatefulWidget {
+class ArticleListScreen extends ConsumerStatefulWidget {
   const ArticleListScreen({super.key});
 
   @override
-  State<ArticleListScreen> createState() => _ArticleListScreenState();
+  ConsumerState<ArticleListScreen> createState() => _ArticleListScreenState();
 }
 
-class _ArticleListScreenState extends State<ArticleListScreen> with SingleTickerProviderStateMixin {
+class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  final List<Map<String, dynamic>> _allArticles = [
-    {
-      'id': '1',
-      'title': 'Ký ức ngọt ngào tại The Pine Hill homestay Đà Lạt',
-      'excerpt': 'Đà Lạt luôn là chốn bình yên mỗi khi mỏi mệt. Lần này mình chọn The Pine Hill và thực sự bị đốn tim bởi phong cảnh thông reo rì rào...',
-      'homestay': 'The Pine Hill',
-      'status': 'Đã xuất bản',
-      'views': '1.250',
-      'likes': '320',
-      'date': '05/06/2026',
-      'image': 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
-    },
-    {
-      'id': '2',
-      'title': 'Trải nghiệm trọn vẹn tại Terracotta Nest phong cách thô mộc',
-      'excerpt': 'Nằm ẩn mình giữa những tán thông xanh, The Terracotta Nest mang lại trải nghiệm ấm cúng, gần gũi thiên nhiên với phong cách kiến trúc mộc mạc...',
-      'homestay': 'The Terracotta Nest',
-      'status': 'Bản nháp',
-      'views': '0',
-      'likes': '0',
-      'date': '02/06/2026',
-      'image': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
-    },
-    {
-      'id': '3',
-      'title': 'Top 3 homestay lãng mạn nhất cho các cặp đôi tại Sapa',
-      'excerpt': 'Mùa đông Sapa thật tuyệt để đi trốn cùng người thương. Dưới đây là bài review chi tiết về 3 homestay siêu lãng mạn có view ngắm mây...',
-      'homestay': 'Sapa Cloud Lodge',
-      'status': 'Đã xuất bản',
-      'views': '2.180',
-      'likes': '450',
-      'date': '28/05/2026',
-      'image': 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000',
-    }
-  ];
 
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => ref.read(authorArticleViewModelProvider.notifier).loadMyArticles());
     _tabController = TabController(length: 3, vsync: this);
   }
 
@@ -90,13 +59,22 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildArticleList(_allArticles, purpleColor),
-          _buildArticleList(_allArticles.where((a) => a['status'] == 'Bản nháp').toList(), purpleColor),
-          _buildArticleList(_allArticles.where((a) => a['status'] == 'Đã xuất bản').toList(), purpleColor),
-        ],
+      body: Consumer(
+        builder: (context, ref, child) {
+          final state = ref.watch(authorArticleViewModelProvider);
+          if (state.isLoading) {
+            return const Center(child: CircularProgressIndicator(color: purpleColor));
+          }
+          final articles = state.articles;
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildArticleList(articles, purpleColor),
+              _buildArticleList(articles.where((a) => a.status == 'draft').toList(), purpleColor),
+              _buildArticleList(articles.where((a) => a.status == 'published').toList(), purpleColor),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -109,7 +87,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
     );
   }
 
-  Widget _buildArticleList(List<Map<String, dynamic>> articles, Color color) {
+  Widget _buildArticleList(List<ArticleModel> articles, Color color) {
     if (articles.isEmpty) {
       return const Center(
         child: Text('Không có bài viết nào', style: TextStyle(color: Colors.grey)),
@@ -122,7 +100,8 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         final article = articles[index];
-        final isDraft = article['status'] == 'Bản nháp';
+        final isDraft = article.status == 'draft';
+        final statusText = isDraft ? 'Bản nháp' : 'Đã xuất bản';
         return GestureDetector(
           onTap: () {
             Navigator.pushNamed(
@@ -154,7 +133,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
                           Row(
                             children: [
                               Text(
-                                article['homestay'],
+                                article.authorName ?? 'Hearth & Horizon',
                                 style: TextStyle(
                                   color: color,
                                   fontWeight: FontWeight.bold,
@@ -169,7 +148,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  article['status'],
+                                  statusText,
                                   style: TextStyle(
                                     color: isDraft ? Colors.orange : Colors.green,
                                     fontSize: 9,
@@ -181,7 +160,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            article['title'],
+                            article.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -197,7 +176,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
                     ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: Image.network(
-                        article['image'],
+                        'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
                         width: 70,
                         height: 70,
                         fit: BoxFit.cover,
@@ -207,7 +186,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  article['excerpt'],
+                  article.content,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13, height: 1.4),
@@ -217,15 +196,15 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
                   children: [
                     const Icon(Icons.calendar_today_outlined, size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(article['date'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(article.createdAt != null ? article.createdAt.toString().split('T')[0] : 'N/A', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                     const Spacer(),
                     const Icon(Icons.visibility_outlined, size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(article['views'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    const Text('0', style: TextStyle(fontSize: 11, color: Colors.grey)),
                     const SizedBox(width: 12),
                     const Icon(Icons.favorite_border_outlined, size: 12, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text(article['likes'], style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    const Text('0', style: TextStyle(fontSize: 11, color: Colors.grey)),
                   ],
                 )
               ],
@@ -236,7 +215,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
     );
   }
 
-  void _showOptionsBottomSheet(BuildContext context, Map<String, dynamic> article) {
+  void _showOptionsBottomSheet(BuildContext context, ArticleModel article) {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -250,7 +229,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  article['title'],
+                  article.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
@@ -280,12 +259,12 @@ class _ArticleListScreenState extends State<ArticleListScreen> with SingleTicker
     );
   }
 
-  void _showDeleteConfirmationDialog(BuildContext context, Map<String, dynamic> article) {
+  void _showDeleteConfirmationDialog(BuildContext context, ArticleModel article) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận xóa?'),
-        content: Text('Bạn có chắc chắn muốn xóa bài viết "${article['title']}"? Thao tác này không thể hoàn tác.'),
+        content: Text('Bạn có chắc chắn muốn xóa bài viết "${article.title}"? Thao tác này không thể hoàn tác.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

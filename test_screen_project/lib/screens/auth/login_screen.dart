@@ -1,13 +1,15 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _obscureText = true;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -254,26 +256,69 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildLoginButton() {
+    final authState = ref.watch(authViewModelProvider);
+
     return ElevatedButton.icon(
-      onPressed: () {
-        Navigator.pushNamed(context, '/choose-role');
+      onPressed: authState.isLoading 
+        ? null 
+        : () async {
+          final email = _emailController.text.trim();
+          final password = _passwordController.text.trim();
+          
+          if (email.isEmpty || password.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Vui lòng nhập đầy đủ email và mật khẩu')),
+            );
+            return;
+          }
+
+          final role = await ref.read(authViewModelProvider.notifier).login(email, password);
+          
+          if (!mounted) return;
+          
+          final currentError = ref.read(authViewModelProvider).error;
+          if (currentError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(currentError)),
+            );
+            ref.read(authViewModelProvider.notifier).clearError();
+            return;
+          }
+
+          // Dieu huong theo role
+          if (role == 'customer') {
+            Navigator.pushReplacementNamed(context, '/customer-home');
+          } else if (role == 'host') {
+            Navigator.pushReplacementNamed(context, '/host-dashboard');
+          } else {
+            Navigator.pushReplacementNamed(context, '/choose-role');
+          }
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
+        disabledBackgroundColor: const Color(0xFF6D4C41).withValues(alpha: 0.6),
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
       ),
-      icon: const Icon(Icons.login_rounded, color: Colors.white, size: 20),
-      label: const Text(
-        'Đăng nhập',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
+      icon: authState.isLoading 
+          ? const SizedBox() 
+          : const Icon(Icons.login_rounded, color: Colors.white, size: 20),
+      label: authState.isLoading
+          ? const SizedBox(
+              width: 20, 
+              height: 20, 
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+            )
+          : const Text(
+              'Đăng nhập',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
     );
   }
 

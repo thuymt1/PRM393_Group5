@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../models/booking_model.dart';
+import '../../viewmodels/booking_viewmodel.dart';
 
-class MyBookingsScreen extends StatelessWidget {
+class MyBookingsScreen extends ConsumerStatefulWidget {
   const MyBookingsScreen({super.key});
+
+  @override
+  ConsumerState<MyBookingsScreen> createState() => _MyBookingsScreenState();
+}
+
+class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
+  
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(bookingViewModelProvider.notifier).loadMyBookings());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +55,9 @@ class MyBookingsScreen extends StatelessWidget {
         // Vùng nội dung thay đổi linh hoạt tương ứng khi người dùng vuốt hoặc click chọn các Tab
         body: TabBarView(
           children: [
-            _buildBookingList(context, 'upcoming'),  // Danh sách chuyến đi sắp khởi hành
-            _buildBookingList(context, 'completed'), // Danh sách chuyến đi đã hoàn thành lịch trình
-            _buildBookingList(context, 'cancelled'), // Danh sách chuyến đi đã thực hiện hủy bỏ đơn
+            _buildBookingList('upcoming'),  // Danh sách chuyến đi sắp khởi hành
+            _buildBookingList('completed'), // Danh sách chuyến đi đã hoàn thành lịch trình
+            _buildBookingList('cancelled'), // Danh sách chuyến đi đã thực hiện hủy bỏ đơn
           ],
         ),
         bottomNavigationBar: _buildBottomNavBar(), // Thanh thực đơn điều hướng cố định dưới đáy màn hình
@@ -50,52 +66,34 @@ class MyBookingsScreen extends StatelessWidget {
   }
 
   // Hàm sinh dựng danh sách đơn đặt phòng dựa trên danh mục trạng thái truyền vào
-  Widget _buildBookingList(BuildContext context, String category) {
-    // Tạo lập danh sách dữ liệu giả lập (Mock data) tương ứng với từng điều kiện Tab
-    final List<Map<String, dynamic>> bookings = category == 'upcoming'
-        ? [
-      {
-        'name': 'The Pine Hill',
-        'location': 'Phường 4, Đà Lạt',
-        'date': '20/06 - 22/06/2026',
-        'status': 'Đã xác nhận',
-        'price': '2.550.000đ',
-        'image': 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
-      },
-    ]
-        : category == 'completed'
-        ? [
-      {
-        'name': 'Ocean View Villa',
-        'location': 'Sơn Trà, Đà Nẵng',
-        'date': '10/05 - 12/05/2026',
-        'status': 'Hoàn thành',
-        'price': '4.800.000đ',
-        'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=1000',
-      },
-    ]
-        : [
-      {
-        'name': 'Vintage Garden',
-        'location': 'Mai Anh Đào, Đà Lạt',
-        'date': '01/04 - 03/04/2026',
-        'status': 'Đã hủy',
-        'price': '1.700.000đ',
-        'image': 'https://images.unsplash.com/photo-1449156001437-3a1441df910b?q=80&w=1000',
-      },
-    ];
+  Widget _buildBookingList(String category) {
+    final bookingState = ref.watch(bookingViewModelProvider);
+    if (bookingState.isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
+    }
+
+    final allBookings = bookingState.bookings;
+    List<BookingModel> filtered = [];
+    
+    if (category == 'upcoming') {
+      filtered = allBookings.where((b) => b.status == 'pending' || b.status == 'confirmed').toList();
+    } else if (category == 'completed') {
+      filtered = allBookings.where((b) => b.status == 'completed').toList();
+    } else {
+      filtered = allBookings.where((b) => b.status == 'cancelled').toList();
+    }
 
     // Trả về giao diện trống nếu danh sách mảng rỗng không có dữ liệu đơn phòng
-    if (bookings.isEmpty) {
+    if (filtered.isEmpty) {
       return _buildEmptyState();
     }
 
     // Hiển thị danh sách cuộn dọc các thẻ hóa đơn đặt phòng
     return ListView.builder(
       padding: const EdgeInsets.all(20),
-      itemCount: bookings.length,
+      itemCount: filtered.length,
       itemBuilder: (context, index) {
-        return _buildBookingCard(context, bookings[index]); // Vẽ cấu trúc chi tiết từng thẻ Card cụ thể
+        return _buildBookingCard(filtered[index]); // Vẽ cấu trúc chi tiết từng thẻ Card cụ thể
       },
     );
   }
@@ -118,15 +116,18 @@ class MyBookingsScreen extends StatelessWidget {
   }
 
   // Hàm thiết kế cấu trúc chi tiết thẻ Card hiển thị thông tin tóm tắt của chuyến đi
-  Widget _buildBookingCard(BuildContext context, Map<String, dynamic> booking) {
-    // Đổi màu sắc nhãn văn bản linh hoạt để đồng điệu với trạng thái đơn hàng hiện tại
+  Widget _buildBookingCard(BookingModel booking) {
     Color statusColor;
-    switch (booking['status']) {
-      case 'Đã xác nhận': statusColor = Colors.green; break;
-      case 'Hoàn thành': statusColor = const Color(0xFF6D4C41); break; // Sắc nâu hệ thống cho đơn đã xong
-      case 'Đã hủy': statusColor = Colors.red; break;
-      default: statusColor = Colors.orange;
+    String statusText;
+    switch (booking.status) {
+      case 'confirmed': statusColor = Colors.green; statusText = 'Đã xác nhận'; break;
+      case 'completed': statusColor = const Color(0xFF6D4C41); statusText = 'Hoàn thành'; break; // Sắc nâu hệ thống cho đơn đã xong
+      case 'cancelled': statusColor = Colors.red; statusText = 'Đã hủy'; break;
+      case 'pending': 
+      default: statusColor = Colors.orange; statusText = 'Chờ duyệt';
     }
+
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -155,7 +156,7 @@ class MyBookingsScreen extends StatelessWidget {
               child: Stack(
                 children: [
                   Image.network(
-                    booking['image'],
+                    'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000', // Mock image
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover, // Cắt cúp tỉ lệ ảnh cân đối phủ kín khung ngang
@@ -171,7 +172,7 @@ class MyBookingsScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        booking['status'],
+                        statusText,
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 11,
@@ -193,7 +194,7 @@ class MyBookingsScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        booking['name'],
+                        booking.homestayName ?? 'Homestay',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -201,7 +202,7 @@ class MyBookingsScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        booking['price'],
+                        formatCurrency.format(booking.totalPrice),
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -216,7 +217,7 @@ class MyBookingsScreen extends StatelessWidget {
                       const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
-                        booking['location'],
+                        'Đà Lạt, Lâm Đồng', // Mock location
                         style: const TextStyle(color: Colors.grey, fontSize: 13),
                       ),
                     ],
@@ -227,7 +228,7 @@ class MyBookingsScreen extends StatelessWidget {
                       const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF6D4C41)), // Biểu tượng lịch màu nâu
                       const SizedBox(width: 8),
                       Text(
-                        booking['date'],
+                        '${booking.checkIn} - ${booking.checkOut}',
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           fontSize: 13,

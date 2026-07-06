@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/article_viewmodel.dart';
+import '../../models/article_model.dart';
 
-class AuthorDashboardScreen extends StatelessWidget {
+class AuthorDashboardScreen extends ConsumerStatefulWidget {
   const AuthorDashboardScreen({super.key});
+
+  @override
+  ConsumerState<AuthorDashboardScreen> createState() => _AuthorDashboardScreenState();
+}
+
+class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(authorArticleViewModelProvider.notifier).loadMyArticles());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +130,7 @@ class AuthorDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildStatsGrid(Color accentColor) {
+    final state = ref.watch(authorArticleViewModelProvider);
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -124,10 +139,10 @@ class AuthorDashboardScreen extends StatelessWidget {
       mainAxisSpacing: 16,
       childAspectRatio: 1.4,
       children: [
-        _statItem('Bài viết', '12', Icons.article_outlined, accentColor),
-        _statItem('Lượt đọc', '3.420', Icons.visibility_outlined, accentColor),
-        _statItem('Lượt thích', '528', Icons.favorite_border_outlined, accentColor),
-        _statItem('Đánh giá', '4.8 ★', Icons.star_outline, accentColor),
+        _statItem('Bài viết', state.isLoading ? '...' : state.articles.length.toString(), Icons.article_outlined, accentColor),
+        _statItem('Lượt đọc', '0', Icons.visibility_outlined, accentColor),
+        _statItem('Lượt thích', '0', Icons.favorite_border_outlined, accentColor),
+        _statItem('Đánh giá', '0.0 ★', Icons.star_outline, accentColor),
       ],
     );
   }
@@ -262,37 +277,24 @@ class AuthorDashboardScreen extends StatelessWidget {
   }
 
   Widget _buildRecentArticlesList(BuildContext context, Color color) {
-    final List<Map<String, dynamic>> dummyArticles = [
-      {
-        'id': '1',
-        'title': 'Ký ức ngọt ngào tại The Pine Hill homestay Đà Lạt',
-        'homestay': 'The Pine Hill',
-        'status': 'Đã xuất bản',
-        'views': '1.250',
-        'likes': '320',
-        'date': '05/06/2026',
-        'image': 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
-      },
-      {
-        'id': '2',
-        'title': 'Trải nghiệm trọn vẹn tại Terracotta Nest phong cách thô mộc',
-        'homestay': 'The Terracotta Nest',
-        'status': 'Bản nháp',
-        'views': '0',
-        'likes': '0',
-        'date': '02/06/2026',
-        'image': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
-      }
-    ];
+    final state = ref.watch(authorArticleViewModelProvider);
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final articles = state.articles.take(2).toList();
+    if (articles.isEmpty) {
+      return const Center(child: Text('Không có bài viết nào', style: TextStyle(color: Colors.grey)));
+    }
 
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: dummyArticles.length,
+      itemCount: articles.length,
       separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        final article = dummyArticles[index];
-        final isDraft = article['status'] == 'Bản nháp';
+        final article = articles[index];
+        final isDraft = article.status == 'draft';
+        final statusText = isDraft ? 'Bản nháp' : 'Đã xuất bản';
         return GestureDetector(
           onTap: () {
             Navigator.pushNamed(
@@ -313,7 +315,7 @@ class AuthorDashboardScreen extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: Image.network(
-                    article['image'],
+                    'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
                     width: 80,
                     height: 80,
                     fit: BoxFit.cover,
@@ -328,7 +330,7 @@ class AuthorDashboardScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            article['homestay'],
+                            article.authorName ?? 'Hearth & Horizon',
                             style: TextStyle(
                               color: color,
                               fontWeight: FontWeight.bold,
@@ -342,7 +344,7 @@ class AuthorDashboardScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              article['status'],
+                              statusText,
                               style: TextStyle(
                                 color: isDraft ? Colors.orange : Colors.green,
                                 fontSize: 9,
@@ -354,7 +356,7 @@ class AuthorDashboardScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        article['title'],
+                        article.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -368,14 +370,14 @@ class AuthorDashboardScreen extends StatelessWidget {
                         children: [
                           const Icon(Icons.visibility_outlined, size: 12, color: Colors.grey),
                           const SizedBox(width: 4),
-                          Text(article['views'], style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                          const Text('0', style: TextStyle(fontSize: 10, color: Colors.grey)),
                           const SizedBox(width: 12),
                           const Icon(Icons.favorite_border_outlined, size: 12, color: Colors.grey),
                           const SizedBox(width: 4),
-                          Text(article['likes'], style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                          const Text('0', style: TextStyle(fontSize: 10, color: Colors.grey)),
                           const Spacer(),
                           Text(
-                            article['date'],
+                            article.createdAt != null ? article.createdAt.toString().split('T')[0] : 'N/A',
                             style: const TextStyle(fontSize: 10, color: Colors.grey),
                           ),
                         ],

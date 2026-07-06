@@ -63,6 +63,18 @@ class HostHomestayViewModel extends StateNotifier<HomestayState> {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
+
+  Future<bool> createHomestay(Map<String, dynamic> data, String? imageUrl) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final homestay = await _repo.createHomestay(data, imageUrl);
+      state = state.copyWith(isLoading: false, homestays: [homestay, ...state.homestays]);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
 }
 
 // Riverpod Providers

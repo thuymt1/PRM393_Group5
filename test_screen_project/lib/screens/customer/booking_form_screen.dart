@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../models/homestay_model.dart';
+import '../../viewmodels/booking_viewmodel.dart';
 
-class BookingFormScreen extends StatefulWidget {
+class BookingFormScreen extends ConsumerStatefulWidget {
   const BookingFormScreen({super.key});
 
   @override
-  State<BookingFormScreen> createState() => _BookingFormScreenState();
+  ConsumerState<BookingFormScreen> createState() => _BookingFormScreenState();
 }
 
-class _BookingFormScreenState extends State<BookingFormScreen> {
+class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
   DateTimeRange? _selectedDateRange;
   int _guests = 2;
 
   @override
   Widget build(BuildContext context) {
+    final homestay = ModalRoute.of(context)!.settings.arguments as Homestay?;
+    if (homestay == null) return const Scaffold(body: Center(child: Text('Lỗi: Không tìm thấy homestay')));
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7), // Surface color
       appBar: AppBar(
@@ -37,22 +44,25 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHomestayBrief(),
+            _buildHomestayBrief(homestay),
             const SizedBox(height: 32),
             _buildDatePickerSection(),
             const SizedBox(height: 24),
             _buildGuestSelector(),
             const SizedBox(height: 32),
-            _buildPricePreview(),
+            _buildPricePreview(homestay),
             const SizedBox(height: 40),
-            _buildSubmitButton(),
+            _buildSubmitButton(homestay),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHomestayBrief() {
+  Widget _buildHomestayBrief(Homestay homestay) {
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -67,30 +77,34 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Image.network(
-              'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
+              imageUrl,
               width: 80,
               height: 80,
               fit: BoxFit.cover,
             ),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'The Terracotta Nest',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                  homestay.name,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Đà Lạt, Lâm Đồng',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                  '${homestay.address}, ${homestay.city}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
-                  '1.250.000đ / đêm',
-                  style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 15),
+                  '${formatCurrency.format(homestay.pricePerNight)} / đêm',
+                  style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ],
             ),
@@ -215,10 +229,15 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
-  Widget _buildPricePreview() {
+  Widget _buildPricePreview(Homestay homestay) {
     if (_selectedDateRange == null) return const SizedBox();
     int nights = _selectedDateRange!.duration.inDays;
     if (nights == 0) nights = 1; // Tối thiểu 1 đêm
+
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final basePrice = homestay.pricePerNight * nights;
+    final serviceFee = 50000.0;
+    final totalPrice = basePrice + serviceFee;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -229,11 +248,11 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       ),
       child: Column(
         children: [
-          _priceRow('1.250.000đ x $nights đêm', '${1250000 * nights}đ'),
+          _priceRow('${formatCurrency.format(homestay.pricePerNight)} x $nights đêm', formatCurrency.format(basePrice)),
           const SizedBox(height: 10),
-          _priceRow('Phí dịch vụ', '50.000đ'),
+          _priceRow('Phí dịch vụ', formatCurrency.format(serviceFee)),
           const Divider(height: 32, color: Color(0xFFE07A5F)),
-          _priceRow('Tổng cộng', '${1250000 * nights + 50000}đ', isBold: true),
+          _priceRow('Tổng cộng', formatCurrency.format(totalPrice), isBold: true),
         ],
       ),
     );
@@ -249,11 +268,39 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(Homestay homestay) {
+    final bookingState = ref.watch(bookingViewModelProvider);
+
     return ElevatedButton(
-      onPressed: () {
-        Navigator.pushNamed(context, '/booking-confirmation');
-      },
+      onPressed: (_selectedDateRange != null && !bookingState.isSubmitting) ? () async {
+        int nights = _selectedDateRange!.duration.inDays;
+        if (nights == 0) nights = 1;
+        final totalPrice = (homestay.pricePerNight * nights) + 50000.0;
+
+        final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
+        final checkIn = dateFormat.format(_selectedDateRange!.start);
+        final checkOut = dateFormat.format(_selectedDateRange!.start.add(Duration(days: nights)));
+
+        final success = await ref.read(bookingViewModelProvider.notifier).createBooking(
+          homestayId: homestay.id,
+          checkIn: checkIn,
+          checkOut: checkOut,
+          totalPrice: totalPrice,
+        );
+        
+        if (!mounted) return;
+
+        if (success) {
+          // Success => navigate to my bookings (with replacement to clear stack or just pushReplacement)
+          Navigator.pushReplacementNamed(context, '/my-bookings');
+        } else {
+          final err = ref.read(bookingViewModelProvider).error;
+          if (err != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+            ref.read(bookingViewModelProvider.notifier).clearError();
+          }
+        }
+      } : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
         minimumSize: const Size(double.infinity, 56),
@@ -261,10 +308,12 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
       ),
-      child: const Text(
-        'Tiếp tục xác nhận',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-      ),
+      child: bookingState.isSubmitting 
+        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+        : const Text(
+            'Tiếp tục xác nhận',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
     );
   }
 }

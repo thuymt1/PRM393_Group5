@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 
 // Màn hình cho phép người dùng lựa chọn vai trò (Khách hàng / Chủ nhà / Tác giả)
-class ChooseRoleScreen extends StatelessWidget {
+class ChooseRoleScreen extends ConsumerWidget {
   const ChooseRoleScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isLoading = ref.watch(authViewModelProvider).isLoading;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7), // Màu nền nhẹ (Surface color từ design system)
       body: SafeArea(
@@ -27,9 +31,7 @@ class ChooseRoleScreen extends StatelessWidget {
                   Icons.person_outline,
                   'Khách hàng',
                   'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
-                  () {
-                    Navigator.pushNamed(context, '/customer-home');
-                  },
+                  () => _handleRoleSelection(context, ref, 'customer', '/customer-home'),
                 ),
                 const SizedBox(height: 16),
                 _roleCard(
@@ -37,9 +39,7 @@ class ChooseRoleScreen extends StatelessWidget {
                   Icons.home_work_outlined,
                   'Chủ nhà',
                   'Quản lý homestay, đón tiếp khách hàng và bắt đầu kinh doanh hiệu quả.',
-                  () {
-                    Navigator.pushNamed(context, '/host-dashboard');
-                  },
+                  () => _handleRoleSelection(context, ref, 'host', '/host-dashboard'),
                 ),
                 const SizedBox(height: 16),
                 _roleCard(
@@ -47,11 +47,12 @@ class ChooseRoleScreen extends StatelessWidget {
                   Icons.edit_note_outlined,
                   'Người viết bài',
                   'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
-                  () {
-                    Navigator.pushNamed(context, '/author-dashboard');
-                  },
+                  () => _handleRoleSelection(context, ref, 'author', '/author-dashboard'),
                 ),
                 const SizedBox(height: 24),
+                if (isLoading)
+                  const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F))),
+                if (!isLoading)
                 _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò
               ],
             ),
@@ -59,6 +60,24 @@ class ChooseRoleScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handleRoleSelection(BuildContext context, WidgetRef ref, String role, String routeName) async {
+    final authState = ref.read(authViewModelProvider);
+    if (authState.isLoading) return;
+
+    await ref.read(authViewModelProvider.notifier).updateRole(role);
+    
+    if (!context.mounted) return;
+    
+    final currentError = ref.read(authViewModelProvider).error;
+    if (currentError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(currentError)));
+      ref.read(authViewModelProvider.notifier).clearError();
+      return;
+    }
+
+    Navigator.pushReplacementNamed(context, routeName);
   }
 
   // Khối thiết kế biểu tượng thương hiệu (Logo đại diện)

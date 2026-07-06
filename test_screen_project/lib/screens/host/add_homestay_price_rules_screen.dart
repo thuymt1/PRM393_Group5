@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/homestay_viewmodel.dart';
 
-class AddHomestayPriceRulesScreen extends StatefulWidget {
+class AddHomestayPriceRulesScreen extends ConsumerStatefulWidget {
   const AddHomestayPriceRulesScreen({super.key});
 
   @override
-  State<AddHomestayPriceRulesScreen> createState() => _AddHomestayPriceRulesScreenState();
+  ConsumerState<AddHomestayPriceRulesScreen> createState() => _AddHomestayPriceRulesScreenState();
 }
 
-class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScreen> {
+class _AddHomestayPriceRulesScreenState extends ConsumerState<AddHomestayPriceRulesScreen> {
   // Bộ điều khiển dữ liệu nhập vào cho các trường thông tin
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _checkInController = TextEditingController(text: '14:00'); // Khởi tạo giờ nhận phòng mặc định
@@ -226,15 +228,30 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
           ),
           // Nút bấm xác nhận hoàn tất quy trình lưu trữ dữ liệu và gửi tin đăng
           ElevatedButton(
-            onPressed: () {
-              // In log kiểm thử toàn bộ thông tin giá tiền và quy định đã nhập trước khi đẩy lên Server/API
-              print("--- Tiến trình Hoàn Tất Đăng Tin ---");
-              print("Giá thuê/đêm: ${_priceController.text} VND");
-              print("Thời gian Check-in: ${_checkInController.text}");
-              print("Thời gian Check-out: ${_checkOutController.text}");
-              print("Nội quy homestay: ${_rulesController.text}");
-
-              // TODO: Triển khai gọi API kết nối DB để lưu trữ thông tin homestay mới và điều hướng về trang chủ quản lý của Host
+            onPressed: () async {
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+              
+              if (_priceController.text.isEmpty) {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập giá')));
+                 return;
+              }
+              
+              final price = int.tryParse(_priceController.text.replaceAll('.', '')) ?? 0;
+              final data = {
+                ...args,
+                'price_per_night': price,
+                'amenities': _rulesController.text, // Just map to amenities or description for now
+              };
+              
+              final success = await ref.read(hostHomestayViewModelProvider.notifier).createHomestay(data, null);
+              if (success) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng homestay thành công!')));
+                Navigator.popUntil(context, ModalRoute.withName('/host-dashboard'));
+              } else {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Có lỗi xảy ra, vui lòng thử lại!')));
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống

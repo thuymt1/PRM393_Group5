@@ -404,7 +404,16 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
           const Spacer(),
           ElevatedButton(
             onPressed: () {
-              // TODO: Navigate to next step
+              if (_nameController.text.isEmpty || _descriptionController.text.isEmpty) {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đủ thông tin')));
+                 return;
+              }
+              Navigator.pushNamed(context, '/add-homestay-location', arguments: {
+                'name': _nameController.text,
+                'description': _descriptionController.text,
+                'max_guests': _maxGuests,
+                'category_id': 1, // Default mapping
+              });
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF5D3A2E),

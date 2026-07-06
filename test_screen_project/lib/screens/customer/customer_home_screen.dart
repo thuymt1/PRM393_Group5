@@ -1,40 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../viewmodels/homestay_viewmodel.dart';
+import '../../viewmodels/profile_viewmodel.dart';
+import '../../models/homestay_model.dart';
 
-class CustomerHomeScreen extends StatefulWidget {
+class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
 
   @override
-  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
+  ConsumerState<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
 }
 
-class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   // Chỉ mục lưu trữ Tab đang được lựa chọn trên BottomNavigationBar (Mặc định là 0: Khám phá)
   int _currentIndex = 0;
 
-  // Danh sách dữ liệu giả lập chứa thông tin các Homestay nổi bật hiển thị trên màn hình
-  final List<Map<String, dynamic>> _featuredHomestays = [
-    {
-      'name': 'The Pine Hill',
-      'location': 'Phường 4, Đà Lạt',
-      'price': '1.200.000đ',
-      'rating': '4.8',
-      'image': 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'Terracotta Villa',
-      'location': 'Hồ Tuyền Lâm, Đà Lạt',
-      'price': '2.500.000đ',
-      'rating': '4.9',
-      'image': 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'Ocean Breeze Loft',
-      'location': 'Sơn Trà, Đà Nẵng',
-      'price': '1.850.000đ',
-      'rating': '4.7',
-      'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=1000&auto=format&fit=crop',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(homestayViewModelProvider.notifier).loadHomestays();
+      ref.read(profileViewModelProvider.notifier).loadProfile();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,11 +50,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             icon: const Icon(Icons.notifications_none, color: Color(0xFF6D4C41)), // Biểu tượng chuông thông báo
             onPressed: () {},
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16.0),
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
             child: CircleAvatar(
               radius: 18, // Ảnh đại diện thu nhỏ góc trên bên phải AppBar
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=alexandria'),
+              backgroundImage: (ref.watch(profileViewModelProvider).profile?.avatarUrl != null)
+                  ? NetworkImage(ref.watch(profileViewModelProvider).profile!.avatarUrl!)
+                  : const NetworkImage('https://i.pravatar.cc/150?u=placeholder'),
             ),
           ),
         ],
@@ -96,14 +87,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   // Khối giao diện hiển thị văn bản chào hỏi cá nhân hóa
   Widget _buildWelcomeHeader() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+    final profile = ref.watch(profileViewModelProvider).profile;
+    final name = profile?.fullName ?? 'bạn';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Chào Alexandria,',
-            style: TextStyle(
+            'Chào $name,',
+            style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Color(0xFF424242), // Màu xám đen thẫm tinh tế
@@ -204,6 +198,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   // Khối gom danh sách các căn Homestay nổi bật kèm tiêu đề nhóm và nút "Xem tất cả"
   Widget _buildFeaturedSection() {
+    final homestayState = ref.watch(homestayViewModelProvider);
+    final homestays = homestayState.homestays;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -225,47 +222,59 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ],
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true, // Cho phép ListView thu gọn kích thước vừa vặn theo số lượng phần tử con
-          physics: const NeverScrollableScrollPhysics(), // Vô hiệu hóa tính năng cuộn riêng biệt của ListView này để dùng cuộn chung của SingleChildScrollView body
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: _featuredHomestays.length,
-          itemBuilder: (context, index) {
-            return _buildHomestayCard(_featuredHomestays[index]); // Vẽ cấu trúc từng thẻ Card Homestay chi tiết
-          },
-        ),
+        if (homestayState.isLoading)
+           const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
+        else if (homestays.isEmpty)
+           const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("Chưa có homestay nào được đăng", style: TextStyle(color: Colors.grey))))
+        else
+          ListView.builder(
+            shrinkWrap: true, // Cho phép ListView thu gọn kích thước vừa vặn theo số lượng phần tử con
+            physics: const NeverScrollableScrollPhysics(), // Vô hiệu hóa tính năng cuộn riêng biệt của ListView này để dùng cuộn chung của SingleChildScrollView body
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: homestays.length,
+            itemBuilder: (context, index) {
+              return _buildHomestayCard(homestays[index]); // Vẽ cấu trúc từng thẻ Card Homestay chi tiết
+            },
+          ),
       ],
     );
   }
 
   // Hàm thiết kế cấu trúc chi tiết cho từng thẻ Card hiển thị hình ảnh và thông tin Homestay
-  Widget _buildHomestayCard(Map<String, dynamic> homestay) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24), // Tạo khoảng cách đệm trống phía dưới thẻ Card
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24), // Thiết lập bo tròn bốn góc cho toàn bộ khung thẻ Card
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Bo tròn góc phần hình ảnh phía trên cùng của Card bằng cách dùng ClipRRect
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            child: Stack(
-              children: [
-                Image.network(
-                  homestay['image'],
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover, // Cắt và kéo dãn hình ảnh phủ kín khung chứa
-                ),
+  Widget _buildHomestayCard(Homestay homestay) {
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000&auto=format&fit=crop';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, '/homestay-detail', arguments: homestay);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 24), // Tạo khoảng cách đệm trống phía dưới thẻ Card
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24), // Thiết lập bo tròn bốn góc cho toàn bộ khung thẻ Card
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Bo tròn góc phần hình ảnh phía trên cùng của Card bằng cách dùng ClipRRect
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              child: Stack(
+                children: [
+                  Image.network(
+                    imageUrl,
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover, // Cắt và kéo dãn hình ảnh phủ kín khung chứa
+                  ),
                 // Nút bấm biểu tượng trái tim yêu thích (Yêu thích/Thích) đặt ở góc trên bên phải ảnh
                 Positioned(
                   top: 16,
@@ -290,7 +299,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                         const Icon(Icons.star, color: Colors.amber, size: 16), // Ngôi sao vàng đánh giá
                         const SizedBox(width: 4),
                         Text(
-                          homestay['rating'],
+                          homestay.rating.toStringAsFixed(1),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
@@ -311,7 +320,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        homestay['name'],
+                        homestay.name,
                         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis, // Hiển thị dấu ba chấm nếu tên quá dài vượt khung
@@ -323,7 +332,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              homestay['location'],
+                              '${homestay.address}, ${homestay.city}',
                               style: const TextStyle(color: Colors.grey, fontSize: 13),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -336,25 +345,26 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 ),
                 const SizedBox(width: 12),
                 // Hiển thị giá tiền theo cấu trúc Text.rich tinh tế phối trộn kích thước chữ
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: homestay['price'],
-                        style: const TextStyle(
-                          color: Color(0xFFE07A5F), // Sắc cam nổi bật cho thông tin giá phòng
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: formatCurrency.format(homestay.pricePerNight),
+                          style: const TextStyle(
+                            color: Color(0xFFE07A5F), // Sắc cam nổi bật cho thông tin giá phòng
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                      const TextSpan(text: '/đêm', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    ],
+                        const TextSpan(text: '/đêm', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

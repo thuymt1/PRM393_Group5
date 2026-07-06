@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../models/homestay_model.dart';
+import '../../viewmodels/homestay_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 
-class HostDashboardScreen extends StatefulWidget {
+class HostDashboardScreen extends ConsumerStatefulWidget {
   const HostDashboardScreen({super.key});
 
   @override
-  State<HostDashboardScreen> createState() => _HostDashboardScreenState();
+  ConsumerState<HostDashboardScreen> createState() => _HostDashboardScreenState();
 }
 
-class _HostDashboardScreenState extends State<HostDashboardScreen>
+class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
@@ -17,6 +22,8 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => ref.read(hostHomestayViewModelProvider.notifier).loadMyHomestays());
+    
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -89,6 +96,9 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
   }
 
   Widget _buildSliverAppBar() {
+    final user = ref.watch(authViewModelProvider).user;
+    final username = user?['username'] ?? 'Host';
+
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
@@ -144,7 +154,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Chào buổi tối, Julian 👋',
+                                'Chào buổi tối, $username 👋',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 14,
@@ -589,6 +599,32 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
   }
 
   Widget _buildMyHomestayCard(BuildContext context) {
+    final state = ref.watch(hostHomestayViewModelProvider);
+    if (state.isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
+    }
+    
+    if (state.homestays.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24)),
+        child: const Center(child: Text('Chưa có homestay nào được đăng', style: TextStyle(color: Colors.grey))),
+      );
+    }
+
+    final homestaysToDisplay = state.homestays.take(3).toList();
+    return Column(
+      children: homestaysToDisplay.map((h) => Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: _buildSingleHomestayCard(context, h),
+      )).toList(),
+    );
+  }
+
+  Widget _buildSingleHomestayCard(BuildContext context, Homestay homestay) {
+    final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, '/homestay-status'),
       child: Container(
@@ -601,15 +637,15 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
           children: [
             Stack(
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
-                    height: 170,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    child: Image.network(
+                      imageUrl,
+                      height: 170,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
                   ),
-                ),
                 // Gradient overlay
                 Positioned.fill(
                   child: ClipRRect(
@@ -636,12 +672,12 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8)],
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.star, color: Color(0xFFF59E0B), size: 13),
-                        SizedBox(width: 3),
-                        Text('4.9', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 13),
+                        const SizedBox(width: 3),
+                        Text(homestay.rating.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -677,16 +713,23 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'The Terracotta Nest',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1F2937)),
+                        Text(
+                          homestay.name,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1F2937)),
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
                             const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF9CA3AF)),
                             const SizedBox(width: 3),
-                            Text('Đà Lạt, Lâm Đồng', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                            Expanded(
+                              child: Text(
+                                '${homestay.address}, ${homestay.city}', 
+                                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -711,11 +754,11 @@ class _HostDashboardScreenState extends State<HostDashboardScreen>
               ),
               child: Row(
                 children: [
-                  _homestayQuickStat('18', 'Đặt phòng', Icons.book_online_outlined),
+                  _homestayQuickStat('0', 'Đặt phòng', Icons.book_online_outlined),
                   _dividerVertical(),
-                  _homestayQuickStat('1.25M', 'Giá/đêm', Icons.payments_outlined),
+                  _homestayQuickStat(formatCurrency.format(homestay.pricePerNight), 'Giá/đêm', Icons.payments_outlined),
                   _dividerVertical(),
-                  _homestayQuickStat('98%', 'Phản hồi', Icons.speed_outlined),
+                  _homestayQuickStat('0%', 'Phản hồi', Icons.speed_outlined),
                 ],
               ),
             ),

@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/profile_viewmodel.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(profileViewModelProvider.notifier).loadProfile());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +56,16 @@ class ProfilePage extends StatelessWidget {
 
   // Khối giao diện thông tin cá nhân cơ bản (Avatar và Tên thành viên)
   Widget _buildProfileHeader() {
+    final profileState = ref.watch(profileViewModelProvider);
+    final profile = profileState.profile;
+
+    if (profileState.isLoading && profile == null) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F))),
+      );
+    }
+
     return Container(
       width: double.infinity, // Chiều rộng tối đa theo khung chứa
       padding: const EdgeInsets.all(24),
@@ -60,9 +85,11 @@ class ProfilePage extends StatelessWidget {
           // Stack dùng để đè nút đổi ảnh (Icon camera) lên trên Avatar hình tròn
           Stack(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 60, // Bán kính vòng tròn ảnh đại diện
-                backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=alexandria'), // Tải ảnh mẫu từ Internet
+                backgroundImage: profile?.avatarUrl != null 
+                    ? NetworkImage(profile!.avatarUrl!) 
+                    : const NetworkImage('https://i.pravatar.cc/150?u=placeholder'), 
               ),
               Positioned(
                 bottom: 0,
@@ -79,13 +106,13 @@ class ProfilePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Alexandria Bennett',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+          Text(
+            profile?.fullName ?? 'Chưa cập nhật tên',
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
           ),
-          const Text(
-            'alexandria.b@homestay.com',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+          Text(
+            profile?.email ?? '---',
+            style: const TextStyle(color: Colors.grey, fontSize: 14),
           ),
           const SizedBox(height: 12),
           // Khung nhãn hiển thị trạng thái phân hạng thành viên (Premium)
@@ -101,8 +128,8 @@ class ProfilePage extends StatelessWidget {
                 Icon(Icons.verified, color: Color(0xFFE07A5F), size: 16),
                 SizedBox(width: 8),
                 Text(
-                  'Thành viên Premium',
-                  style: TextStyle(
+                  profile?.role == 'HOST' ? 'Chủ nhà' : 'Khách hàng',
+                  style: const TextStyle(
                     color: Color(0xFFE07A5F),
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -228,9 +255,11 @@ class ProfilePage extends StatelessWidget {
   // Thiết kế cấu trúc nút Đăng xuất chứa cả Icon biểu tượng phía trước chữ
   Widget _buildLogoutButton() {
     return ElevatedButton.icon(
-      onPressed: () {
-        // TODO: Xử lý xóa phiên đăng nhập (token/session) và chuyển hướng về màn hình Login tại đây
-        print("Thực hiện đăng xuất tài khoản");
+      onPressed: () async {
+        await ref.read(authViewModelProvider.notifier).logout();
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        }
       },
       icon: const Icon(Icons.logout, color: Colors.white, size: 20), // Biểu tượng đăng xuất
       label: const Text(

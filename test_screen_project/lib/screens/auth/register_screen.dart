@@ -1,13 +1,15 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
@@ -299,10 +301,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildRegisterButton() {
+    final authState = ref.watch(authViewModelProvider);
+
     return ElevatedButton(
-      onPressed: _agreeToTerms
-          ? () {
-              Navigator.pushNamed(context, '/choose-role');
+      onPressed: (_agreeToTerms && !authState.isLoading)
+          ? () async {
+              final email = _emailController.text.trim();
+              final password = _passwordController.text.trim();
+              final confirmPassword = _confirmPasswordController.text.trim();
+
+              if (email.isEmpty || password.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')),
+                );
+                return;
+              }
+
+              if (password != confirmPassword) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mật khẩu xác nhận không khớp')),
+                );
+                return;
+              }
+
+              final success = await ref.read(authViewModelProvider.notifier).register(email, password);
+              
+              if (!mounted) return;
+
+              if (success) {
+                Navigator.pushReplacementNamed(context, '/choose-role');
+              } else {
+                final currentError = ref.read(authViewModelProvider).error;
+                if (currentError != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(currentError)),
+                  );
+                  ref.read(authViewModelProvider.notifier).clearError();
+                }
+              }
             }
           : null,
       style: ElevatedButton.styleFrom(
@@ -314,13 +350,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
       ),
-      child: const Text(
-        'Đăng ký tài khoản',
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
+      child: authState.isLoading
+          ? const SizedBox(
+              width: 20, 
+              height: 20, 
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+            )
+          : const Text(
+              'Đăng ký tài khoản',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
     );
   }
 

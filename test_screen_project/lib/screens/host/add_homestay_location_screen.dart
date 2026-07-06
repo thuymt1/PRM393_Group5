@@ -244,13 +244,17 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
           // Nút bấm xác nhận chuyển tiếp sang Bước 3 (Đăng tải hình ảnh không gian)
           ElevatedButton(
             onPressed: () {
-              // In log kiểm thử thông tin dữ liệu địa chỉ đã nhập
-              print("--- Dữ liệu Bước 2 ---");
-              print("Địa chỉ cụ thể: ${_addressController.text}");
-              print("Quận/Huyện: ${_districtController.text}");
-              print("Thành phố/Tỉnh: ${_cityController.text}");
-
-              // TODO: Điều phối kết nối Navigator chuyển tiếp sang bước tiếp theo (Hình ảnh - Add Photos Screen)
+              if (_addressController.text.isEmpty || _cityController.text.isEmpty) {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập địa chỉ và thành phố')));
+                 return;
+              }
+              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+              final newArgs = {
+                ...args,
+                'address': '${_addressController.text}, ${_districtController.text}',
+                'city': _cityController.text,
+              };
+              Navigator.pushNamed(context, '/add-homestay-price-rules', arguments: newArgs);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống

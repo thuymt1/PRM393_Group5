@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../viewmodels/article_viewmodel.dart';
 
-class CreateArticleScreen extends StatefulWidget {
+class CreateArticleScreen extends ConsumerStatefulWidget {
   const CreateArticleScreen({super.key});
 
   @override
-  State<CreateArticleScreen> createState() => _CreateArticleScreenState();
+  ConsumerState<CreateArticleScreen> createState() => _CreateArticleScreenState();
 }
 
-class _CreateArticleScreenState extends State<CreateArticleScreen> {
+class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _homestayController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
@@ -274,8 +276,22 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
         const SizedBox(width: 16),
         Expanded(
           child: ElevatedButton(
-            onPressed: () {
-              _showSuccessDialog(context);
+            onPressed: () async {
+              if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đủ thông tin')));
+                 return;
+              }
+              final success = await ref.read(authorArticleViewModelProvider.notifier).createArticle(
+                _titleController.text,
+                _contentController.text,
+              );
+              if (success) {
+                if (!mounted) return;
+                _showSuccessDialog(context);
+              } else {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Có lỗi xảy ra, vui lòng thử lại!')));
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: color,

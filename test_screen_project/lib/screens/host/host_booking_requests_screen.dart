@@ -1,55 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../models/booking_model.dart';
+import '../../viewmodels/booking_viewmodel.dart';
 
-class HostBookingRequestsScreen extends StatefulWidget {
+class HostBookingRequestsScreen extends ConsumerStatefulWidget {
   const HostBookingRequestsScreen({super.key});
 
   @override
-  State<HostBookingRequestsScreen> createState() => _HostBookingRequestsScreenState();
+  ConsumerState<HostBookingRequestsScreen> createState() => _HostBookingRequestsScreenState();
 }
 
-class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
+class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedFilter = 0;
 
   final List<String> _filters = ['Tất cả', 'Chờ duyệt', 'Đã duyệt', 'Đã từ chối'];
 
-  final List<Map<String, dynamic>> _requests = [
-    {
-      'guestName': 'Trần An Nhiên',
-      'avatar': 'https://i.pravatar.cc/150?u=user1',
-      'stayDate': '20 thg 06 – 22 thg 06, 2026',
-      'details': '2 đêm • 2 khách',
-      'price': '2.550.000đ',
-      'status': 'Chờ duyệt',
-      'homestay': 'The Terracotta Nest',
-      'trips': '12 chuyến đi',
-    },
-    {
-      'guestName': 'Lê Minh Tâm',
-      'avatar': 'https://i.pravatar.cc/150?u=user2',
-      'stayDate': '25 thg 06 – 28 thg 06, 2026',
-      'details': '3 đêm • 1 khách',
-      'price': '3.750.000đ',
-      'status': 'Chờ duyệt',
-      'homestay': 'The Pine Hill Dalat',
-      'trips': '5 chuyến đi',
-    },
-    {
-      'guestName': 'Phạm Hải Yến',
-      'avatar': 'https://i.pravatar.cc/150?u=user3',
-      'stayDate': '01 thg 07 – 02 thg 07, 2026',
-      'details': '1 đêm • 4 khách',
-      'price': '1.800.000đ',
-      'status': 'Đã duyệt',
-      'homestay': 'The Terracotta Nest',
-      'trips': '28 chuyến đi',
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => ref.read(hostBookingViewModelProvider.notifier).loadHostRequests());
     _tabController = TabController(length: _filters.length, vsync: this);
   }
 
@@ -59,12 +31,20 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
     super.dispose();
   }
 
-  List<Map<String, dynamic>> get _filteredRequests {
-    if (_selectedFilter == 0) return _requests;
-    return _requests.where((r) => r['status'] == _filters[_selectedFilter]).toList();
+  List<BookingModel> get _filteredRequests {
+    final state = ref.watch(hostBookingViewModelProvider);
+    final requests = state.bookings;
+    if (_selectedFilter == 0) return requests;
+    
+    return requests.where((r) {
+      if (_selectedFilter == 1) return r.status == 'pending';
+      if (_selectedFilter == 2) return r.status == 'confirmed' || r.status == 'completed';
+      if (_selectedFilter == 3) return r.status == 'cancelled';
+      return true;
+    }).toList();
   }
 
-  Widget _buildAnimatedRequestCard(BuildContext context, Map<String, dynamic> data, int index) {
+  Widget _buildAnimatedRequestCard(BuildContext context, BookingModel data, int index) {
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
       duration: Duration(milliseconds: 350 + (index * 80)),
@@ -84,6 +64,9 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(hostBookingViewModelProvider);
+    final filtered = _filteredRequests;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
@@ -144,13 +127,15 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
           child: _buildFilterTabs(),
         ),
       ),
-      body: _filteredRequests.isEmpty
+      body: state.isLoading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
+          : filtered.isEmpty
           ? _buildEmptyState()
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              itemCount: _filteredRequests.length,
+              itemCount: filtered.length,
               itemBuilder: (context, index) {
-                return _buildAnimatedRequestCard(context, _filteredRequests[index], index);
+                return _buildAnimatedRequestCard(context, filtered[index], index);
               },
             ),
     );
@@ -223,12 +208,17 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
     );
   }
 
-  Widget _buildRequestCard(BuildContext context, Map<String, dynamic> data, int index) {
-    final bool isPending = data['status'] == 'Chờ duyệt';
-    final bool isApproved = data['status'] == 'Đã duyệt';
+  Widget _buildRequestCard(BuildContext context, BookingModel data, int index) {
+    final bool isPending = data.status == 'pending';
+    final bool isApproved = data.status == 'confirmed' || data.status == 'completed';
+    final bool isCancelled = data.status == 'cancelled';
+
+    String statusText = isPending ? 'Chờ duyệt' : isApproved ? 'Đã duyệt' : 'Đã từ chối';
 
     Color statusColor = isPending ? Colors.orange : isApproved ? Colors.green : Colors.red;
     Color statusBg = isPending ? Colors.orange.shade50 : isApproved ? Colors.green.shade50 : Colors.red.shade50;
+
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -250,57 +240,57 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Row(
               children: [
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundImage: NetworkImage(data['avatar']),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: isApproved ? Colors.green : Colors.grey.shade300,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Stack(
                     children: [
-                      Text(
-                        data['guestName'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: Color(0xFF1F2937),
-                        ),
+                      const CircleAvatar(
+                        radius: 26,
+                        backgroundImage: NetworkImage('https://i.pravatar.cc/150'), // Mock avatar
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        data['trips'],
-                        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: isApproved ? Colors.green : Colors.grey.shade300,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: statusColor.withOpacity(0.2)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          data.customerName ?? 'Khách',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Khách mới',
+                          style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
+                        ),
+                      ],
+                    ),
                   ),
-                  child: Text(
-                    data['status'],
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: statusColor.withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      statusText,
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 11,
@@ -320,18 +310,16 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                _buildInfoRow(Icons.home_outlined, 'Homestay', data['homestay']),
+                _buildInfoRow(Icons.home_outlined, 'Homestay', data.homestayName ?? 'Homestay'),
                 const SizedBox(height: 10),
-                _buildInfoRow(Icons.calendar_today_outlined, 'Thời gian', data['stayDate']),
-                const SizedBox(height: 10),
-                _buildInfoRow(Icons.people_outline, 'Chi tiết', data['details']),
+                _buildInfoRow(Icons.calendar_today_outlined, 'Thời gian', '${data.checkIn} đến ${data.checkOut}'),
                 const SizedBox(height: 14),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Tổng tiền:', style: TextStyle(color: Color(0xFF6B7280), fontSize: 13)),
                     Text(
-                      data['price'],
+                      formatCurrency.format(data.totalPrice),
                       style: const TextStyle(
                         color: Color(0xFFE07A5F),
                         fontWeight: FontWeight.bold,
@@ -347,7 +335,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
                     children: [
                       Expanded(
                         child: _AnimatedButton(
-                          onPressed: () => _showRejectDialog(context),
+                          onPressed: () => _showRejectDialog(context, data.id),
                           isOutlined: true,
                           icon: Icons.close,
                           label: 'Từ chối',
@@ -357,8 +345,9 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
                       const SizedBox(width: 12),
                       Expanded(
                         child: _AnimatedButton(
-                          onPressed: () {
-                            setState(() => _requests[_requests.indexOf(data)]['status'] = 'Đã duyệt');
+                          onPressed: () async {
+                            await ref.read(hostBookingViewModelProvider.notifier).updateStatus(data.id, 'confirmed');
+                            if (!mounted) return;
                             _showSuccessSnackbar(context, 'Đã phê duyệt thành công!');
                           },
                           isOutlined: false,
@@ -420,7 +409,7 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
     );
   }
 
-  void _showRejectDialog(BuildContext context) {
+  void _showRejectDialog(BuildContext context, int bookingId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -470,8 +459,10 @@ class _HostBookingRequestsScreenState extends State<HostBookingRequestsScreen>
             child: const Text('Hủy', style: TextStyle(color: Color(0xFF6B7280))),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
+              await ref.read(hostBookingViewModelProvider.notifier).updateStatus(bookingId, 'cancelled');
+              if (!mounted) return;
               _showSuccessSnackbar(context, 'Đã từ chối yêu cầu');
             },
             style: ElevatedButton.styleFrom(
