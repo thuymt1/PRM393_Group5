@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Secrets & Config Files
+# Ignore files containing API keys and other secrets
+lib/core/constants/app_constants.dart
+*.env

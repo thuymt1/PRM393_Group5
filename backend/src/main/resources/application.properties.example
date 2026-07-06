@@ -1,0 +1,30 @@
+# ===========================
+# SERVER CONFIG
+# ===========================
+server.port=8080
+
+# ===========================
+# DATASOURCE — Supabase PostgreSQL
+# ===========================
+# Lay Connection String tu: Supabase Dashboard > Project Settings > Database > Connection string (JDBC)
+# Thay the <password> bang mat khau Supabase cua ban
+spring.datasource.url=jdbc:postgresql://db.vsmlzmwgqyaduavrisme.supabase.co:5432/postgres
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_SUPABASE_DB_PASSWORD
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# ===========================
+# JPA / HIBERNATE
+# ===========================
+# validate: kiem tra schema khop voi Entity, khong tu dong sua DB (an toan cho production)
+spring.jpa.hibernate.ddl-auto=validate
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+# Tat lenh SQL tu Hibernate de log gon hon
+spring.jpa.open-in-view=false
+
+# ===========================
+# SUPABASE JWT CONFIG
+# ===========================
+# JWT secret duoc lay tu: Supabase Dashboard > Project Settings > API > JWT Secret
+supabase.jwt.secret=YOUR_SUPABASE_JWT_SECRET

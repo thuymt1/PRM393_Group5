@@ -1,0 +1,11 @@
+/// Cau hinh toan cuc cho ung dung
+class AppConstants {
+  // Backend Spring Boot URL — doi thanh IP thuc cua server khi deploy
+  // Khi chay tren Android emulator: dung 10.0.2.2 thay cho localhost
+  static const String backendBaseUrl = 'http://10.0.2.2:8080/api';
+
+  // Supabase — chi dung cho Auth va Storage
+  static const String supabaseUrl = 'https://vsmlzmwgqyaduavrisme.supabase.co';
+  static const String supabaseAnonKey =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzbWx6bXdncXlhZHVhdnJpc21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTc0MTIsImV4cCI6MjA5NzIzMzQxMn0.MQqxeMaxp3i7uJXZ4kWN2UxyUmul3N5E7_XWZ2FIcfU';
+}

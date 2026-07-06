@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: homestay-backend
+    
+  datasource:
+    # URL kết nối Supabase PostgreSQL: jdbc:postgresql://<db.xxx.supabase.co>:5432/postgres
+    url: ${DB_URL:jdbc:postgresql://YOUR_SUPABASE_DB_HOST:5432/postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:YOUR_SUPABASE_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update # Tự động cập nhật schema
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Cấu hình JWT lấy từ Supabase Project (Project Settings -> API -> JWT Secret)
+          # Thường Supabase dùng thuật toán HS256 với Secret Key.
+          # Lưu ý: URL Issuer của Supabase thường là: https://<project-ref>.supabase.co/auth/v1
+          issuer-uri: https://YOUR_SUPABASE_PROJECT_REF.supabase.co/auth/v1
+
+server:
+  port: 8080

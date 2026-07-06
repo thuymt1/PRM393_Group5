@@ -35,3 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Secrets & Config Files ###
+# Ignore sensitive configuration files containing DB credentials and JWT secrets
+src/main/resources/application.properties
+src/main/resources/application.yml
+*.env
