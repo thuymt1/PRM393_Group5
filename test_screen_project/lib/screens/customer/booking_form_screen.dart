@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/homestay_model.dart';
 import '../../viewmodels/booking_viewmodel.dart';
 
 class BookingFormScreen extends ConsumerStatefulWidget {
-  const BookingFormScreen({super.key});
+  final Homestay? homestay;
+  const BookingFormScreen({super.key, this.homestay});
 
   @override
   ConsumerState<BookingFormScreen> createState() => _BookingFormScreenState();
@@ -17,7 +19,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final homestay = ModalRoute.of(context)!.settings.arguments as Homestay?;
+    final homestay = widget.homestay;
     if (homestay == null) return const Scaffold(body: Center(child: Text('Lỗi: Không tìm thấy homestay')));
 
     return Scaffold(
@@ -27,7 +29,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Đặt phòng',
@@ -292,7 +294,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
 
         if (success) {
           // Success => navigate to my bookings (with replacement to clear stack or just pushReplacement)
-          Navigator.pushReplacementNamed(context, '/my-bookings');
+          context.pushReplacement('/my-bookings');
         } else {
           final err = ref.read(bookingViewModelProvider).error;
           if (err != null) {

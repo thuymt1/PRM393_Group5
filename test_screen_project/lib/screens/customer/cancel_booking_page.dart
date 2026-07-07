@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class CancelBookingPage extends StatefulWidget {
   const CancelBookingPage({super.key});
@@ -33,7 +34,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại trang trước đó
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Hủy đặt phòng',
@@ -268,7 +269,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
         const SizedBox(height: 16),
         // Nút bấm văn bản hỗ trợ khách quay ngược về màn hình quản lý lịch trình, giữ lại phòng lưu trú
         TextButton(
-          onPressed: () => Navigator.pop(context), // Thoát đóng giao diện gỡ bỏ tiến trình
+          onPressed: () => context.pop(), // Thoát đóng giao diện gỡ bỏ tiến trình
           child: const Text(
             'Giữ lại đặt phòng này',
             style: TextStyle(

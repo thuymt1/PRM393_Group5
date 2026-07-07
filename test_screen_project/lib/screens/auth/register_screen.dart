@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
@@ -39,7 +40,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SingleChildScrollView(
@@ -329,7 +330,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               if (!mounted) return;
 
               if (success) {
-                Navigator.pushReplacementNamed(context, '/choose-role');
+                context.pushReplacement('/choose-role');
               } else {
                 final currentError = ref.read(authViewModelProvider).error;
                 if (currentError != null) {
@@ -375,7 +376,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           style: TextStyle(color: Colors.grey.shade600),
         ),
         GestureDetector(
-          onTap: () => Navigator.pop(context),
+          onTap: () => context.pop(),
           child: const Text(
             'Đăng nhập ngay',
             style: TextStyle(

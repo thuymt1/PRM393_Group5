@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class FilterScreen extends StatefulWidget {
   const FilterScreen({super.key});
@@ -39,7 +40,7 @@ class _FilterScreenState extends State<FilterScreen> {
         elevation: 0, // Loại bỏ bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.close, color: Color(0xFF6D4C41)), // Icon dấu X đóng màn hình bộ lọc
-          onPressed: () => Navigator.pop(context), // Thoát quay lại màn hình trước đó
+          onPressed: () => context.pop(), // Thoát quay lại màn hình trước đó
         ),
         title: const Text(
           'Bộ lọc',
@@ -305,7 +306,7 @@ class _FilterScreenState extends State<FilterScreen> {
             print("Danh sách tiện nghi: $_selectedAmenities");
             print("Mức đánh giá tối thiểu: $_selectedRating sao");
 
-            Navigator.pop(context); // Quay ngược lại màn hình kết quả tìm kiếm danh sách
+            context.pop(); // Quay ngược lại màn hình kết quả tìm kiếm danh sách
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6D4C41), // Đặt màu nâu chủ đạo hệ thống cho nút nhấn

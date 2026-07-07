@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
@@ -30,7 +31,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
       ),
       body: SingleChildScrollView(
@@ -231,7 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       alignment: Alignment.centerRight,
       child: TextButton.icon(
         onPressed: () {
-          Navigator.pushNamed(context, '/forgot-password-otp');
+          context.push('/forgot-password-otp');
         },
         icon: const Icon(
           Icons.help_outline_rounded,
@@ -287,11 +288,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
           // Dieu huong theo role
           if (role == 'customer') {
-            Navigator.pushReplacementNamed(context, '/customer-home');
+            context.pushReplacement('/customer-home');
           } else if (role == 'host') {
-            Navigator.pushReplacementNamed(context, '/host-dashboard');
+            context.pushReplacement('/host-dashboard');
           } else {
-            Navigator.pushReplacementNamed(context, '/choose-role');
+            context.pushReplacement('/choose-role');
           }
       },
       style: ElevatedButton.styleFrom(
@@ -397,7 +398,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         GestureDetector(
           onTap: () {
-            Navigator.pushNamed(context, '/register');
+            context.push('/register');
           },
           child: const Text(
             'Đăng ký ngay',

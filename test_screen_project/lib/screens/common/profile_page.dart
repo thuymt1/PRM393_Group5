@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
@@ -258,7 +259,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       onPressed: () async {
         await ref.read(authViewModelProvider.notifier).logout();
         if (mounted) {
-          Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+          context.go('/login');
         }
       },
       icon: const Icon(Icons.logout, color: Colors.white, size: 20), // Biểu tượng đăng xuất

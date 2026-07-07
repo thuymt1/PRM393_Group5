@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class ArticleDetailScreen extends StatelessWidget {
-  const ArticleDetailScreen({super.key});
+  final Map<String, dynamic>? article;
+  const ArticleDetailScreen({super.key, this.article});
 
   @override
   Widget build(BuildContext context) {
-    // Retrieve article arguments passed through navigation
-    final Map<String, dynamic> article = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    // Retrieve article arguments passed through constructor
+    final Map<String, dynamic>? currentArticle = article;
+    if (currentArticle == null) return const Scaffold(body: Center(child: Text('Lỗi: Không tìm thấy bài viết')));
+    
+    // For convenience we assign it to a non-nullable variable for the rest of the code
+    final Map<String, dynamic> articleData = currentArticle;
     
     const Color purpleColor = Color(0xFF8E24AA);
     const Color primaryBrown = Color(0xFF6D4C41);
@@ -22,7 +28,7 @@ class ArticleDetailScreen extends StatelessWidget {
               backgroundColor: Colors.white.withOpacity(0.9),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: primaryBrown),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
               ),
             ),
             actions: [
@@ -31,7 +37,7 @@ class ArticleDetailScreen extends StatelessWidget {
                 child: IconButton(
                   icon: const Icon(Icons.more_vert, color: primaryBrown),
                   onPressed: () {
-                    _showArticleActions(context, article);
+                    _showArticleActions(context, articleData);
                   },
                 ),
               ),
@@ -42,7 +48,7 @@ class ArticleDetailScreen extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    article['image'],
+                    articleData['image'],
                     fit: BoxFit.cover,
                   ),
                   const DecoratedBox(
@@ -74,7 +80,7 @@ class ArticleDetailScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          article['homestay'],
+                          articleData['homestay'],
                           style: const TextStyle(
                             color: purpleColor,
                             fontWeight: FontWeight.bold,
@@ -83,14 +89,14 @@ class ArticleDetailScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        article['date'],
+                        articleData['date'],
                         style: const TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    article['title'],
+                    articleData['title'],
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -104,7 +110,7 @@ class ArticleDetailScreen extends StatelessWidget {
                   const Divider(),
                   const SizedBox(height: 16),
                   Text(
-                    article['excerpt'] + "\n\n" + 
+                    articleData['excerpt'] + "\n\n" + 
                     "Khuôn viên của homestay vô cùng thoáng đãng với nhiều cây xanh và hoa. Sáng sớm, mình có thể ngồi ngoài ban công thưởng thức ly cafe ấm và ngắm nhìn sương mù lơ lửng trên thung lũng. Không gian tĩnh mịch giúp tâm hồn được thư thái sau chuỗi ngày làm việc căng thẳng ở thành phố.\n\n" +
                     "Phòng nghỉ được thiết kế rất tỉ mỉ, giường nệm êm ái và thơm tho. Phòng tắm sạch sẽ, đầy đủ tiện nghi cần thiết. Anh chị chủ nhà cực kỳ chu đáo và mến khách, luôn nhiệt tình chỉ đường và gợi ý các quán ăn ngon chuẩn vị bản địa. Chắc chắn mình sẽ quay lại đây vào một ngày không xa!",
                     style: const TextStyle(
@@ -114,7 +120,7 @@ class ArticleDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  _buildInteractionsRow(article),
+                  _buildInteractionsRow(articleData),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -220,7 +226,7 @@ class ArticleDetailScreen extends StatelessWidget {
                   leading: const Icon(Icons.edit_outlined, color: Colors.blue),
                   title: const Text('Sửa bài viết', style: TextStyle(fontWeight: FontWeight.bold)),
                   onTap: () {
-                    Navigator.pop(context);
+                    context.pop();
                     // Open edit flow
                   },
                 ),
@@ -228,7 +234,7 @@ class ArticleDetailScreen extends StatelessWidget {
                   leading: const Icon(Icons.delete_outline, color: Colors.red),
                   title: const Text('Xóa bài viết', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                   onTap: () {
-                    Navigator.pop(context);
+                    context.pop();
                     _confirmDelete(context, article);
                   },
                 ),
@@ -248,13 +254,13 @@ class ArticleDetailScreen extends StatelessWidget {
         content: Text('Bạn có chắc chắn muốn xóa bài viết "${article['title']}"? Thao tác này không thể hoàn tác.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Back to list
+              context.pop(); // Close dialog
+              context.pop(); // Back to list
               print("Bài viết đã được xóa thành công!");
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

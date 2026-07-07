@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class HomestayStatusScreen extends StatefulWidget {
   const HomestayStatusScreen({super.key});
@@ -58,7 +59,7 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen>
         backgroundColor: Colors.white,
         elevation: 0,
         leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
+          onTap: () => context.pop(),
           child: Container(
             margin: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -479,7 +480,7 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text('Hủy', style: TextStyle(color: Color(0xFF6B7280))),
           ),
           ElevatedButton(
@@ -488,7 +489,7 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen>
                 _status = 'Đã ẩn';
                 _isPublic = false;
               });
-              Navigator.pop(context);
+              context.pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text('Bài đăng đã được ẩn'),

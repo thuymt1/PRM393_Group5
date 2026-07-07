@@ -37,6 +37,7 @@ dependencies:
 
   # State management — MVVM ViewModel
   flutter_riverpod: ^2.6.1
+  go_router: ^14.8.1
 
   # HTTP client — goi Spring Boot Backend API
   http: ^1.2.2

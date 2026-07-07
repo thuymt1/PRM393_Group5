@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class IntroScreen extends StatefulWidget {
   const IntroScreen({super.key});
@@ -119,7 +120,7 @@ class _IntroScreenState extends State<IntroScreen> {
           ),
         ),
         TextButton(
-          onPressed: () => Navigator.pushNamed(context, '/customer-home'),
+          onPressed: () => context.push('/customer-home'),
           style: TextButton.styleFrom(
             visualDensity: VisualDensity.compact,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -237,7 +238,7 @@ class _IntroScreenState extends State<IntroScreen> {
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/login'),
+            onPressed: () => context.push('/login'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41),
               minimumSize: const Size(double.infinity, 48),
@@ -257,7 +258,7 @@ class _IntroScreenState extends State<IntroScreen> {
           ),
           const SizedBox(height: 10),
           OutlinedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/register'),
+            onPressed: () => context.push('/register'),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
               side: const BorderSide(color: Color(0xFFE07A5F), width: 1.4),

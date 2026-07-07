@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/article_viewmodel.dart';
 
@@ -44,7 +45,7 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: primaryBrown),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Viết bài review mới',
@@ -260,7 +261,7 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
           child: OutlinedButton(
             onPressed: () {
               print("Lưu bản nháp thành công!");
-              Navigator.pop(context);
+              context.pop();
             },
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 56),
@@ -343,8 +344,8 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Return to list/dashboard
+                  context.pop(); // Close dialog
+                  context.pop(); // Return to list/dashboard
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),

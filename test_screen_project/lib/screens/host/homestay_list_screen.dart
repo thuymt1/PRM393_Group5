@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class HomestayListScreen extends StatefulWidget {
   const HomestayListScreen({super.key});
@@ -80,7 +81,7 @@ class _HomestayListScreenState extends State<HomestayListScreen>
         backgroundColor: Colors.white,
         elevation: 0,
         leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
+          onTap: () => context.pop(),
           child: Container(
             margin: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -139,7 +140,7 @@ class _HomestayListScreenState extends State<HomestayListScreen>
         child: _isGridView ? _buildGridView() : _buildListView(),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/add-homestay-basic-info'),
+        onPressed: () => context.push('/add-homestay-basic-info'),
         backgroundColor: const Color(0xFFE07A5F),
         elevation: 3,
         icon: const Icon(Icons.add, color: Colors.white),

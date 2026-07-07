@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AddHomestayBasicInfoScreen extends StatefulWidget {
   const AddHomestayBasicInfoScreen({super.key});
@@ -53,7 +54,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
         backgroundColor: Colors.white,
         elevation: 0,
         leading: GestureDetector(
-          onTap: () => Navigator.pop(context),
+          onTap: () => context.pop(),
           child: Container(
             margin: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -408,7 +409,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập đủ thông tin')));
                  return;
               }
-              Navigator.pushNamed(context, '/add-homestay-location', arguments: {
+              context.push('/add-homestay-location', extra: {
                 'name': _nameController.text,
                 'description': _descriptionController.text,
                 'max_guests': _maxGuests,

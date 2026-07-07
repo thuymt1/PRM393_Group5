@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
@@ -77,7 +78,7 @@ class ChooseRoleScreen extends ConsumerWidget {
       return;
     }
 
-    Navigator.pushReplacementNamed(context, routeName);
+    context.pushReplacement(routeName);
   }
 
   // Khối thiết kế biểu tượng thương hiệu (Logo đại diện)

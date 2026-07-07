@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/homestay_model.dart';
@@ -71,13 +72,13 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
                       _buildRevenueChart(),
                       const SizedBox(height: 28),
                       _buildSectionHeader('Yêu cầu đặt phòng mới', () {
-                        Navigator.pushNamed(context, '/host-booking-requests');
+                        context.push('/host-booking-requests');
                       }),
                       const SizedBox(height: 12),
                       _buildBookingRequestItem(context),
                       const SizedBox(height: 28),
                       _buildSectionHeader('Homestay của tôi', () {
-                        Navigator.pushNamed(context, '/homestay-list');
+                        context.push('/homestay-list');
                       }),
                       const SizedBox(height: 12),
                       _buildMyHomestayCard(context),
@@ -96,8 +97,8 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
   }
 
   Widget _buildSliverAppBar() {
-    final user = ref.watch(authViewModelProvider).user;
-    final username = user?['username'] ?? 'Host';
+    final profile = ref.watch(authViewModelProvider).profile;
+    final username = profile?.fullName ?? 'Host';
 
     return SliverAppBar(
       expandedHeight: 220,
@@ -175,11 +176,11 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
                           Row(
                             children: [
                               _appBarIconButton(Icons.notifications_outlined, () {
-                                Navigator.pushNamed(context, '/notifications');
+                                context.push('/notifications');
                               }, badge: '3'),
                               const SizedBox(width: 8),
                               GestureDetector(
-                                onTap: () => Navigator.pushNamed(context, '/profile'),
+                                onTap: () => context.push('/profile'),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
@@ -500,7 +501,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
 
   Widget _buildBookingRequestItem(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/host-booking-detail'),
+      onTap: () => context.push('/host-booking-detail'),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -578,7 +579,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/host-booking-requests'),
+                  onPressed: () => context.push('/host-booking-requests'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF5D3A2E),
                     foregroundColor: Colors.white,
@@ -626,7 +627,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
     final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
     return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, '/homestay-status'),
+      onTap: () => context.push('/homestay-status'),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -802,7 +803,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
 
   Widget _buildFAB(BuildContext context) {
     return FloatingActionButton.extended(
-      onPressed: () => Navigator.pushNamed(context, '/add-homestay-basic-info'),
+      onPressed: () => context.push('/add-homestay-basic-info'),
       backgroundColor: const Color(0xFFE07A5F),
       elevation: 4,
       icon: const Icon(Icons.add, color: Colors.white),
@@ -829,9 +830,9 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen>
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         onTap: (index) {
-          if (index == 1) Navigator.pushNamed(context, '/host-booking-requests');
-          else if (index == 2) Navigator.pushNamed(context, '/homestay-list');
-          else if (index == 3) Navigator.pushNamed(context, '/profile');
+          if (index == 1) context.push('/host-booking-requests');
+          else if (index == 2) context.push('/homestay-list');
+          else if (index == 3) context.push('/profile');
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class CreateReviewPage extends StatefulWidget {
   const CreateReviewPage({super.key});
@@ -36,7 +37,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.close, color: Color(0xFF6D4C41)), // Icon dấu X đóng màn hình đánh giá
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Đánh giá trải nghiệm',
@@ -313,8 +314,8 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
             // Nút bấm gỡ bỏ ngăn xếp đóng cửa sổ pop-up để quay ngược về luồng giao diện trước đó
             ElevatedButton(
               onPressed: () {
-                Navigator.pop(context); // Đóng pop-up hội thoại thành công Dialog
-                Navigator.pop(context); // Đóng luôn màn hình CreateReviewPage để quay về danh sách đơn phòng trước đó
+                context.pop(); // Đóng pop-up hội thoại thành công Dialog
+                context.pop(); // Đóng luôn màn hình CreateReviewPage để quay về danh sách đơn phòng trước đó
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6D4C41),

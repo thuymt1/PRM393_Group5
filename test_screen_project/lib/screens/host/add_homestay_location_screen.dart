@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AddHomestayLocationScreen extends StatefulWidget {
-  const AddHomestayLocationScreen({super.key});
+  final Map<String, dynamic>? args;
+  const AddHomestayLocationScreen({super.key, this.args});
 
   @override
   State<AddHomestayLocationScreen> createState() => _AddHomestayLocationScreenState();
@@ -22,7 +24,7 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại bước trước đó
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Đăng tin homestay mới',
@@ -235,7 +237,7 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
         children: [
           // Nút quay lại màn hình cấu hình Bước 1 trước đó
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text(
               'Quay lại',
               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
@@ -248,13 +250,13 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập địa chỉ và thành phố')));
                  return;
               }
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+              final args = widget.args ?? {};
               final newArgs = {
                 ...args,
                 'address': '${_addressController.text}, ${_districtController.text}',
                 'city': _cityController.text,
               };
-              Navigator.pushNamed(context, '/add-homestay-price-rules', arguments: newArgs);
+              context.push('/add-homestay-price-rules', extra: newArgs);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống

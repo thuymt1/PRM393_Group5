@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/article_viewmodel.dart';
 import '../../models/article_model.dart';
@@ -39,7 +40,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.notifications_none, color: primaryBrown),
             onPressed: () {
-              Navigator.pushNamed(context, '/notifications');
+              context.push('/notifications');
             },
           ),
           const Padding(
@@ -65,7 +66,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
             _buildQuickActionsGrid(context, purpleColor),
             const SizedBox(height: 32),
             _buildSectionHeader('Bài viết gần đây', purpleColor, showSeeAll: true, onSeeAll: () {
-              Navigator.pushNamed(context, '/article-list');
+              context.push('/article-list');
             }),
             const SizedBox(height: 12),
             _buildRecentArticlesList(context, purpleColor),
@@ -211,7 +212,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
             Icons.edit_note,
             color,
             () {
-              Navigator.pushNamed(context, '/create-article');
+              context.push('/create-article');
             },
           ),
         ),
@@ -224,7 +225,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
             Icons.book_outlined,
             color,
             () {
-              Navigator.pushNamed(context, '/article-list');
+              context.push('/article-list');
             },
           ),
         ),
@@ -297,10 +298,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
         final statusText = isDraft ? 'Bản nháp' : 'Đã xuất bản';
         return GestureDetector(
           onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/article-detail',
-              arguments: article,
+            context.push('/article-detail', extra: article,
             );
           },
           child: Container(
@@ -401,11 +399,11 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
       currentIndex: 0,
       onTap: (index) {
         if (index == 1) {
-          Navigator.pushReplacementNamed(context, '/article-list');
+          context.pushReplacement('/article-list');
         } else if (index == 2) {
-          Navigator.pushNamed(context, '/notifications');
+          context.push('/notifications');
         } else if (index == 3) {
-          Navigator.pushNamed(context, '/profile');
+          context.push('/profile');
         }
       },
       items: const [

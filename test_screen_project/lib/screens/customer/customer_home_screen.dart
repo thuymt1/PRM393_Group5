@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../viewmodels/homestay_viewmodel.dart';
@@ -247,7 +248,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/homestay-detail', arguments: homestay);
+        context.push('/homestay-detail', extra: homestay);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 24), // Tạo khoảng cách đệm trống phía dưới thẻ Card

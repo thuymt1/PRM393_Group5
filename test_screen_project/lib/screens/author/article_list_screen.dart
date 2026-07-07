@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/article_model.dart';
@@ -78,7 +79,7 @@ class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with Sing
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          Navigator.pushNamed(context, '/create-article');
+          context.push('/create-article');
         },
         backgroundColor: purpleColor,
         child: const Icon(Icons.add, color: Colors.white),
@@ -104,10 +105,7 @@ class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with Sing
         final statusText = isDraft ? 'Bản nháp' : 'Đã xuất bản';
         return GestureDetector(
           onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/article-detail',
-              arguments: article,
+            context.push('/article-detail', extra: article,
             );
           },
           onLongPress: () {
@@ -239,7 +237,7 @@ class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with Sing
                   leading: const Icon(Icons.edit_outlined, color: Colors.blue),
                   title: const Text('Chỉnh sửa bài viết', style: TextStyle(fontWeight: FontWeight.bold)),
                   onTap: () {
-                    Navigator.pop(context);
+                    context.pop();
                     // Open edit/create screen with parameters
                   },
                 ),
@@ -247,7 +245,7 @@ class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with Sing
                   leading: const Icon(Icons.delete_outline, color: Colors.red),
                   title: const Text('Xóa bài viết', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
                   onTap: () {
-                    Navigator.pop(context);
+                    context.pop();
                     _showDeleteConfirmationDialog(context, article);
                   },
                 ),
@@ -267,12 +265,12 @@ class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with Sing
         content: Text('Bạn có chắc chắn muốn xóa bài viết "${article.title}"? Thao tác này không thể hoàn tác.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              context.pop();
               print("Xóa bài viết hoàn tất!");
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -291,11 +289,11 @@ class _ArticleListScreenState extends ConsumerState<ArticleListScreen> with Sing
       currentIndex: 1,
       onTap: (index) {
         if (index == 0) {
-          Navigator.pushReplacementNamed(context, '/author-dashboard');
+          context.pushReplacement('/author-dashboard');
         } else if (index == 2) {
-          Navigator.pushNamed(context, '/notifications');
+          context.push('/notifications');
         } else if (index == 3) {
-          Navigator.pushNamed(context, '/profile');
+          context.push('/profile');
         }
       },
       items: const [

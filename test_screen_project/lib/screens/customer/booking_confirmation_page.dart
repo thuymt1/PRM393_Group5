@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class BookingConfirmationPage extends StatelessWidget {
   const BookingConfirmationPage({super.key});
@@ -12,7 +13,7 @@ class BookingConfirmationPage extends StatelessWidget {
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại trang trước đó
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Xác nhận đặt phòng',
@@ -224,7 +225,7 @@ class BookingConfirmationPage extends StatelessWidget {
         // Nút bấm lớn màu nâu thực hiện tiến hành chuyển tiếp sang bước thanh toán hóa đơn
         ElevatedButton(
           onPressed: () {
-            Navigator.pushNamed(context, '/payment');
+            context.push('/payment');
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6D4C41), // Màu sắc nâu đậm chủ đạo hệ thống
@@ -241,7 +242,7 @@ class BookingConfirmationPage extends StatelessWidget {
         const SizedBox(height: 16),
         // Link văn bản hỗ trợ khách quay ngược lại để sửa đổi các thông tin lưu trú chưa chuẩn xác
         TextButton(
-          onPressed: () => Navigator.pop(context), // Trở lại màn hình trước để thay đổi thông tin
+          onPressed: () => context.pop(), // Trở lại màn hình trước để thay đổi thông tin
           child: const Text(
             'Thay đổi thông tin',
             style: TextStyle(

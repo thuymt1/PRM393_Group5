@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../models/homestay_model.dart';
 
 // Màn hình hiển thị thông tin chi tiết của một căn Homestay cụ thể
 class HomestayDetailPage extends StatelessWidget {
-  const HomestayDetailPage({super.key});
+  final Homestay? homestay;
+  const HomestayDetailPage({super.key, this.homestay});
 
   @override
   Widget build(BuildContext context) {
-    final homestay = ModalRoute.of(context)!.settings.arguments as Homestay?;
     if (homestay == null) return const Scaffold(body: Center(child: Text('Lỗi: Không tìm thấy homestay')));
 
     return Scaffold(
@@ -81,7 +82,7 @@ class HomestayDetailPage extends StatelessWidget {
           backgroundColor: Colors.white,
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
         ),
       ),
@@ -404,7 +405,7 @@ class HomestayDetailPage extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/booking-form', arguments: homestay);
+              context.push('/booking-form', extra: homestay);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống

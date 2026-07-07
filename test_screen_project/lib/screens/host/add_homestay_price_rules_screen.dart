@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/homestay_viewmodel.dart';
 
 class AddHomestayPriceRulesScreen extends ConsumerStatefulWidget {
-  const AddHomestayPriceRulesScreen({super.key});
+  final Map<String, dynamic>? args;
+  const AddHomestayPriceRulesScreen({super.key, this.args});
 
   @override
   ConsumerState<AddHomestayPriceRulesScreen> createState() => _AddHomestayPriceRulesScreenState();
@@ -25,7 +27,7 @@ class _AddHomestayPriceRulesScreenState extends ConsumerState<AddHomestayPriceRu
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại bước trước đó
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: const Text(
           'Đăng tin homestay mới',
@@ -220,7 +222,7 @@ class _AddHomestayPriceRulesScreenState extends ConsumerState<AddHomestayPriceRu
         children: [
           // Nút quay lại màn hình cấu hình Bước 3 trước đó
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text(
               'Quay lại',
               style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
@@ -229,7 +231,7 @@ class _AddHomestayPriceRulesScreenState extends ConsumerState<AddHomestayPriceRu
           // Nút bấm xác nhận hoàn tất quy trình lưu trữ dữ liệu và gửi tin đăng
           ElevatedButton(
             onPressed: () async {
-              final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+              final args = widget.args ?? {};
               
               if (_priceController.text.isEmpty) {
                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập giá')));
@@ -247,7 +249,7 @@ class _AddHomestayPriceRulesScreenState extends ConsumerState<AddHomestayPriceRu
               if (success) {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng homestay thành công!')));
-                Navigator.popUntil(context, ModalRoute.withName('/host-dashboard'));
+                context.go('/host-dashboard');
               } else {
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Có lỗi xảy ra, vui lòng thử lại!')));
