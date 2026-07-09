@@ -55,6 +55,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(auth);
         } catch (JwtException e) {
+            System.err.println("JWT Verification Failed: " + e.getMessage());
+            e.printStackTrace();
             // Token khong hop le — tra ve 401
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");

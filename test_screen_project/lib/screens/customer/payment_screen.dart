@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../viewmodels/booking_viewmodel.dart';
 
-class PaymentScreen extends StatefulWidget {
-  const PaymentScreen({super.key});
+class PaymentScreen extends ConsumerStatefulWidget {
+  final Map<String, dynamic>? payload;
+  const PaymentScreen({super.key, this.payload});
 
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  ConsumerState<PaymentScreen> createState() => _PaymentScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
-  int _selectedPaymentMethod = 0; // 0: MoMo, 1: ZaloPay, 2: Bank Transfer, 3: Credit Card
+class _PaymentScreenState extends ConsumerState<PaymentScreen> {
+  int _selectedPaymentMethod = 0; 
 
   final List<Map<String, dynamic>> _paymentMethods = [
     {'name': 'Ví MoMo', 'icon': Icons.account_balance_wallet_outlined, 'color': Colors.pink},
@@ -20,6 +24,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.payload == null) {
+      return const Scaffold(body: Center(child: Text('Lỗi: Không tìm thấy thông tin thanh toán')));
+    }
+
+    final payload = widget.payload!;
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -44,7 +54,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildOrderSummary(),
+            _buildOrderSummary(payload),
             const SizedBox(height: 32),
             const Text(
               'Chọn phương thức thanh toán',
@@ -57,7 +67,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             const SizedBox(height: 16),
             _buildPaymentMethodsList(),
             const SizedBox(height: 40),
-            _buildPayButton(),
+            _buildPayButton(payload),
             const SizedBox(height: 24),
             _buildSecurityNotice(),
           ],
@@ -66,7 +76,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildOrderSummary() {
+  Widget _buildOrderSummary(Map<String, dynamic> payload) {
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final homestayName = payload['homestayName'] as String? ?? 'Homestay';
+    final totalPrice = payload['totalPrice'] as double? ?? 0.0;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -74,7 +88,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -86,37 +100,41 @@ class _PaymentScreenState extends State<PaymentScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Mã đơn hàng', style: TextStyle(color: Colors.grey)),
-              Text(
-                '#BK982345',
+              const Text(
+                'Đang tạo...',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF6D4C41),
+                  color: Color(0xFF6D4C41),
                 ),
               ),
             ],
           ),
           const Divider(height: 32),
-          _summaryRow('Homestay', 'The Pine Hill Dalat'),
+          _summaryRow('Homestay', homestayName),
           const SizedBox(height: 12),
-          _summaryRow('Thời gian', '20/06 - 22/06 (2 đêm)'),
-          const SizedBox(height: 12),
-          _summaryRow('Tổng thanh toán', '2.550.000đ', isTotal: true),
+          _summaryRow('Tổng thanh toán', formatCurrency.format(totalPrice), isBold: true),
         ],
       ),
     );
   }
 
-  Widget _summaryRow(String label, String value, {bool isTotal = false}) {
+  Widget _summaryRow(String label, String value, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey)),
         Text(
-          value,
-          style: TextStyle(
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            fontSize: isTotal ? 18 : 14,
-            color: isTotal ? const Color(0xFFE07A5F) : const Color(0xFF424242),
+          label,
+          style: const TextStyle(color: Colors.grey, fontSize: 15),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              fontSize: isBold ? 18 : 15,
+              color: isBold ? const Color(0xFFE07A5F) : const Color(0xFF424242),
+            ),
           ),
         ),
       ],
@@ -130,24 +148,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
         final isSelected = _selectedPaymentMethod == index;
 
         return GestureDetector(
-          onTap: () => setState(() => _selectedPaymentMethod = index),
-          child: Container(
+          onTap: () {
+            setState(() {
+              _selectedPaymentMethod = index;
+            });
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFFF7F4E1) : Colors.white,
+              color: isSelected ? const Color(0xFF6D4C41).withValues(alpha: 0.05) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected ? const Color(0xFFE07A5F) : Colors.transparent,
+                color: isSelected ? const Color(0xFF6D4C41) : Colors.grey.shade200,
                 width: 1.5,
               ),
+              boxShadow: [
+                if (!isSelected)
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+              ],
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: method['color'].withOpacity(0.1),
+                    color: (method['color'] as Color).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(method['icon'], color: method['color'], size: 24),
@@ -158,14 +189,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     method['name'],
                     style: TextStyle(
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 16,
                       color: const Color(0xFF424242),
                     ),
                   ),
                 ),
-                if (isSelected)
-                  const Icon(Icons.check_circle, color: Color(0xFFE07A5F), size: 24)
-                else
-                  Icon(Icons.radio_button_off, color: Colors.grey.shade300, size: 24),
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFF6D4C41) : Colors.grey.shade400,
+                      width: 2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? Center(
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF6D4C41),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        )
+                      : null,
+                ),
               ],
             ),
           ),
@@ -174,27 +225,53 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildPayButton() {
+  Widget _buildPayButton(Map<String, dynamic> payload) {
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final totalPrice = payload['totalPrice'] as double? ?? 0.0;
+    final bookingState = ref.watch(bookingViewModelProvider);
+
     return ElevatedButton(
-      onPressed: () {
-        print("Xác nhận thanh toán thành công bằng phương thức có index: $_selectedPaymentMethod");
-        _showSuccessDialog(context);
+      onPressed: bookingState.isSubmitting ? null : () async {
+        final homestayId = payload['homestayId'] as int;
+        final checkIn = payload['checkIn'] as String;
+        final checkOut = payload['checkOut'] as String;
+        
+        final success = await ref.read(bookingViewModelProvider.notifier).createBooking(
+          homestayId: homestayId,
+          checkIn: checkIn,
+          checkOut: checkOut,
+          totalPrice: totalPrice,
+        );
+
+        if (!mounted) return;
+
+        if (success) {
+          _showSuccessDialog(context);
+        } else {
+          final err = ref.read(bookingViewModelProvider).error;
+          if (err != null) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+            ref.read(bookingViewModelProvider.notifier).clearError();
+          }
+        }
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF6D4C41),
-        minimumSize: const Size(double.infinity, 60),
+        backgroundColor: const Color(0xFFE07A5F),
+        minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
+        elevation: 4,
+        shadowColor: const Color(0xFFE07A5F).withValues(alpha: 0.4),
       ),
-      child: const Text(
-        'Xác nhận thanh toán',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
+      child: bookingState.isSubmitting 
+        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+        : Text(
+            'Thanh toán ${formatCurrency.format(totalPrice)}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
     );
   }
 
@@ -202,7 +279,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
+      builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -225,22 +302,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ),
               const SizedBox(height: 12),
               const Text(
-                'Giao dịch của bạn đã được thực hiện an toàn. Bạn có thể kiểm tra thông tin đặt phòng trong Lịch sử chuyến đi.',
+                'Cảm ơn bạn đã sử dụng dịch vụ. Booking của bạn đang chờ chủ nhà xác nhận.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 14, height: 1.5),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () {
-                  Navigator.pop(dialogContext); // Đóng pop-up Dialog
-                  Navigator.of(context).popUntil((route) => route.isFirst); // Quay lại trang chủ
+                  context.go('/my-bookings'); 
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),
                   minimumSize: const Size(double.infinity, 50),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Đồng ý', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text('Xem danh sách phòng đã đặt', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -250,14 +326,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildSecurityNotice() {
-    return const Row(
+    return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.lock_outline, size: 14, color: Colors.grey),
-        SizedBox(width: 8),
+        Icon(Icons.lock_outline, size: 16, color: Colors.grey.shade600),
+        const SizedBox(width: 8),
         Text(
-          'Thanh toán an toàn & mã hóa SSL',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
+          'Thanh toán an toàn và bảo mật 100%',
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
       ],
     );

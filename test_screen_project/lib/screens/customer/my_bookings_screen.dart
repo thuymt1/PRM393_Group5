@@ -145,7 +145,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       child: InkWell(
         onTap: () {
           // TODO: Thực hiện điều phối điều hướng kết nối Navigator dẫn tới trang màn hình chi tiết đơn đặt chỗ
-          print("Xem chi tiết đơn phòng căn: ${booking['name']}");
+          print("Xem chi tiết đơn phòng căn: ${booking.homestayName}");
         },
         borderRadius: BorderRadius.circular(24), // Đảm bảo hiệu ứng sóng nước hiệu ứng gợn sóng (Ink Splash) bo khít góc thẻ
         child: Column(

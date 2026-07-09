@@ -17,7 +17,7 @@ class HomestayDetailPage extends StatelessWidget {
       body: CustomScrollView(
         // Sử dụng CustomScrollView kết hợp các Slivers để tạo hiệu ứng cuộn AppBar mượt mà
         slivers: [
-          _buildSliverAppBar(context, homestay), // Thanh AppBar chứa hình ảnh nền có thể thu phóng và ghim cố định
+          _buildSliverAppBar(context, homestay!), // Thanh AppBar chứa hình ảnh nền có thể thu phóng và ghim cố định
           SliverToBoxAdapter(
             // Chuyển đổi khối Widget thông thường thành cấu trúc tương thích với Slivers
             child: Padding(
@@ -25,15 +25,15 @@ class HomestayDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeaderSection(homestay), // Khối tên nhà, chi phí thuê, địa chỉ và số sao đánh giá
+                  _buildHeaderSection(homestay!), // Khối tên nhà, chi phí thuê, địa chỉ và số sao đánh giá
                   const SizedBox(height: 24),
-                  _buildHostSection(homestay), // Khối thông tin chi tiết và nút liên hệ với chủ nhà (Host)
+                  _buildHostSection(homestay!), // Khối thông tin chi tiết và nút liên hệ với chủ nhà (Host)
                   const SizedBox(height: 24),
-                  _buildIntroductionSection(homestay), // Khối văn bản mô tả giới thiệu chi tiết về homestay
+                  _buildIntroductionSection(homestay!), // Khối văn bản mô tả giới thiệu chi tiết về homestay
                   const SizedBox(height: 24),
-                  _buildAmenitiesSection(homestay), // Khối bọc (Wrap) hiển thị danh sách các tiện ích cung cấp
+                  _buildAmenitiesSection(homestay!), // Khối bọc (Wrap) hiển thị danh sách các tiện ích cung cấp
                   const SizedBox(height: 24),
-                  _buildLocationSection(homestay), // Khối bản đồ thu nhỏ hiển thị vị trí của căn homestay
+                  _buildLocationSection(homestay!), // Khối bản đồ thu nhỏ hiển thị vị trí của căn homestay
                   const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh đặt phòng
                 ],
               ),
@@ -41,7 +41,7 @@ class HomestayDetailPage extends StatelessWidget {
           ),
         ],
       ),
-      bottomSheet: _buildBottomBookingBar(context, homestay), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
+      bottomSheet: _buildBottomBookingBar(context, homestay!), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
     );
   }
 
@@ -191,6 +191,9 @@ class HomestayDetailPage extends StatelessWidget {
 
   // Khối giao diện hiển thị danh tính chủ sở hữu căn hộ (Host Information)
   Widget _buildHostSection(Homestay homestay) {
+    final hostAvatar = homestay.hostAvatar ?? 'https://i.pravatar.cc/150?u=host_${homestay.hostId ?? 'default'}';
+    final hostName = homestay.hostName ?? 'Chủ nhà (Không rõ)';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -198,7 +201,7 @@ class HomestayDetailPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ nhẹ tạo chiều sâu nổi khối
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -206,21 +209,21 @@ class HomestayDetailPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 24, // Ảnh đại diện hình tròn của chủ nhà
-            backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=host_alex'),
+          CircleAvatar(
+            radius: 24,
+            backgroundImage: NetworkImage(hostAvatar),
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Alex Nguyen',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
+                  hostName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
                 ),
-                Text(
-                  'Chủ nhà siêu cấp • Tham gia 2021',
+                const Text(
+                  'Chủ nhà siêu cấp',
                   style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
               ],
@@ -405,7 +408,7 @@ class HomestayDetailPage extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
-              context.push('/booking-form', extra: homestay);
+              context.push('/booking-form', extra: homestay!);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống

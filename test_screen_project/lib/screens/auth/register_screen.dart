@@ -362,6 +362,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
+                color: Colors.white,
               ),
             ),
     );

@@ -89,11 +89,17 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/booking-confirmation',
-      builder: (context, state) => const BookingConfirmationPage(),
+      builder: (context, state) {
+        final payload = state.extra as Map<String, dynamic>?;
+        return BookingConfirmationPage(payload: payload);
+      },
     ),
     GoRoute(
       path: '/payment',
-      builder: (context, state) => const PaymentScreen(),
+      builder: (context, state) {
+        final payload = state.extra as Map<String, dynamic>?;
+        return PaymentScreen(payload: payload);
+      },
     ),
     GoRoute(
       path: '/my-bookings',

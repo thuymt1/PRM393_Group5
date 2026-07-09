@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile_model.dart';
 import '../repositories/auth_repository.dart';
+import '../utils/error_handler.dart';
 
 /// State cua AuthViewModel
 class AuthState {
@@ -38,7 +39,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, profile: profile);
       return profile?.role; // 'customer' | 'host' | 'author' | null (chua chon role)
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
       return null;
     }
   }
@@ -51,7 +52,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
       return false;
     }
   }
@@ -69,7 +70,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
       final updatedProfile = await _repo.updateRole(role);
       state = state.copyWith(isLoading: false, profile: updatedProfile);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
     }
   }
 

@@ -33,14 +33,14 @@ public class BookingService {
     // Lay booking cua khach hang
     @Transactional(readOnly = true)
     public List<BookingDto> getMyBookings(String customerId) {
-        return bookingRepository.findByCustomerIdOrderByCreatedAtDesc(customerId)
+        return bookingRepository.findByCustomerIdOrderByCreatedAtDesc(java.util.UUID.fromString(customerId))
                 .stream().map(BookingDto::fromEntity).toList();
     }
 
     // Lay booking den homestay cua host
     @Transactional(readOnly = true)
     public List<BookingDto> getHostBookingRequests(String hostId) {
-        List<Long> homestayIds = homestayRepository.findByHostIdOrderByIdDesc(hostId)
+        List<Long> homestayIds = homestayRepository.findByHostIdOrderByIdDesc(java.util.UUID.fromString(hostId))
                 .stream().map(Homestay::getId).toList();
 
         if (homestayIds.isEmpty()) return List.of();
@@ -69,7 +69,7 @@ public class BookingService {
 
         Homestay homestay = homestayRepository.findById(homestayId)
                 .orElseThrow(() -> new IllegalArgumentException("Homestay not found"));
-        Profile customer = profileRepository.findById(customerId)
+        Profile customer = profileRepository.findById(java.util.UUID.fromString(customerId))
                 .orElseThrow(() -> new IllegalArgumentException("Customer profile not found"));
 
         Booking booking = new Booking();
@@ -91,7 +91,7 @@ public class BookingService {
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
         // Kiem tra quyen: host phai la chu cua homestay do
-        if (!booking.getHomestay().getHost().getId().equals(hostId)) {
+        if (!booking.getHomestay().getHost().getId().equals(java.util.UUID.fromString(hostId))) {
             throw new SecurityException("Bạn không có quyền cập nhật booking này.");
         }
 

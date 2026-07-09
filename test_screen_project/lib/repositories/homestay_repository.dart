@@ -5,13 +5,24 @@ import '../core/network/api_client.dart';
 class HomestayRepository {
   final _api = ApiClient();
 
-  /// Lay danh sach homestay active (co the tim kiem)
-  Future<List<Homestay>> getHomestays({String? search}) async {
+  /// Lay danh sach homestay active (co the tim kiem + filter category)
+  Future<List<Homestay>> getHomestays({String? search, int? categoryId}) async {
     final params = <String, String>{};
     if (search != null && search.isNotEmpty) params['search'] = search;
+    if (categoryId != null) params['categoryId'] = categoryId.toString();
 
     final List<dynamic> json = await _api.get('/homestays', queryParams: params);
     return json.map((e) => Homestay.fromJson(e)).toList();
+  }
+
+  /// Lay chi tiet mot homestay
+  Future<Homestay?> getHomestayById(int id) async {
+    try {
+      final json = await _api.get('/homestays/$id');
+      return Homestay.fromJson(json);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Lay homestay cua Host dang dang nhap
@@ -27,7 +38,7 @@ class HomestayRepository {
     return Homestay.fromJson(json);
   }
 
-  /// Lay danh sach categories
+  /// Lay danh sach categories tu backend
   Future<List<Map<String, dynamic>>> getCategories() async {
     final List<dynamic> json = await _api.get('/categories');
     return json.cast<Map<String, dynamic>>();

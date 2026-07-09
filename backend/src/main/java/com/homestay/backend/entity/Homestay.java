@@ -23,11 +23,27 @@ public class Homestay {
     private String address;
     private String city;
     
+    private Double latitude;
+    private Double longitude;
+
     @Column(name = "price_per_night")
     private Double pricePerNight;
+
+    @Column(name = "max_guests")
+    private Integer maxGuests;
+
+    @Column(name = "num_bedrooms")
+    private Integer numBedrooms;
+
+    @Column(name = "num_bathrooms")
+    private Integer numBathrooms;
     
+    @Transient
     private Double rating;
     private String status;
+
+    @Column(name = "created_at")
+    private java.time.LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "host_id")
@@ -39,4 +55,13 @@ public class Homestay {
 
     @OneToMany(mappedBy = "homestay", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<HomestayImage> images;
+
+    @ManyToMany
+    @JoinTable(
+        name = "homestay_amenities_link",
+        joinColumns = @JoinColumn(name = "homestay_id"),
+        inverseJoinColumns = @JoinColumn(name = "amenity_id")
+    )
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private List<Amenity> amenities;
 }

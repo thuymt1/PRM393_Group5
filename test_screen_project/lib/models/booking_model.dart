@@ -38,3 +38,25 @@ class BookingModel {
     );
   }
 }
+
+class BookingRequestPayload {
+  final int homestayId;
+  final String homestayName;
+  final String checkIn;
+  final String checkOut;
+  final int guests;
+  final double totalPrice;
+  final double basePrice;
+  final double serviceFee;
+
+  BookingRequestPayload({
+    required this.homestayId,
+    required this.homestayName,
+    required this.checkIn,
+    required this.checkOut,
+    required this.guests,
+    required this.totalPrice,
+    required this.basePrice,
+    required this.serviceFee,
+  });
+}

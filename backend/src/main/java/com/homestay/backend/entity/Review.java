@@ -5,29 +5,28 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "articles")
+@Table(name = "reviews")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Article {
+public class Review {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String title;
-
-    @Column(columnDefinition = "TEXT")
-    private String content;
-
-    @Column(name = "thumbnail_url")
-    private String thumbnailUrl;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "homestay_id")
+    private Homestay homestay;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "author_id", nullable = false)
-    private Profile author;
+    @JoinColumn(name = "customer_id")
+    private Profile customer;
 
-    private String status;
+    private Integer rating;
+
+    @Column(columnDefinition = "TEXT")
+    private String comment;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

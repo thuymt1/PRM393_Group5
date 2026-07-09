@@ -20,4 +20,7 @@ public class HomestayImage {
 
     @Column(name = "url", nullable = false)
     private String url;
+
+    @Column(name = "is_primary")
+    private Boolean isPrimary;
 }

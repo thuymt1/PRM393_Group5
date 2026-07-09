@@ -33,7 +33,7 @@ Dự án được chia thành hai phân hệ chính: **Backend** (Java) và **Fr
 ### 1️⃣ Khởi chạy Backend (Java Spring Boot)
 **Yêu cầu hệ thống:**
 - Java 17 hoặc mới hơn.
-- Maven (hoặc có thể sử dụng wrapper `mvnw` đi kèm).
+- Không cần cài đặt sẵn Gradle (dự án sử dụng Gradle Wrapper `gradlew` đi kèm).
 - IDE (Khuyến nghị): IntelliJ IDEA, Eclipse, hoặc VS Code.
 
 **Các bước thực hiện:**
@@ -44,15 +44,15 @@ Dự án được chia thành hai phân hệ chính: **Backend** (Java) và **Fr
 2. **Cấu hình Cơ sở dữ liệu (Database):** 
    - Hệ thống đã được thiết lập sẵn kết nối tới database PostgreSQL trên Supabase tại file `src/main/resources/application.properties`.
    - Các biến thiết yếu như `spring.datasource.url`, tài khoản và `supabase.jwt.secret` đã được thiết lập đầy đủ cho quá trình khởi chạy.
-3. **Tải Dependencies & Build:**
-   Sử dụng Maven để tải các thư viện cần thiết:
+3. **Tải Dependencies & Build (Tùy chọn):**
+   Sử dụng Gradle Wrapper để build dự án (bỏ qua test):
    ```bash
-   mvn clean install -DskipTests
+   .\gradlew build -x test
    ```
 4. **Khởi động Server:**
-   Chạy ứng dụng Spring Boot:
+   Chạy ứng dụng Spring Boot bằng lệnh sau:
    ```bash
-   mvn spring-boot:run
+   .\gradlew bootRun
    ```
    *(Server Backend sẽ khởi chạy và lắng nghe tại cổng `http://localhost:8080`)*
 

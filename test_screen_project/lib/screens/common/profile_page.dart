@@ -123,11 +123,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               color: const Color(0xFFE07A5F).withOpacity(0.1), // Nền cam nhạt trong suốt 10%
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min, // Thu nhỏ kích thước hàng vừa khít với nội dung bên trong
               children: [
-                Icon(Icons.verified, color: Color(0xFFE07A5F), size: 16),
-                SizedBox(width: 8),
+                const Icon(Icons.verified, color: Color(0xFFE07A5F), size: 16),
+                const SizedBox(width: 8),
                 Text(
                   profile?.role == 'HOST' ? 'Chủ nhà' : 'Khách hàng',
                   style: const TextStyle(

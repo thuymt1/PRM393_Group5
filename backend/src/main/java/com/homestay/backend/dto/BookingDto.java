@@ -26,7 +26,7 @@ public class BookingDto {
                 .id(b.getId())
                 .homestayId(b.getHomestay() != null ? b.getHomestay().getId() : null)
                 .homestayName(b.getHomestay() != null ? b.getHomestay().getName() : null)
-                .customerId(b.getCustomer() != null ? b.getCustomer().getId() : null)
+                .customerId(b.getCustomer() != null && b.getCustomer().getId() != null ? b.getCustomer().getId().toString() : null)
                 .customerName(b.getCustomer() != null ? b.getCustomer().getFullName() : null)
                 .checkIn(b.getCheckIn())
                 .checkOut(b.getCheckOut())

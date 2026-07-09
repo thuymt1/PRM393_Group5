@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/articles/{id}").permitAll()
+                .requestMatchers("/error").permitAll()
                 // Tat ca cac request con lai yeu cau dang nhap
                 .anyRequest().authenticated()
             )

@@ -1,86 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../viewmodels/homestay_viewmodel.dart';
+import '../../models/homestay_model.dart';
 
-class HomestayListScreen extends StatefulWidget {
-  const HomestayListScreen({super.key});
+class HomestayListScreen extends ConsumerStatefulWidget {
+  final bool isTab;
+  const HomestayListScreen({super.key, this.isTab = false});
 
   @override
-  State<HomestayListScreen> createState() => _HomestayListScreenState();
+  ConsumerState<HomestayListScreen> createState() => _HomestayListScreenState();
 }
 
-class _HomestayListScreenState extends State<HomestayListScreen>
+class _HomestayListScreenState extends ConsumerState<HomestayListScreen>
     with SingleTickerProviderStateMixin {
-  int _selectedFilter = 0;
   bool _isGridView = true;
   final TextEditingController _searchController = TextEditingController();
 
-  final List<String> _filters = ['Gần đây', 'Phổ biến', 'Giá thấp', 'Đánh giá cao'];
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(hostHomestayViewModelProvider.notifier).loadMyHomestays();
+    });
+  }
 
-  final List<Map<String, dynamic>> _homestays = [
-    {
-      'name': 'The Pine Hill',
-      'location': 'Phường 4, Đà Lạt',
-      'price': '1.200.000',
-      'rating': 4.8,
-      'reviews': 124,
-      'status': 'Hoạt động',
-      'image': 'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'Minimalist Villa',
-      'location': 'Hồ Tuyền Lâm',
-      'price': '2.500.000',
-      'rating': 4.9,
-      'reviews': 87,
-      'status': 'Hoạt động',
-      'image': 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'Ocean Breeze Loft',
-      'location': 'Sơn Trà, Đà Nẵng',
-      'price': '1.850.000',
-      'rating': 4.7,
-      'reviews': 63,
-      'status': 'Tạm ẩn',
-      'image': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'Vintage Garden',
-      'location': 'Mai Anh Đào, Đà Lạt',
-      'price': '850.000',
-      'rating': 4.6,
-      'reviews': 39,
-      'status': 'Hoạt động',
-      'image': 'https://images.unsplash.com/photo-1449156001437-3a1441df910b?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'A-Frame Escape',
-      'location': 'Trại Mát, Đà Lạt',
-      'price': '1.550.000',
-      'rating': 4.9,
-      'reviews': 201,
-      'status': 'Hoạt động',
-      'image': 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?q=80&w=1000&auto=format&fit=crop',
-    },
-    {
-      'name': 'Forest Cabin',
-      'location': 'Sapa, Lào Cai',
-      'price': '1.100.000',
-      'rating': 4.5,
-      'reviews': 55,
-      'status': 'Chờ duyệt',
-      'image': 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop',
-    },
-  ];
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(hostHomestayViewModelProvider);
+    final homestays = state.homestays;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0E8),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: GestureDetector(
+        leading: widget.isTab ? null : GestureDetector(
           onTap: () => context.pop(),
           child: Container(
             margin: const EdgeInsets.all(10),
@@ -101,11 +63,10 @@ class _HomestayListScreenState extends State<HomestayListScreen>
         ),
         centerTitle: true,
         actions: [
-          // Toggle grid/list
           GestureDetector(
             onTap: () => setState(() => _isGridView = !_isGridView),
             child: Container(
-              margin: const EdgeInsets.only(right: 8),
+              margin: const EdgeInsets.only(right: 12),
               width: 38,
               height: 38,
               decoration: BoxDecoration(
@@ -119,357 +80,217 @@ class _HomestayListScreenState extends State<HomestayListScreen>
               ),
             ),
           ),
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.tune_outlined, color: Color(0xFF374151), size: 19),
-          ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(112),
-          child: _buildSearchAndFilter(),
-        ),
       ),
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: _isGridView ? _buildGridView() : _buildListView(),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
+      body: state.isLoading 
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
+        : homestays.isEmpty 
+          ? _buildEmptyState()
+          : AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: _isGridView ? _buildGridView(homestays) : _buildListView(homestays),
+            ),
+      floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/add-homestay-basic-info'),
         backgroundColor: const Color(0xFFE07A5F),
-        elevation: 3,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Thêm mới', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  Widget _buildSearchAndFilter() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _buildEmptyState() {
+    return Center(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F0E8),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Tìm homestay...',
-                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                  border: InputBorder.none,
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFFE07A5F), size: 20),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: Color(0xFF9CA3AF), size: 18),
-                          onPressed: () => setState(() => _searchController.clear()),
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: List.generate(_filters.length, (i) {
-                final isSelected = _selectedFilter == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedFilter = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF5D3A2E) : Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: isSelected ? Colors.transparent : const Color(0xFFE5E7EB),
-                      ),
-                    ),
-                    child: Text(
-                      _filters[i],
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : const Color(0xFF6B7280),
-                        fontSize: 12,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
+          const Icon(Icons.home_work_outlined, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('Bạn chưa có homestay nào', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text('Hãy đăng tin homestay đầu tiên của bạn', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
   }
 
-  Widget _buildGridView() {
+  Widget _buildGridView(List<Homestay> homestays) {
     return GridView.builder(
-      key: const ValueKey('grid'),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 0.68,
+        childAspectRatio: 0.72,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
       ),
-      itemCount: _homestays.length,
+      itemCount: homestays.length,
       itemBuilder: (context, index) {
-        return _buildGridCard(_homestays[index]);
+        return _buildHomestayGridCard(homestays[index]);
       },
     );
   }
 
-  Widget _buildListView() {
+  Widget _buildListView(List<Homestay> homestays) {
     return ListView.builder(
-      key: const ValueKey('list'),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-      itemCount: _homestays.length,
+      itemCount: homestays.length,
       itemBuilder: (context, index) {
-        return _buildListCard(_homestays[index]);
+        return _buildHomestayListCard(homestays[index]);
       },
     );
   }
 
-  Widget _buildGridCard(Map<String, dynamic> homestay) {
-    final isActive = homestay['status'] == 'Hoạt động';
-    final isPending = homestay['status'] == 'Chờ duyệt';
+  Widget _buildHomestayGridCard(Homestay homestay) {
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://placehold.co/400';
 
-    Color statusColor = isActive ? Colors.green : isPending ? Colors.orange : Colors.grey;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: Stack(
+    return GestureDetector(
+      onTap: () => context.push('/homestay-detail', extra: homestay),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
                 ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: Image.network(
-                    homestay['image'],
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                Positioned.fill(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.transparent, Colors.black.withOpacity(0.3)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                    ),
-                  ),
+                  child: Image.network(imageUrl, height: 130, width: double.infinity, fit: BoxFit.cover),
                 ),
                 Positioned(
-                  top: 10,
-                  right: 10,
+                  top: 8, left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      homestay['status'],
-                      style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 10,
-                  left: 10,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star, color: Color(0xFFF59E0B), size: 10),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${homestay['rating']}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
-                        ),
+                        const Icon(Icons.star, color: Colors.amber, size: 12),
+                        const SizedBox(width: 4),
+                        Text(homestay.rating.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
                       ],
                     ),
                   ),
                 ),
+                Positioned(
+                  top: 8, right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(8)),
+                    child: const Text('Hoạt động', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                  ),
+                ),
               ],
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            Padding(
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    homestay['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1F2937)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  Text(homestay.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 10, color: Color(0xFF9CA3AF)),
+                      const Icon(Icons.location_on_outlined, size: 12, color: Colors.grey),
                       const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          homestay['location'],
-                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      Expanded(child: Text('${homestay.address}, ${homestay.city}', style: const TextStyle(color: Colors.grey, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis)),
                     ],
                   ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '${homestay['price']}đ',
-                                style: const TextStyle(
-                                  color: Color(0xFFE07A5F),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const TextSpan(text: '/đêm', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 9)),
-                            ],
-                          ),
-                        ),
-                      ),
-                      GestureDetector(
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F0E8),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.more_vert, size: 15, color: Color(0xFF6B7280)),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: 8),
+                  Text(formatCurrency.format(homestay.pricePerNight), style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 13)),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildListCard(Map<String, dynamic> homestay) {
-    final isActive = homestay['status'] == 'Hoạt động';
-    final isPending = homestay['status'] == 'Chờ duyệt';
-    Color statusColor = isActive ? Colors.green : isPending ? Colors.orange : Colors.grey;
+  Widget _buildHomestayListCard(Homestay homestay) {
+    final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
+    final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://placehold.co/400';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
-            child: Image.network(
-              homestay['image'],
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => context.push('/homestay-detail', extra: homestay),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        height: 120,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+              child: Stack(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          homestay['name'],
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF1F2937)),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  Image.network(imageUrl, width: 120, height: 120, fit: BoxFit.cover),
+                  Positioned(
+                    top: 8, left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 10),
+                          const SizedBox(width: 2),
+                          Text(homestay.rating.toStringAsFixed(1), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10)),
+                        ],
                       ),
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(homestay['location'], style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Color(0xFFF59E0B), size: 12),
-                      Text(' ${homestay['rating']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                      const SizedBox(width: 6),
-                      Text('(${homestay['reviews']} đánh giá)', style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10)),
-                      const Spacer(),
-                      Text(
-                        '${homestay['price']}đ',
-                        style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text(homestay.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                              child: const Text('Hoạt động', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 12, color: Colors.grey),
+                            const SizedBox(width: 4),
+                            Expanded(child: Text('${homestay.address}, ${homestay.city}', style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(formatCurrency.format(homestay.pricePerNight), style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14)),
+                        const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

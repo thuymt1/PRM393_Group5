@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/profile_model.dart';
 import '../repositories/profile_repository.dart';
+import '../utils/error_handler.dart';
 
 class ProfileState {
   final bool isLoading;
@@ -29,7 +30,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       final profile = await _repo.getMyProfile();
       state = state.copyWith(isLoading: false, profile: profile);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
     }
   }
 
@@ -43,7 +44,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       );
       state = state.copyWith(isLoading: false, profile: updated);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
     }
   }
 }
@@ -51,3 +52,4 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
 final profileViewModelProvider = StateNotifierProvider<ProfileViewModel, ProfileState>(
   (ref) => ProfileViewModel(ProfileRepository()),
 );
+

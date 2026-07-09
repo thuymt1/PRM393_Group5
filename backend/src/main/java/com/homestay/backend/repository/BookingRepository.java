@@ -13,7 +13,7 @@ import java.util.List;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // Lay booking cua khach hang
-    List<Booking> findByCustomerIdOrderByCreatedAtDesc(String customerId);
+    List<Booking> findByCustomerIdOrderByCreatedAtDesc(java.util.UUID customerId);
 
     // Lay booking den homestay cua host (theo list homestayId)
     List<Booking> findByHomestayIdInOrderByCreatedAtDesc(List<Long> homestayIds);

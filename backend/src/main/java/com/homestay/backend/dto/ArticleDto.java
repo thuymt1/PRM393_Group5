@@ -22,7 +22,7 @@ public class ArticleDto {
                 .id(a.getId())
                 .title(a.getTitle())
                 .content(a.getContent())
-                .authorId(a.getAuthor() != null ? a.getAuthor().getId() : null)
+                .authorId(a.getAuthor() != null && a.getAuthor().getId() != null ? a.getAuthor().getId().toString() : null)
                 .authorName(a.getAuthor() != null ? a.getAuthor().getFullName() : null)
                 .status(a.getStatus())
                 .createdAt(a.getCreatedAt())

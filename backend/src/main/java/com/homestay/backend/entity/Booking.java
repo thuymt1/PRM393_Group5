@@ -30,10 +30,19 @@ public class Booking {
     @Column(name = "check_out")
     private LocalDate checkOut;
 
+    @Column(name = "total_guests")
+    private Integer totalGuests;
+
     @Column(name = "total_price")
     private Double totalPrice;
 
     private String status;
+
+    @Column(name = "payment_status")
+    private String paymentStatus;
+
+    @Column(columnDefinition = "TEXT")
+    private String notes;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

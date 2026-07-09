@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/article_viewmodel.dart';
 import '../../models/article_model.dart';
+import 'article_list_screen.dart';
+import '../common/profile_page.dart';
 
 class AuthorDashboardScreen extends ConsumerStatefulWidget {
   const AuthorDashboardScreen({super.key});
@@ -12,6 +14,8 @@ class AuthorDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
+  int _currentIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -25,56 +29,82 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text(
-          'Author Dashboard',
-          style: TextStyle(
-            color: primaryBrown,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'BeVietnamPro',
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications_none, color: primaryBrown),
-            onPressed: () {
-              context.push('/notifications');
-            },
-          ),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=author_emma'),
+      body: _buildBody(purpleColor, primaryBrown),
+      bottomNavigationBar: _buildBottomNavBar(purpleColor),
+    );
+  }
+
+  Widget _buildBody(Color purpleColor, Color primaryBrown) {
+    switch (_currentIndex) {
+      case 0:
+        return _buildDashboardTab(purpleColor, primaryBrown);
+      case 1:
+        return const ArticleListScreen(isTab: true);
+      case 2:
+        return const ProfilePage();
+      default:
+        return _buildDashboardTab(purpleColor, primaryBrown);
+    }
+  }
+
+  Widget _buildDashboardTab(Color purpleColor, Color primaryBrown) {
+    return Column(
+      children: [
+        AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: Text(
+            'Author Dashboard',
+            style: TextStyle(
+              color: primaryBrown,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'BeVietnamPro',
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeCard(purpleColor),
-            const SizedBox(height: 24),
-            _buildStatsGrid(purpleColor),
-            const SizedBox(height: 32),
-            _buildSectionHeader('Thao tác nhanh', purpleColor),
-            const SizedBox(height: 12),
-            _buildQuickActionsGrid(context, purpleColor),
-            const SizedBox(height: 32),
-            _buildSectionHeader('Bài viết gần đây', purpleColor, showSeeAll: true, onSeeAll: () {
-              context.push('/article-list');
-            }),
-            const SizedBox(height: 12),
-            _buildRecentArticlesList(context, purpleColor),
-            const SizedBox(height: 40),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.notifications_none, color: primaryBrown),
+              onPressed: () {
+                context.push('/notifications');
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: GestureDetector(
+                onTap: () => setState(() => _currentIndex = 2),
+                child: const CircleAvatar(
+                  radius: 18,
+                  backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=author_emma'),
+                ),
+              ),
+            ),
           ],
         ),
-      ),
-      bottomNavigationBar: _buildBottomNavBar(context),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWelcomeCard(purpleColor),
+                const SizedBox(height: 24),
+                _buildStatsGrid(purpleColor),
+                const SizedBox(height: 32),
+                _buildSectionHeader('Thao tác nhanh', purpleColor),
+                const SizedBox(height: 12),
+                _buildQuickActionsGrid(context, purpleColor),
+                const SizedBox(height: 32),
+                _buildSectionHeader('Bài viết gần đây', purpleColor, showSeeAll: true, onSeeAll: () {
+                  setState(() => _currentIndex = 1);
+                }),
+                const SizedBox(height: 12),
+                _buildRecentArticlesList(context, purpleColor),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -87,7 +117,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6D4C41).withOpacity(0.2),
+            color: const Color(0xFF6D4C41).withValues(alpha: 0.2),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -97,7 +127,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Chào mừng quay trở lại, Emma!',
+            'Chào mừng quay trở lại!',
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -112,7 +142,7 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () {
-              // Navigate to Create Article Screen
+              context.push('/create-article');
             },
             icon: const Icon(Icons.edit, size: 16, color: Color(0xFF6D4C41)),
             label: const Text('Viết bài mới', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -148,36 +178,51 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     );
   }
 
-  Widget _statItem(String label, String val, IconData icon, Color color) {
+  Widget _statItem(String title, String value, IconData icon, Color accentColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 8),
-          Text(
-            val,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
-          ),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          Icon(icon, color: accentColor, size: 24),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6D4C41),
+                ),
+              ),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, Color color, {bool showSeeAll = false, VoidCallback? onSeeAll}) {
+  Widget _buildSectionHeader(String title, Color accentColor, {bool showSeeAll = false, VoidCallback? onSeeAll}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -192,40 +237,42 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
         if (showSeeAll)
           TextButton(
             onPressed: onSeeAll,
-            child: Text(
-              'Xem tất cả',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
-            ),
+            child: Text('Xem tất cả', style: TextStyle(color: accentColor)),
           ),
       ],
     );
   }
 
-  Widget _buildQuickActionsGrid(BuildContext context, Color color) {
+  Widget _buildQuickActionsGrid(BuildContext context, Color accentColor) {
     return Row(
       children: [
         Expanded(
-          child: _quickActionCard(
-            context,
-            'Viết bài',
-            'Chia sẻ trải nghiệm',
-            Icons.edit_note,
-            color,
+          child: _quickActionItem(
+            'Quản lý\nbài viết',
+            Icons.folder_outlined,
+            accentColor,
+            () => setState(() => _currentIndex = 1),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _quickActionItem(
+            'Bình luận',
+            Icons.comment_outlined,
+            const Color(0xFF00897B),
             () {
-              context.push('/create-article');
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng sắp ra mắt')));
             },
           ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _quickActionCard(
-            context,
-            'Bài viết',
-            'Quản lý bài đăng',
-            Icons.book_outlined,
-            color,
+          child: _quickActionItem(
+            'Thống kê',
+            Icons.analytics_outlined,
+            const Color(0xFFE53935),
             () {
-              context.push('/article-list');
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng sắp ra mắt')));
             },
           ),
         ),
@@ -233,43 +280,42 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     );
   }
 
-  Widget _quickActionCard(
-      BuildContext context,
-      String title,
-      String subtitle,
-      IconData icon,
-      Color color,
-      VoidCallback onTap,
-      ) {
+  Widget _quickActionItem(String title, IconData icon, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(color: Colors.grey, fontSize: 11),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6D4C41),
+                height: 1.2,
+              ),
             ),
           ],
         ),
@@ -277,113 +323,56 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     );
   }
 
-  Widget _buildRecentArticlesList(BuildContext context, Color color) {
+  Widget _buildRecentArticlesList(BuildContext context, Color accentColor) {
     final state = ref.watch(authorArticleViewModelProvider);
-    if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final articles = state.articles.take(2).toList();
-    if (articles.isEmpty) {
-      return const Center(child: Text('Không có bài viết nào', style: TextStyle(color: Colors.grey)));
-    }
-
-    return ListView.separated(
+    if (state.isLoading) return const Center(child: CircularProgressIndicator());
+    if (state.articles.isEmpty) return const Text('Bạn chưa có bài viết nào.', style: TextStyle(color: Colors.grey));
+    
+    return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: articles.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
+      itemCount: state.articles.take(3).length,
       itemBuilder: (context, index) {
-        final article = articles[index];
-        final isDraft = article.status == 'draft';
-        final statusText = isDraft ? 'Bản nháp' : 'Đã xuất bản';
-        return GestureDetector(
-          onTap: () {
-            context.push('/article-detail', extra: article,
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        final article = state.articles[index];
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            leading: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: article.coverImage != null 
+                  ? Image.network(article.coverImage!, width: 70, height: 70, fit: BoxFit.cover)
+                  : Container(width: 70, height: 70, color: Colors.grey[200]),
             ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1518780664697-55e3ad937233?q=80&w=1000',
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            article.authorName ?? 'Hearth & Horizon',
-                            style: TextStyle(
-                              color: color,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isDraft ? Colors.orange.shade50 : Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              statusText,
-                              style: TextStyle(
-                                color: isDraft ? Colors.orange : Colors.green,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        article.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.visibility_outlined, size: 12, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          const Text('0', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          const SizedBox(width: 12),
-                          const Icon(Icons.favorite_border_outlined, size: 12, color: Colors.grey),
-                          const SizedBox(width: 4),
-                          const Text('0', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          const Spacer(),
-                          Text(
-                            article.createdAt != null ? article.createdAt.toString().split('T')[0] : 'N/A',
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
-                )
-              ],
+            title: Text(
+              article.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            subtitle: Text(
+              article.status == 'published' ? 'Đã xuất bản' : 'Bản nháp',
+              style: TextStyle(
+                color: article.status == 'published' ? Colors.green : Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              onPressed: () {
+                context.push('/article-detail', extra: article.id);
+              },
             ),
           ),
         );
@@ -391,25 +380,20 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
     );
   }
 
-  Widget _buildBottomNavBar(BuildContext context) {
+  Widget _buildBottomNavBar(Color purpleColor) {
     return BottomNavigationBar(
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF8E24AA),
+      selectedItemColor: purpleColor,
       unselectedItemColor: Colors.grey,
-      currentIndex: 0,
+      currentIndex: _currentIndex,
       onTap: (index) {
-        if (index == 1) {
-          context.pushReplacement('/article-list');
-        } else if (index == 2) {
-          context.push('/notifications');
-        } else if (index == 3) {
-          context.push('/profile');
-        }
+        setState(() {
+          _currentIndex = index;
+        });
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
         BottomNavigationBarItem(icon: Icon(Icons.article_outlined), activeIcon: Icon(Icons.article), label: 'Bài viết'),
-        BottomNavigationBarItem(icon: Icon(Icons.notifications_none), activeIcon: Icon(Icons.notifications), label: 'Thông báo'),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Hồ sơ'),
       ],
     );

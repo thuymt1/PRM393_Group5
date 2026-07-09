@@ -271,37 +271,30 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
   }
 
   Widget _buildSubmitButton(Homestay homestay) {
-    final bookingState = ref.watch(bookingViewModelProvider);
-
     return ElevatedButton(
-      onPressed: (_selectedDateRange != null && !bookingState.isSubmitting) ? () async {
+      onPressed: _selectedDateRange != null ? () {
         int nights = _selectedDateRange!.duration.inDays;
         if (nights == 0) nights = 1;
-        final totalPrice = (homestay.pricePerNight * nights) + 50000.0;
+        final basePrice = homestay.pricePerNight * nights;
+        final serviceFee = 50000.0;
+        final totalPrice = basePrice + serviceFee;
 
         final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
         final checkIn = dateFormat.format(_selectedDateRange!.start);
-        final checkOut = dateFormat.format(_selectedDateRange!.start.add(Duration(days: nights)));
+        final checkOut = dateFormat.format(_selectedDateRange!.end);
 
-        final success = await ref.read(bookingViewModelProvider.notifier).createBooking(
-          homestayId: homestay.id,
-          checkIn: checkIn,
-          checkOut: checkOut,
-          totalPrice: totalPrice,
-        );
-        
-        if (!mounted) return;
+        final payload = {
+          'homestayId': homestay.id,
+          'homestayName': homestay.name,
+          'checkIn': checkIn,
+          'checkOut': checkOut,
+          'guests': _guests,
+          'basePrice': basePrice,
+          'serviceFee': serviceFee,
+          'totalPrice': totalPrice,
+        };
 
-        if (success) {
-          // Success => navigate to my bookings (with replacement to clear stack or just pushReplacement)
-          context.pushReplacement('/my-bookings');
-        } else {
-          final err = ref.read(bookingViewModelProvider).error;
-          if (err != null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-            ref.read(bookingViewModelProvider.notifier).clearError();
-          }
-        }
+        context.push('/booking-confirmation', extra: payload);
       } : null,
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
@@ -310,12 +303,10 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
         elevation: 2,
         shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
       ),
-      child: bookingState.isSubmitting 
-        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-        : const Text(
-            'Tiếp tục xác nhận',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+      child: const Text(
+        'Tiếp tục xác nhận',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+      ),
     );
   }
 }

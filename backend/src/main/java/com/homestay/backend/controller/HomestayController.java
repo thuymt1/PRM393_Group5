@@ -1,6 +1,7 @@
 package com.homestay.backend.controller;
 
 import com.homestay.backend.dto.HomestayDto;
+import com.homestay.backend.entity.Category;
 import com.homestay.backend.repository.CategoryRepository;
 import com.homestay.backend.service.HomestayService;
 import org.springframework.http.ResponseEntity;
@@ -24,11 +25,20 @@ public class HomestayController {
         this.categoryRepository = categoryRepository;
     }
 
-    // GET /api/homestays?search=dalat   (public)
+    // GET /api/homestays?search=dalat&categoryId=1  (public)
     @GetMapping("/homestays")
     public ResponseEntity<List<HomestayDto>> getHomestays(
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(homestayService.getHomestays(search));
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long categoryId) {
+        return ResponseEntity.ok(homestayService.getHomestays(search, categoryId));
+    }
+
+    // GET /api/homestays/{id}  (public)
+    @GetMapping("/homestays/{id}")
+    public ResponseEntity<HomestayDto> getHomestayById(@PathVariable Long id) {
+        return homestayService.getHomestayById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     // GET /api/homestays/mine   (chi Host)
@@ -51,7 +61,7 @@ public class HomestayController {
 
     // GET /api/categories   (public)
     @GetMapping("/categories")
-    public ResponseEntity<?> getCategories() {
+    public ResponseEntity<List<Category>> getCategories() {
         return ResponseEntity.ok(categoryRepository.findAll());
     }
 }

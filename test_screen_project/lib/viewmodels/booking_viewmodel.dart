@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/booking_model.dart';
 import '../repositories/booking_repository.dart';
+import '../utils/error_handler.dart';
 
 class BookingState {
   final bool isLoading;
@@ -42,7 +43,7 @@ class BookingViewModel extends StateNotifier<BookingState> {
       final list = await _repo.getMyBookings();
       state = state.copyWith(isLoading: false, bookings: list);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
     }
   }
 
@@ -67,7 +68,7 @@ class BookingViewModel extends StateNotifier<BookingState> {
       );
       return true;
     } catch (e) {
-      state = state.copyWith(isSubmitting: false, error: e.toString());
+      state = state.copyWith(isSubmitting: false, error: ErrorHandler.getMessage(e));
       return false;
     }
   }
@@ -87,7 +88,7 @@ class HostBookingViewModel extends StateNotifier<BookingState> {
       final list = await _repo.getHostRequests();
       state = state.copyWith(isLoading: false, bookings: list);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: ErrorHandler.getMessage(e));
     }
   }
 
@@ -98,7 +99,7 @@ class HostBookingViewModel extends StateNotifier<BookingState> {
       final updatedList = state.bookings.map((b) => b.id == bookingId ? updated : b).toList();
       state = state.copyWith(bookings: updatedList);
     } catch (e) {
-      state = state.copyWith(error: e.toString());
+      state = state.copyWith(error: ErrorHandler.getMessage(e));
     }
   }
 }
@@ -111,3 +112,4 @@ final bookingViewModelProvider = StateNotifierProvider<BookingViewModel, Booking
 final hostBookingViewModelProvider = StateNotifierProvider<HostBookingViewModel, BookingState>(
   (ref) => HostBookingViewModel(BookingRepository()),
 );
+

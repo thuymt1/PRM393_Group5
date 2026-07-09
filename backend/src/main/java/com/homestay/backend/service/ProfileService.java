@@ -18,7 +18,7 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public Profile getProfile(String userId) {
-        return profileRepository.findById(userId)
+        return profileRepository.findById(java.util.UUID.fromString(userId))
                 .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
     }
 
@@ -35,10 +35,11 @@ public class ProfileService {
 
     @Transactional
     public Profile updateRole(String userId, String role) {
-        Profile profile = profileRepository.findById(userId).orElseGet(() -> {
+        java.util.UUID uuid = java.util.UUID.fromString(userId);
+        Profile profile = profileRepository.findById(uuid).orElseGet(() -> {
             // Profile chua ton tai (user moi dang nhap qua magic link)
             Profile p = new Profile();
-            p.setId(userId);
+            p.setId(uuid);
             return p;
         });
         profile.setRole(role);

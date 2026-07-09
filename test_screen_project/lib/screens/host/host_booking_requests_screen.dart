@@ -6,7 +6,8 @@ import '../../models/booking_model.dart';
 import '../../viewmodels/booking_viewmodel.dart';
 
 class HostBookingRequestsScreen extends ConsumerStatefulWidget {
-  const HostBookingRequestsScreen({super.key});
+  final bool isTab;
+  const HostBookingRequestsScreen({super.key, this.isTab = false});
 
   @override
   ConsumerState<HostBookingRequestsScreen> createState() => _HostBookingRequestsScreenState();
@@ -73,7 +74,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: GestureDetector(
+        leading: widget.isTab ? null : GestureDetector(
           onTap: () => context.pop(),
           child: Container(
             margin: const EdgeInsets.all(10),

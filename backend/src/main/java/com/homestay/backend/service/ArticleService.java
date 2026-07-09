@@ -31,14 +31,14 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleDto> getMyArticles(String authorId) {
-        return articleRepository.findByAuthorIdOrderByCreatedAtDesc(authorId)
+        return articleRepository.findByAuthorIdOrderByCreatedAtDesc(java.util.UUID.fromString(authorId))
                 .stream().map(ArticleDto::fromEntity).toList();
     }
 
     @Transactional
     public ArticleDto createArticle(String authorId, String title, String content) {
-        Profile author = profileRepository.findById(authorId)
-                .orElseThrow(() -> new IllegalArgumentException("Author profile not found"));
+        Profile author = profileRepository.findById(java.util.UUID.fromString(authorId))
+                .orElseThrow(() -> new IllegalArgumentException("Author not found"));
 
         Article article = new Article();
         article.setTitle(title);
