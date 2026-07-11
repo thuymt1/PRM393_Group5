@@ -306,18 +306,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (profile != null) {
         final role = profile['role'];
-        if (role == 'customer') {
-          Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
-        } else if (role == 'host') {
+        if (role == 'host') {
           Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
         } else if (role == 'author') {
           Navigator.pushNamedAndRemoveUntil(context, '/author-dashboard', (route) => false);
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
         }
       } else {
         // Chưa có profile -> Mới đăng ký qua mạng xã hội hoặc lỗi chưa tạo profile
-        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
+        await _apiService.updateProfileRole('customer');
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
+        }
       }
     } catch (e) {
       if (!mounted) return;

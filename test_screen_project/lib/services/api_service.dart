@@ -30,12 +30,14 @@ class ApiService {
     required String email,
     required String fullName,
     required String phone,
+    String role = 'customer',
   }) async {
     await _supabase.from('profiles').insert({
       'id': id,
       'email': email,
       'full_name': fullName,
       'phone': phone,
+      'role': role,
       'created_at': DateTime.now().toIso8601String(),
     });
   }

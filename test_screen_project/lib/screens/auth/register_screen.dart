@@ -512,7 +512,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
-        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
       } else {
         throw Exception('Không nhận được thông tin User');
       }
