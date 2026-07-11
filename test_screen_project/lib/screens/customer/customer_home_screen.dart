@@ -16,14 +16,15 @@ final categoriesProvider = FutureProvider<List<Map<String, dynamic>>>((ref) asyn
 });
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
-  const CustomerHomeScreen({super.key});
+  final int initialIndex;
+  const CustomerHomeScreen({super.key, this.initialIndex = 0});
 
   @override
   ConsumerState<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
 }
 
 class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
   int? _selectedCategoryId;
   int _selectedCategoryIndex = -1; // -1 = "Tất cả"
   final TextEditingController _searchController = TextEditingController();
@@ -33,6 +34,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     Future.microtask(() {
       ref.read(homestayViewModelProvider.notifier).loadHomestays();
       ref.read(profileViewModelProvider.notifier).loadProfile();
@@ -268,8 +270,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     switch (_currentIndex) {
       case 0: return _buildExploreTab();
       case 1: return _buildFavoritesTab();
-      case 2: return const MyBookingsScreen();
-      case 3: return const ProfilePage();
       default: return _buildExploreTab();
     }
   }
@@ -745,7 +745,15 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
       unselectedItemColor: Colors.grey,
       currentIndex: _currentIndex,
       backgroundColor: Colors.white,
-      onTap: (index) => setState(() => _currentIndex = index),
+      onTap: (index) {
+        if (index == 0 || index == 1) {
+          setState(() => _currentIndex = index);
+        } else if (index == 2) {
+          context.go('/my-bookings');
+        } else if (index == 3) {
+          context.go('/profile');
+        }
+      },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Khám phá'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Yêu thích'),

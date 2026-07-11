@@ -67,7 +67,14 @@ final appRouter = GoRouter(
     // Customer flow
     GoRoute(
       path: '/customer-home',
-      builder: (context, state) => const CustomerHomeScreen(),
+      builder: (context, state) {
+        final initialIndex = state.extra as int? ?? 0;
+        return CustomerHomeScreen(initialIndex: initialIndex);
+      },
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfilePage(),
     ),
     GoRoute(
       path: '/homestay-detail',

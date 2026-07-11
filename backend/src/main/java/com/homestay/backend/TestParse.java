@@ -1,3 +1,5 @@
+package com.homestay.backend;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.Claims;
 

@@ -6,6 +6,7 @@ class ArticleModel {
   final String? authorName;
   final String status;
   final String createdAt;
+  final String? coverImage;
 
   const ArticleModel({
     required this.id,
@@ -15,6 +16,7 @@ class ArticleModel {
     this.authorName,
     required this.status,
     required this.createdAt,
+    this.coverImage,
   });
 
   factory ArticleModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class ArticleModel {
       authorName: json['author_name'],
       status: json['status'] ?? 'published',
       createdAt: json['created_at'] ?? '',
+      coverImage: json['cover_image'],
     );
   }
 }

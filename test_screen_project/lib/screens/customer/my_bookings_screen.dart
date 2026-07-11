@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/booking_model.dart';
@@ -263,6 +264,17 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       selectedItemColor: const Color(0xFFE07A5F), // Sắc cam làm nổi bần bật icon tab đang đứng hoạt động tích cực
       unselectedItemColor: Colors.grey, // Sắc màu xám nhẹ cho các danh mục tab còn lại chưa được lựa chọn
       currentIndex: 2, // Đánh chỉ mục vị trí hiện tại đang nằm cố định ở Tab thứ 2 ('Chuyến đi' của tôi)
+      onTap: (index) {
+        if (index == 0) {
+          context.go('/customer-home', extra: 0);
+        } else if (index == 1) {
+          context.go('/customer-home', extra: 1);
+        } else if (index == 2) {
+          // Stay here
+        } else if (index == 3) {
+          context.go('/profile');
+        }
+      },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'Khám phá'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite_border), activeIcon: Icon(Icons.favorite), label: 'Yêu thích'),

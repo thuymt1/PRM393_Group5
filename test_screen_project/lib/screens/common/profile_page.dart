@@ -284,6 +284,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       selectedItemColor: const Color(0xFFE07A5F), // Màu sắc cam làm nổi bật icon đang được chọn kích hoạt
       unselectedItemColor: Colors.grey, // Màu sắc xám cho các icon còn lại chưa được chọn
       currentIndex: 3, // Thiết lập vị trí trang hiện tại là trang Hồ sơ (vị trí index thứ 3 trong mảng)
+      onTap: (index) {
+        if (index == 0) {
+          context.go('/customer-home', extra: 0);
+        } else if (index == 1) {
+          context.go('/customer-home', extra: 1);
+        } else if (index == 2) {
+          context.go('/my-bookings');
+        } else if (index == 3) {
+          // Stay here
+        }
+      },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Khám phá'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Yêu thích'),
