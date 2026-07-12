@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 
 void main() {
@@ -75,9 +76,9 @@ void main() {
         final firstImportIdx = content.indexOf('import');
         if (firstImportIdx != -1) {
           final endOfLine = content.indexOf(';', firstImportIdx) + 1;
-          content = content.substring(0, endOfLine) + "\nimport 'package:go_router/go_router.dart';" + content.substring(endOfLine);
+          content = "${content.substring(0, endOfLine)}\nimport 'package:go_router/go_router.dart';${content.substring(endOfLine)}";
         } else {
-          content = "import 'package:go_router/go_router.dart';\n" + content;
+          content = "import 'package:go_router/go_router.dart';\n$content";
         }
       }
       file.writeAsStringSync(content);

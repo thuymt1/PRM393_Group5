@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../models/homestay_model.dart';
+import '../models/booking_model.dart';
 
 // Auth screens
 import '../screens/auth/intro_screen.dart';
@@ -38,6 +39,7 @@ import '../screens/author/article_detail_screen.dart';
 
 // Common screens
 import '../screens/common/profile_page.dart';
+import '../screens/common/edit_profile_screen.dart';
 import '../screens/common/notification_screen.dart';
 
 final appRouter = GoRouter(
@@ -75,6 +77,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/profile',
       builder: (context, state) => const ProfilePage(),
+    ),
+    GoRoute(
+      path: '/edit-profile',
+      builder: (context, state) => const EditProfileScreen(),
     ),
     GoRoute(
       path: '/homestay-detail',
@@ -132,7 +138,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/host-booking-detail',
-      builder: (context, state) => const HostBookingDetailScreen(),
+      builder: (context, state) {
+        final booking = state.extra as BookingModel?;
+        return HostBookingDetailScreen(booking: booking);
+      },
     ),
     GoRoute(
       path: '/homestay-list',
@@ -140,7 +149,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/homestay-status',
-      builder: (context, state) => const HomestayStatusScreen(),
+      builder: (context, state) {
+        final homestay = state.extra as Homestay?;
+        return HomestayStatusScreen(homestay: homestay);
+      },
     ),
     GoRoute(
       path: '/add-homestay-basic-info',
@@ -183,10 +195,6 @@ final appRouter = GoRouter(
     ),
 
     // Common
-    GoRoute(
-      path: '/profile',
-      builder: (context, state) => const ProfilePage(),
-    ),
     GoRoute(
       path: '/notifications',
       builder: (context, state) => const NotificationScreen(),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/homestay_model.dart';
 
@@ -51,7 +52,7 @@ class ApiService {
           .maybeSingle();
       return response;
     } catch (e) {
-      print('Error getting profile: $e');
+      debugPrint('Error getting profile: $e');
       return null;
     }
   }
@@ -83,7 +84,7 @@ class ApiService {
       
       return (response as List).map((json) => Homestay.fromJson(json)).toList();
     } catch (e) {
-      print('Error fetching homestays: $e');
+      debugPrint('Error fetching homestays: $e');
       return [];
     }
   }
@@ -105,7 +106,7 @@ class ApiService {
       
       return (response as List).map((json) => Homestay.fromJson(json)).toList();
     } catch (e) {
-      print('Error fetching my homestays: $e');
+      debugPrint('Error fetching my homestays: $e');
       return [];
     }
   }
@@ -142,7 +143,7 @@ class ApiService {
     try {
       return await _supabase.from('categories').select();
     } catch (e) {
-      print('Error fetching categories: $e');
+      debugPrint('Error fetching categories: $e');
       return [];
     }
   }
@@ -191,7 +192,7 @@ class ApiService {
           .eq('customer_id', user.id)
           .order('created_at', ascending: false);
     } catch (e) {
-      print('Error fetching bookings: $e');
+      debugPrint('Error fetching bookings: $e');
       return [];
     }
   }
@@ -228,7 +229,7 @@ class ApiService {
           .inFilter('homestay_id', homestayIds)
           .order('created_at', ascending: false);
     } catch (e) {
-      print('Error fetching host booking requests: $e');
+      debugPrint('Error fetching host booking requests: $e');
       return [];
     }
   }
@@ -252,7 +253,7 @@ class ApiService {
           .select()
           .order('created_at', ascending: false);
     } catch (e) {
-      print('Error fetching articles: $e');
+      debugPrint('Error fetching articles: $e');
       return [];
     }
   }
@@ -269,7 +270,7 @@ class ApiService {
           .eq('author_id', user.id)
           .order('created_at', ascending: false);
     } catch (e) {
-      print('Error fetching my articles: $e');
+      debugPrint('Error fetching my articles: $e');
       return [];
     }
   }

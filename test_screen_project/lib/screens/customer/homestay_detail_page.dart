@@ -381,7 +381,7 @@ class HomestayDetailPage extends StatelessWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Tạo bóng mờ ngược lên trên phân định ranh giới rõ ràng với body
+            color: Colors.black.withValues(alpha: 0.05), // Tạo bóng mờ ngược lên trên phân định ranh giới rõ ràng với body
             blurRadius: 10,
             offset: const Offset(0, -5),
           )

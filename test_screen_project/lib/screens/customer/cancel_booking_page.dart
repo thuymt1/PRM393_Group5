@@ -95,7 +95,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ mịn siêu nhẹ tạo chiều sâu nổi khối
+            color: Colors.black.withValues(alpha: 0.03), // Đổ bóng mờ mịn siêu nhẹ tạo chiều sâu nổi khối
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -148,7 +148,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF7F4E1), // Sắc nền be vàng nhạt nhã nhặn phù hợp khối thông tin lưu ý
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE07A5F).withOpacity(0.1)),
+        border: Border.all(color: const Color(0xFFE07A5F).withValues(alpha: 0.1)),
       ),
       child: const Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -185,7 +185,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               // Đổi sang màu hồng nhạt nhẹ 5% sắc cam nếu thẻ lý do này được chọn kích hoạt
-              color: isSelected ? const Color(0xFFE07A5F).withOpacity(0.05) : Colors.white,
+              color: isSelected ? const Color(0xFFE07A5F).withValues(alpha: 0.05) : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected ? const Color(0xFFE07A5F) : Colors.grey.shade200, // Tô viền cam nổi bật
@@ -258,7 +258,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
             minimumSize: const Size(double.infinity, 56), // Kéo dãn tối đa chiều ngang, chiều cao ô nút bấm 56 đơn vị
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 2,
-            shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
+            shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
             disabledBackgroundColor: Colors.grey.shade300, // Đổi màu sắc xám mờ nút khi bị khóa tính năng
           ),
           child: const Text(

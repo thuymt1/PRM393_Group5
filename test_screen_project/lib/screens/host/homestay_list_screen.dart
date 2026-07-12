@@ -144,7 +144,7 @@ class _HomestayListScreenState extends ConsumerState<HomestayListScreen>
     final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://placehold.co/400';
 
     return GestureDetector(
-      onTap: () => context.push('/homestay-detail', extra: homestay),
+      onTap: () => context.push('/homestay-status', extra: homestay),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -214,7 +214,7 @@ class _HomestayListScreenState extends ConsumerState<HomestayListScreen>
     final imageUrl = homestay.images.isNotEmpty ? homestay.images[0] : 'https://placehold.co/400';
 
     return GestureDetector(
-      onTap: () => context.push('/homestay-detail', extra: homestay),
+      onTap: () => context.push('/homestay-status', extra: homestay),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         height: 120,

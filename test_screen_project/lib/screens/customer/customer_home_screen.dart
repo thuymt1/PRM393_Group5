@@ -356,9 +356,15 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
         height: 90,
         child: Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F), strokeWidth: 2)),
       ),
-      error: (_, __) => _buildDefaultCategoryFilter(),
+      error: (err, _) => const SizedBox(
+        height: 90,
+        child: Center(child: Text('Không thể tải danh mục', style: TextStyle(color: Colors.grey))),
+      ),
       data: (categories) {
-        if (categories.isEmpty) return _buildDefaultCategoryFilter();
+        if (categories.isEmpty) return const SizedBox(
+          height: 90,
+          child: Center(child: Text('Chưa có danh mục nào', style: TextStyle(color: Colors.grey))),
+        );
 
         // Map icon cho category theo name
         final iconMap = <String, IconData>{
@@ -417,62 +423,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
     );
   }
 
-  // Fallback hardcode categories neu API that bai
-  Widget _buildDefaultCategoryFilter() {
-    final categories = [
-      {'icon': Icons.beach_access, 'label': 'Biển'},
-      {'icon': Icons.terrain, 'label': 'Núi'},
-      {'icon': Icons.apartment, 'label': 'Thành phố'},
-      {'icon': Icons.forest, 'label': 'Rừng'},
-    ];
-    return SizedBox(
-      height: 90,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final isSelected = _selectedCategoryIndex == index;
-          return GestureDetector(
-            onTap: () {
-              setState(() => _selectedCategoryIndex = isSelected ? -1 : index);
-              if (!isSelected) {
-                ref.read(homestayViewModelProvider.notifier)
-                    .search(categories[index]['label'] as String);
-              } else {
-                ref.read(homestayViewModelProvider.notifier).clearFilters();
-              }
-            },
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Column(
-                children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE07A5F).withOpacity(0.1) : const Color(0xFFF7F4E1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: isSelected ? Border.all(color: const Color(0xFFE07A5F)) : null,
-                    ),
-                    child: Icon(categories[index]['icon'] as IconData,
-                      color: isSelected ? const Color(0xFFE07A5F) : const Color(0xFF6D4C41)),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(categories[index]['label'] as String,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? const Color(0xFFE07A5F) : Colors.grey,
-                    )),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Widget _buildFeaturedSection() {
     final homestayState = ref.watch(homestayViewModelProvider);

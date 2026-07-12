@@ -95,7 +95,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ mịn siêu nhẹ tạo chiều sâu nổi khối
+            color: Colors.black.withValues(alpha: 0.03), // Đổ bóng mờ mịn siêu nhẹ tạo chiều sâu nổi khối
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -265,7 +265,7 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
         minimumSize: const Size(double.infinity, 56), // Kéo dãn tối đa chiều rộng hàng ngang, chiều cao ô nút 56 đơn vị
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Thiết lập bo tròn góc phím nút bấm
         elevation: 2,
-        shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
+        shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
         disabledBackgroundColor: Colors.grey.shade300, // Đổi hẳn sang màu xám mờ đục khi nút bị tắt tính năng khóa bấm
       ),
       child: const Text(

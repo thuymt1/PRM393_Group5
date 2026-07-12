@@ -168,7 +168,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
                     width: 1.5,
                   ),
                   boxShadow: isSelected
-                      ? [BoxShadow(color: const Color(0xFF5D3A2E).withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3))]
+                      ? [BoxShadow(color: const Color(0xFF5D3A2E).withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 3))]
                       : [],
                 ),
                 child: Text(
@@ -196,7 +196,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFE07A5F).withOpacity(0.1),
+              color: const Color(0xFFE07A5F).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.inbox_outlined, size: 40, color: Color(0xFFE07A5F)),
@@ -213,7 +213,6 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
   Widget _buildRequestCard(BuildContext context, BookingModel data, int index) {
     final bool isPending = data.status == 'pending';
     final bool isApproved = data.status == 'confirmed' || data.status == 'completed';
-    final bool isCancelled = data.status == 'cancelled';
 
     String statusText = isPending ? 'Chờ duyệt' : isApproved ? 'Đã duyệt' : 'Đã từ chối';
 
@@ -222,14 +221,16 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
 
     final formatCurrency = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/host-booking-detail', extra: data),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -289,7 +290,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
                     decoration: BoxDecoration(
                       color: statusBg,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: statusColor.withOpacity(0.2)),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.2)),
                     ),
                     child: Text(
                       statusText,
@@ -331,8 +332,23 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
                   ],
                 ),
 
+              const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () => context.push('/host-booking-detail', extra: data),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text('Xem chi tiết',
+                          style: TextStyle(
+                              color: Color(0xFFE07A5F),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13)),
+                      Icon(Icons.chevron_right, size: 16, color: Color(0xFFE07A5F)),
+                    ],
+                  ),
+                ),
                 if (isPending) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -349,8 +365,8 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
                         child: _AnimatedButton(
                           onPressed: () async {
                             await ref.read(hostBookingViewModelProvider.notifier).updateStatus(data.id, 'confirmed');
-                            if (!mounted) return;
-                            _showSuccessSnackbar(context, 'Đã phê duyệt thành công!');
+                            if (!context.mounted) return;
+                            _showSuccessSnackbar(context, 'Phê duyệt thành công!');
                           },
                           isOutlined: false,
                           icon: Icons.check,
@@ -366,6 +382,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -376,7 +393,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: const Color(0xFFE07A5F).withOpacity(0.1),
+            color: const Color(0xFFE07A5F).withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 14, color: const Color(0xFFE07A5F)),
@@ -464,7 +481,7 @@ class _HostBookingRequestsScreenState extends ConsumerState<HostBookingRequestsS
             onPressed: () async {
               context.pop();
               await ref.read(hostBookingViewModelProvider.notifier).updateStatus(bookingId, 'cancelled');
-              if (!mounted) return;
+              if (!context.mounted) return;
               _showSuccessSnackbar(context, 'Đã từ chối yêu cầu');
             },
             style: ElevatedButton.styleFrom(

@@ -138,7 +138,7 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -183,7 +183,7 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -218,7 +218,7 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -248,7 +248,7 @@ class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
       label: Text('Thêm hình ảnh bài đăng', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 56),
-        side: BorderSide(color: color.withOpacity(0.5)),
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );

@@ -142,7 +142,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(Icons.info_outline, color: Colors.white, size: 24),
@@ -189,7 +189,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
             ],
           ),
           child: TextField(
@@ -205,7 +205,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE07A5F).withOpacity(0.1),
+                    color: const Color(0xFFE07A5F).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: const Color(0xFFE07A5F), size: 16),
@@ -241,7 +241,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Row(
             children: [
@@ -249,7 +249,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE07A5F).withOpacity(0.1),
+                  color: const Color(0xFFE07A5F).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(Icons.people_outline, color: Color(0xFFE07A5F), size: 16),
@@ -335,8 +335,8 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                     width: 1.5,
                   ),
                   boxShadow: isSelected
-                      ? [BoxShadow(color: const Color(0xFF5D3A2E).withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 4))]
-                      : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 3))],
+                      ? [BoxShadow(color: const Color(0xFF5D3A2E).withValues(alpha: 0.2), blurRadius: 10, offset: const Offset(0, 4))]
+                      : [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 3))],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,7 +383,7 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, -4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, -4)),
         ],
       ),
       child: Row(

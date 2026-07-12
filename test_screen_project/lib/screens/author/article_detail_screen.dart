@@ -25,7 +25,7 @@ class ArticleDetailScreen extends StatelessWidget {
             expandedHeight: 280,
             pinned: true,
             leading: CircleAvatar(
-              backgroundColor: Colors.white.withOpacity(0.9),
+              backgroundColor: Colors.white.withValues(alpha: 0.9),
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: primaryBrown),
                 onPressed: () => context.pop(),
@@ -33,7 +33,7 @@ class ArticleDetailScreen extends StatelessWidget {
             ),
             actions: [
               CircleAvatar(
-                backgroundColor: Colors.white.withOpacity(0.9),
+                backgroundColor: Colors.white.withValues(alpha: 0.9),
                 child: IconButton(
                   icon: const Icon(Icons.more_vert, color: primaryBrown),
                   onPressed: () {
@@ -76,7 +76,7 @@ class ArticleDetailScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: purpleColor.withOpacity(0.1),
+                          color: purpleColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(

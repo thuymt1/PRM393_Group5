@@ -146,7 +146,7 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
             borderRadius: BorderRadius.circular(16), // Bo tròn góc hộp 16 đơn vị
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
+                color: Colors.black.withValues(alpha: 0.03), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -226,7 +226,7 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới rõ ràng với body
+            color: Colors.black.withValues(alpha: 0.05), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới rõ ràng với body
             blurRadius: 10,
             offset: const Offset(0, -5),
           )

@@ -137,7 +137,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         borderRadius: BorderRadius.circular(24), // Bo tròn 4 góc khung thẻ 24 đơn vị
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ mịn siêu nhẹ tạo độ sâu bề mặt tinh tế
+            color: Colors.black.withValues(alpha: 0.03), // Đổ bóng mờ mịn siêu nhẹ tạo độ sâu bề mặt tinh tế
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -145,8 +145,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
       ),
       child: InkWell(
         onTap: () {
-          // TODO: Thực hiện điều phối điều hướng kết nối Navigator dẫn tới trang màn hình chi tiết đơn đặt chỗ
-          print("Xem chi tiết đơn phòng căn: ${booking.homestayName}");
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tính năng xem chi tiết đơn đang phát triển')));
         },
         borderRadius: BorderRadius.circular(24), // Đảm bảo hiệu ứng sóng nước hiệu ứng gợn sóng (Ink Splash) bo khít góc thẻ
         child: Column(
@@ -169,7 +168,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9), // Khung nền trắng đục mờ trong suốt 90%
+                        color: Colors.white.withValues(alpha: 0.9), // Khung nền trắng đục mờ trong suốt 90%
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(

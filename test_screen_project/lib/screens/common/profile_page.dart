@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../viewmodels/profile_viewmodel.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/booking_viewmodel.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -16,7 +17,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(profileViewModelProvider.notifier).loadProfile());
+    Future.microtask(() {
+      ref.read(profileViewModelProvider.notifier).loadProfile();
+      ref.read(bookingViewModelProvider.notifier).loadMyBookings();
+    });
   }
 
   @override
@@ -75,7 +79,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         borderRadius: BorderRadius.circular(24), // Bo tròn góc thẻ hồ sơ 24 đơn vị
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng nhẹ tạo hiệu ứng nổi bề mặt
+            color: Colors.black.withValues(alpha: 0.03), // Đổ bóng nhẹ tạo hiệu ứng nổi bề mặt
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -120,7 +124,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFFE07A5F).withOpacity(0.1), // Nền cam nhạt trong suốt 10%
+              color: const Color(0xFFE07A5F).withValues(alpha: 0.1), // Nền cam nhạt trong suốt 10%
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -146,11 +150,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   // Khối gom hai thẻ thông số thống kê lại theo chiều ngang
   Widget _buildStatsRow() {
+    final bookingState = ref.watch(bookingViewModelProvider);
+    final completedCount = bookingState.bookings.where((b) => b.status == 'completed').toList().length;
+    final totalCount = bookingState.bookings.length;
     return Row(
       children: [
-        Expanded(child: _buildStatCard('12', 'Chuyến đi')), // Thẻ thống kê số lượng chuyến đi
+        Expanded(child: _buildStatCard('$totalCount', 'Chuyến đi')),
         const SizedBox(width: 16),
-        Expanded(child: _buildStatCard('4.8', 'Xếp hạng')), // Thẻ thống kê điểm số đánh giá
+        Expanded(child: _buildStatCard('$completedCount', 'Đã hoàn thành')),
       ],
     );
   }
@@ -164,7 +171,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 5,
           )
         ],
@@ -204,20 +211,42 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
               )
             ],
           ),
           child: Column(
             children: [
-              _buildSettingItem(Icons.person_outline, 'Thông tin cá nhân', 'Tên pháp lý, chi tiết liên hệ'),
-              const Divider(height: 1), // Đường kẻ phân chia mỏng ngăn cách giữa các mục
-              _buildSettingItem(Icons.payment, 'Phương thức thanh toán', 'Visa •••• 4242, MoMo'),
+              _buildSettingItem(
+                Icons.person_outline,
+                'Thông tin cá nhân',
+                'Tên pháp lý, chi tiết liên hệ',
+                onTap: () => context.push('/edit-profile'),
+              ),
               const Divider(height: 1),
-              _buildSettingItem(Icons.star_outline, 'Nhận xét của tôi', '8 trải nghiệm đã chia sẻ'),
+              _buildSettingItem(
+                Icons.payment,
+                'Phương thức thanh toán',
+                'Visa •••• 4242, MoMo',
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Tính năng sắp ra mắt'), behavior: SnackBarBehavior.floating),
+                ),
+              ),
               const Divider(height: 1),
-              _buildSettingItem(Icons.settings_outlined, 'Cài đặt hệ thống', 'Thông báo, ngôn ngữ'),
+              _buildSettingItem(
+                Icons.star_outline,
+                'Nhận xét của tôi',
+                'Viết đánh giá về chuyến đi',
+                onTap: () => context.push('/create-review'),
+              ),
+              const Divider(height: 1),
+              _buildSettingItem(
+                Icons.settings_outlined,
+                'Cài đặt hệ thống',
+                'Thông báo, ngôn ngữ',
+                onTap: () => context.push('/notifications'),
+              ),
             ],
           ),
         ),
@@ -226,13 +255,13 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   // Hàm thiết kế từng dòng tùy chọn cài đặt sử dụng cấu trúc ListTile tiêu chuẩn
-  Widget _buildSettingItem(IconData icon, String title, String subtitle) {
+  Widget _buildSettingItem(IconData icon, String title, String subtitle, {VoidCallback? onTap}) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF7F4E1), // Màu nền be nhạt bao quanh Icon
+          color: const Color(0xFFF7F4E1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: const Color(0xFF6D4C41), size: 20),
@@ -245,11 +274,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         subtitle,
         style: const TextStyle(fontSize: 12, color: Colors.grey),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20), // Biểu tượng mũi tên đi tới cuối dòng
-      onTap: () {
-        // TODO: Xử lý sự kiện khi click vào từng mục tùy chọn tại đây
-        print("Bấm vào mục cài đặt: $title");
-      },
+      trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+      onTap: onTap,
     );
   }
 
@@ -272,7 +298,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         minimumSize: const Size(double.infinity, 56), // Co giãn full chiều ngang, chiều cao ô nút 56 đơn vị
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Thiết lập bo tròn góc nút bấm
         elevation: 2,
-        shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
+        shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
       ),
     );
   }

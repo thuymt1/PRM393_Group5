@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/homestay_viewmodel.dart';
+import '../../viewmodels/booking_viewmodel.dart';
 import '../common/profile_page.dart';
 import 'host_booking_requests_screen.dart';
 import 'homestay_list_screen.dart';
@@ -27,6 +28,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> with 
     super.initState();
     Future.microtask(() {
       ref.read(hostHomestayViewModelProvider.notifier).loadMyHomestays();
+      ref.read(hostBookingViewModelProvider.notifier).loadHostRequests();
     });
 
     _animationController = AnimationController(
@@ -96,8 +98,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> with 
                       setState(() => _currentIndex = 1);
                     }),
                     const SizedBox(height: 12),
-                    // Hardcode for now, later fetch from bookings
-                    const Text('Chưa có yêu cầu mới.', style: TextStyle(color: Colors.grey)),
+                    _buildRecentRequests(),
                     const SizedBox(height: 28),
                     _buildSectionHeader('Homestay của tôi', () {
                       setState(() => _currentIndex = 2);
@@ -113,6 +114,16 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> with 
         ),
       ],
     );
+  }
+
+  Widget _buildRecentRequests() {
+    final state = ref.watch(hostBookingViewModelProvider);
+    if (state.isLoading) return const Text('Đang tải...', style: TextStyle(color: Colors.grey));
+    final pendingRequests = state.bookings.where((b) => b.status == 'pending').toList();
+    if (pendingRequests.isEmpty) {
+      return const Text('Chưa có yêu cầu mới.', style: TextStyle(color: Colors.grey));
+    }
+    return Text('Bạn có \${pendingRequests.length} yêu cầu đặt phòng mới.', style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold));
   }
 
   Widget _buildSliverAppBar() {
@@ -147,7 +158,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> with 
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Chào buổi tối, $username 👋',
+                            _getGreeting(username),
                             style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14),
                           ),
                           const SizedBox(height: 2),
@@ -214,14 +225,22 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> with 
   }
 
   Widget _buildStatsGrid() {
-    final state = ref.watch(hostHomestayViewModelProvider);
+    final homestayState = ref.watch(hostHomestayViewModelProvider);
+    final bookingState = ref.watch(hostBookingViewModelProvider);
+    final pendingCount = bookingState.bookings.where((b) => b.status == 'pending').length;
     return Row(
       children: [
-        _buildStatCard('Tổng số nhà', '${state.homestays.length}', Icons.home_work, Colors.blue),
+        _buildStatCard('Tổng số nhà', '${homestayState.homestays.length}', Icons.home_work, Colors.blue),
         const SizedBox(width: 16),
-        _buildStatCard('Đánh giá', '0.0', Icons.star, Colors.amber),
+        _buildStatCard('Chờ duyệt', '$pendingCount', Icons.pending_actions, Colors.orange),
       ],
     );
+  }
+
+  String _getGreeting(String name) {
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12 ? 'Chào buổi sáng' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+    return '$greeting, $name 👋';
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {

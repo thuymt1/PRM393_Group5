@@ -71,7 +71,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
         ],
       ),
       child: Row(
@@ -246,7 +246,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFF7F4E1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE07A5F).withOpacity(0.1)),
+        border: Border.all(color: const Color(0xFFE07A5F).withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -301,7 +301,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
         minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 2,
-        shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
+        shadowColor: const Color(0xFF6D4C41).withValues(alpha: 0.3),
       ),
       child: const Text(
         'Tiếp tục xác nhận',

@@ -290,7 +290,7 @@ class _FilterScreenState extends State<FilterScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Tạo viền bóng đổ ngược lên phía trên tạo chiều sâu tách biệt với body
+            color: Colors.black.withValues(alpha: 0.05), // Tạo viền bóng đổ ngược lên phía trên tạo chiều sâu tách biệt với body
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),

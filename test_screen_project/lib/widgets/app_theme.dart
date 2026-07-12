@@ -35,7 +35,7 @@ class AppTheme {
         seedColor: primaryBrown,
         primary: primaryBrown,
         secondary: accentColor,
-        background: backgroundColor,
+        surface: backgroundColor,
       ),
       fontFamily: 'BeVietnamPro',
       appBarTheme: const AppBarTheme(
@@ -62,7 +62,7 @@ class AppTheme {
     return InputDecoration(
       hintText: hintText,
       hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-      prefixIcon: Icon(prefixIcon, color: primaryBrown.withOpacity(0.7)),
+      prefixIcon: Icon(prefixIcon, color: primaryBrown.withValues(alpha: 0.7)),
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white,
@@ -95,7 +95,7 @@ class AppTheme {
       border: Border.all(color: Colors.grey.shade100),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.04),
+          color: Colors.black.withValues(alpha: 0.04),
           blurRadius: blurRadius,
           offset: offset,
         )
