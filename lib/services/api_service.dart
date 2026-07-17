@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/homestay_model.dart';
+import '../models/host_application_model.dart';
 
 class ApiService {
   final _supabase = Supabase.instance.client;
@@ -602,4 +603,201 @@ class ApiService {
       return [];
     }
   }
+
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // --- PHÂN HỆ ĐƠN ĐĂNG KÝ HOST (HOST APPLICATIONS) ---
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // 23. Gửi đơn đăng ký làm host
+  Future<void> submitHostApplication({
+    required String fullName,
+    required String phone,
+    required String email,
+    String? reason,
+    String? experience,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập');
+
+    // Kiểm tra đã có đơn pending chưa
+    final existing = await _supabase
+        .from('host_applications')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+    if (existing != null) {
+      throw Exception('Bạn đã có đơn đăng ký đang chờ xét duyệt.');
+    }
+
+    await _supabase.from('host_applications').insert({
+      'user_id': user.id,
+      'full_name': fullName,
+      'phone': phone,
+      'email': email,
+      'reason': reason,
+      'experience': experience,
+      'status': 'pending',
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    // Cập nhật profile: cập nhật thông tin họ tên, SĐT mới (giữ nguyên role là customer)
+    await _supabase
+        .from('profiles')
+        .update({
+          'full_name': fullName,
+          'phone': phone,
+        })
+        .eq('id', user.id);
+  }
+
+  // 24. Lấy đơn đăng ký host của tôi (mới nhất)
+  Future<HostApplication?> getMyHostApplication() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      final response = await _supabase
+          .from('host_applications')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return HostApplication.fromJson(response);
+    } catch (e) {
+      print('Error fetching my host application: $e');
+      return null;
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // --- PHÂN HỆ QUẢN TRỊ ADMIN ---
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // 25. [ADMIN] Lấy tất cả đơn đăng ký host (có thể lọc theo status)
+  Future<List<HostApplication>> getHostApplications({String? status}) async {
+    try {
+      var query = _supabase
+          .from('host_applications')
+          .select();
+
+      if (status != null) {
+        query = query.eq('status', status);
+      }
+
+      final response = await query.order('created_at', ascending: false);
+      return (response as List)
+          .map((json) => HostApplication.fromJson(json))
+          .toList();
+    } catch (e) {
+      print('Error fetching host applications: $e');
+      return [];
+    }
+  }
+
+  // 26. [ADMIN] Phê duyệt hoặc từ chối đơn đăng ký host
+  Future<void> reviewHostApplication({
+    required String applicationId,
+    required String userId,
+    required String status, // 'approved' | 'rejected'
+    String? adminNote,
+  }) async {
+    final admin = _supabase.auth.currentUser;
+    if (admin == null) throw Exception('Chưa đăng nhập');
+
+    // Cập nhật trạng thái đơn
+    await _supabase.from('host_applications').update({
+      'status': status,
+      'admin_note': adminNote,
+      'reviewed_at': DateTime.now().toIso8601String(),
+      'reviewed_by': admin.id,
+    }).eq('id', applicationId);
+
+    // Cập nhật role người dùng tương ứng
+    final newRole = status == 'approved' ? 'host' : 'customer';
+    await _supabase
+        .from('profiles')
+        .update({'role': newRole})
+        .eq('id', userId);
+  }
+
+  // 27. [ADMIN] Lấy tất cả người dùng
+  Future<List<Map<String, dynamic>>> getAllUsers() async {
+    try {
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      print('Error fetching users: $e');
+      return [];
+    }
+  }
+
+  // 28. [ADMIN] Lấy tất cả homestay (bao gồm cả inactive)
+  Future<List<Map<String, dynamic>>> getAllHomestaysAdmin() async {
+    try {
+      final response = await _supabase
+          .from('homestays')
+          .select('''
+            *,
+            homestay_images(url),
+            categories(name),
+            profiles!host_id(full_name, email)
+          ''')
+          .order('id', ascending: false);
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (e) {
+      print('Error fetching all homestays: $e');
+      return [];
+    }
+  }
+
+  // 29. [ADMIN] Bật/tắt trạng thái homestay
+  Future<void> updateHomestayStatus(int homestayId, String status) async {
+    await _supabase
+        .from('homestays')
+        .update({'status': status})
+        .eq('id', homestayId);
+  }
+
+  // 30. [ADMIN] Lấy thống kê tổng quan Dashboard
+  Future<Map<String, int>> getDashboardStats() async {
+    try {
+      final results = await Future.wait([
+        _supabase.from('profiles').select('id').neq('role', 'admin'),
+        _supabase.from('homestays').select('id').eq('status', 'active'),
+        _supabase.from('homestays').select('id').neq('status', 'active'),
+        _supabase.from('bookings').select('id'),
+        _supabase
+            .from('host_applications')
+            .select('id')
+            .eq('status', 'pending'),
+      ]);
+
+      return {
+        'total_users': (results[0] as List).length,
+        'active_homestays': (results[1] as List).length,
+        'inactive_homestays': (results[2] as List).length,
+        'total_bookings': (results[3] as List).length,
+        'pending_applications': (results[4] as List).length,
+      };
+    } catch (e) {
+      print('Error fetching dashboard stats: $e');
+      return {
+        'total_users': 0,
+        'active_homestays': 0,
+        'inactive_homestays': 0,
+        'total_bookings': 0,
+        'pending_applications': 0,
+      };
+    }
+  }
 }
+

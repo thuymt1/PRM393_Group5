@@ -306,12 +306,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (profile != null) {
         final role = profile['role'];
-        if (role == 'customer') {
-          Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
+        if (role == 'admin') {
+          Navigator.pushNamedAndRemoveUntil(context, '/admin-dashboard', (route) => false);
+        } else if (role == 'customer') {
+          // Kiểm tra xem khách hàng này có đơn đăng ký host đang chờ duyệt hoặc bị từ chối không
+          final app = await _apiService.getMyHostApplication();
+          if (!mounted) return;
+          if (app != null && (app.status == 'pending' || app.status == 'rejected')) {
+            Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
+          } else {
+            Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
+          }
         } else if (role == 'host') {
           Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
         } else if (role == 'author') {
           Navigator.pushNamedAndRemoveUntil(context, '/author-dashboard', (route) => false);
+        } else if (role == 'pending_host') {
+          // Dự phòng cho trường hợp role DB vẫn là pending_host
+          Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
         } else {
           Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
         }

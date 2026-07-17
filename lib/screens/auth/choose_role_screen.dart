@@ -31,6 +31,12 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
     }
   }
 
+  // Điều hướng đến form đăng ký host (không kích hoạt ngay)
+  void _goToHostRegistration() {
+    if (_isLoading) return;
+    Navigator.pushNamed(context, '/host-registration-form');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,8 +66,8 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
                     context,
                     Icons.home_work_outlined,
                     'Chủ nhà',
-                    'Quản lý homestay, đón tiếp khách hàng và bắt đầu kinh doanh hiệu quả.',
-                    () => _selectRole('host', '/host-dashboard'),
+                    'Gửi đơn đăng ký và chờ Admin phê duyệt để bắt đầu quản lý homestay.',
+                    () => _goToHostRegistration(),
                   ),
                   const SizedBox(height: 16),
                   _roleCard(
@@ -219,7 +225,8 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
     return Column(
       children: [
         Text(
-          'Bạn có thể thay đổi vai trò bất cứ lúc nào trong phần Cài đặt.',
+          'Đăng ký làm Chủ nhà cần được Admin xem xét và phê duyệt.',
+          textAlign: TextAlign.center,
           style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
         ),
       ],

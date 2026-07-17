@@ -36,6 +36,13 @@ import 'screens/author/article_list_screen.dart';
 import 'screens/author/create_article_screen.dart';
 import 'screens/author/article_detail_screen.dart';
 
+// Admin screens
+import 'screens/admin/admin_dashboard_screen.dart';
+
+// Host Registration screens
+import 'screens/host/host_registration_screen.dart';
+import 'screens/host/host_pending_screen.dart';
+
 // Common screens
 import 'screens/common/profile_page.dart';
 import 'screens/common/notification_screen.dart';
@@ -103,6 +110,13 @@ class MyApp extends StatelessWidget {
         '/article-list': (context) => const ArticleListScreen(),
         '/create-article': (context) => const CreateArticleScreen(),
         '/article-detail': (context) => const ArticleDetailScreen(),
+
+        // Admin flow
+        '/admin-dashboard': (context) => const AdminDashboardScreen(),
+
+        // Host Registration flow
+        '/host-registration-form': (context) => const HostRegistrationScreen(),
+        '/host-pending': (context) => const HostPendingScreen(),
 
         // Common
         '/profile': (context) => const ProfilePage(),
