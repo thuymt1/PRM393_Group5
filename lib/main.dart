@@ -85,28 +85,44 @@ class MyApp extends StatelessWidget {
         '/reset-password': (context) => const ResetPasswordScreen(),
 
         // Customer flow
-        '/customer-home': (context) => const AuthGuard(child: CustomerHomeScreen()),
+        '/customer-home': (context) =>
+            const AuthGuard(child: CustomerHomeScreen()),
         '/homestay-detail': (context) => const HomestayDetailPage(),
         '/filter': (context) => const FilterScreen(),
         '/booking-form': (context) => const BookingFormScreen(),
         '/booking-confirmation': (context) => const BookingConfirmationPage(),
         '/payment': (context) => const PaymentScreen(),
         '/my-bookings': (context) => const MyBookingsScreen(),
-        '/customer-booking-detail': (context) => const CustomerBookingDetailScreen(),
-        '/create-review': (context) => const CreateReviewPage(),
+        '/customer-booking-detail': (context) =>
+            const CustomerBookingDetailScreen(),
+        '/create-review': (context) {
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
+          return CreateReviewPage(
+            homestayId: args?['homestay_id'] as int?,
+            bookingId: args?['booking_id'] as int?,
+          );
+        },
 
         // Host flow
-        '/host-dashboard': (context) => const AuthGuard(child: HostDashboardScreen()),
-        '/host-booking-requests': (context) => const HostBookingRequestsScreen(),
+        '/host-dashboard': (context) =>
+            const AuthGuard(child: HostDashboardScreen()),
+        '/host-booking-requests': (context) =>
+            const HostBookingRequestsScreen(),
         '/host-booking-detail': (context) => const HostBookingDetailScreen(),
         '/homestay-list': (context) => const HomestayListScreen(),
         '/homestay-status': (context) => const HomestayStatusScreen(),
-        '/add-homestay-basic-info': (context) => const AddHomestayBasicInfoScreen(),
-        '/add-homestay-location': (context) => const AddHomestayLocationScreen(),
-        '/add-homestay-price-rules': (context) => const AddHomestayPriceRulesScreen(),
+        '/add-homestay-basic-info': (context) =>
+            const AddHomestayBasicInfoScreen(),
+        '/add-homestay-location': (context) =>
+            const AddHomestayLocationScreen(),
+        '/add-homestay-price-rules': (context) =>
+            const AddHomestayPriceRulesScreen(),
 
         // Author flow
-        '/author-dashboard': (context) => const AuthGuard(child: AuthorDashboardScreen()),
+        '/author-dashboard': (context) =>
+            const AuthGuard(child: AuthorDashboardScreen()),
         '/article-list': (context) => const ArticleListScreen(),
         '/create-article': (context) => const CreateArticleScreen(),
         '/article-detail': (context) => const ArticleDetailScreen(),
@@ -122,8 +138,9 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfilePage(),
         '/notifications': (context) => const NotificationScreen(),
         '/edit-profile': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, String>?;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, String>?;
           return EditProfileScreen(
             currentName: args?['name'] ?? '',
             currentPhone: args?['phone'] ?? '',
@@ -143,7 +160,9 @@ class AuthGuard extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = Supabase.instance.client.auth;
     final user = auth.currentUser;
-    if (auth.currentSession == null || user == null || user.emailConfirmedAt == null) {
+    if (auth.currentSession == null ||
+        user == null ||
+        user.emailConfirmedAt == null) {
       return const LoginScreen();
     }
     return child;

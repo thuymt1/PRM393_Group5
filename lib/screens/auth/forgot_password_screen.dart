@@ -1,321 +1,291 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/api_service.dart';
 import '../../utils/validators.dart';
 
-/// Màn hình Quên Mật Khẩu – gửi link qua email để đặt lại mật khẩu
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
-
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final ApiService _apiService = ApiService();
-  bool _isLoading = false;
-  bool _emailSent = false;
+  final _email = TextEditingController();
+  final _otp = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  final _api = ApiService();
+  bool _loading = false;
+  bool _sentView = false;
+  bool _otpStep = false;
+  bool _passwordStep = false;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _email.dispose();
+    _otp.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
-  Future<void> _handleSendResetLink() async {
+  Future<void> _send() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-
+    setState(() => _loading = true);
     try {
-      await _apiService.sendPasswordResetOtp(_emailController.text.trim());
+      await _api.sendPasswordResetOtp(_email.text.trim());
       if (!mounted) return;
       setState(() {
-        _isLoading = false;
-        _emailSent = true;
+        _sentView = true;
+        _loading = false;
       });
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      final msg = e.message.toLowerCase();
-      
-      // Với lý do bảo mật, nếu email không tồn tại hoặc lỗi tương tự ta vẫn báo thành công
-      if (msg.contains('rate limit') || msg.contains('too many') || msg.contains('seconds')) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Bạn đã gửi quá nhiều yêu cầu. Vui lòng chờ vài phút rồi thử lại.'),
-            backgroundColor: Colors.orange.shade700,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-      } else {
-        setState(() => _emailSent = true);
-      }
+      _notice('Mã OTP đã được gửi. Hãy kiểm tra email của bạn.');
     } catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Lỗi kết nối mạng. Vui lòng kiểm tra internet.'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      if (mounted) {
+        setState(() => _loading = false);
+        _notice('Không thể gửi mã: $e', error: true);
+      }
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
-          onPressed: () => Navigator.pop(context),
+  Future<void> _reset() async {
+    if (_password.text.length < 6 || _password.text != _confirm.text) {
+      _notice('Mật khẩu mới phải từ 6 ký tự và trùng nhau', error: true);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await _api.updatePassword(_password.text);
+      await _api.signOut();
+      if (!mounted) return;
+      _notice('Đổi mật khẩu thành công!');
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _notice('Không thể đổi mật khẩu. Vui lòng thử lại.', error: true);
+      }
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    if (!RegExp(r'^\d{6}$').hasMatch(_otp.text.trim())) {
+      _notice('Vui lòng nhập đủ mã OTP 6 số', error: true);
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      await _api.verifyPasswordResetOtp(_email.text.trim(), _otp.text.trim());
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _passwordStep = true;
+      });
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _notice('Mã OTP sai hoặc đã hết hạn', error: true);
+      }
+    }
+  }
+
+  void _notice(String text, {bool error = false}) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(text),
+          backgroundColor: error ? Colors.red.shade600 : Colors.green.shade700,
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: _emailSent ? _buildSuccessView() : _buildFormView(),
-      ),
-    );
-  }
+      );
 
-  // ─── Giao diện nhập email gửi link ──────────────────────────────────────────
-  Widget _buildFormView() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          _buildHeader(),
-          const SizedBox(height: 48),
-          _buildEmailField(),
-          const SizedBox(height: 12),
-          _buildHelpText(),
-          const SizedBox(height: 40),
-          _buildSubmitButton(),
-          const SizedBox(height: 24),
-          _buildBackToLoginLink(),
-          const SizedBox(height: 40),
-        ],
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: const Color(0xFFFDFAE7),
+    appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
+        onPressed: () => Navigator.pop(context),
       ),
-    );
-  }
+    ),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: _passwordStep
+          ? _passwordView()
+          : (_otpStep
+                ? _otpView()
+                : (_sentView ? _sentViewWidget() : _emailView())),
+    ),
+  );
 
-  Widget _buildHeader() {
-    return Column(
+  Widget _emailView() => Form(
+    key: _formKey,
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE07A5F).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Icon(Icons.lock_reset_rounded, size: 40, color: Color(0xFFE07A5F)),
-        ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 30),
+        const Icon(Icons.lock_reset, size: 60, color: Color(0xFFE07A5F)),
+        const SizedBox(height: 20),
         const Text(
           'Quên mật khẩu?',
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 30,
             fontWeight: FontWeight.bold,
             color: Color(0xFF6D4C41),
-            fontFamily: 'BeVietnamPro',
           ),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Nhập email đăng ký của bạn – chúng tôi sẽ gửi link đặt lại mật khẩu về email đó.',
-          style: TextStyle(fontSize: 15, color: Colors.grey.shade600, height: 1.6),
+        const Text('Nhập email đăng ký để nhận mã OTP đặt lại mật khẩu.'),
+        const SizedBox(height: 30),
+        TextFormField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          validator: Validators.validateEmail,
+          decoration: const InputDecoration(
+            labelText: 'Email đăng ký',
+            border: OutlineInputBorder(),
+          ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildEmailField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+        const SizedBox(height: 24),
         const Text(
-          'Email đăng ký',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41), fontSize: 14),
+          'Mã đặt lại mật khẩu sẽ hết hạn trong 60 giây',
+          style: TextStyle(color: Colors.grey),
         ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
-            ],
-          ),
-          child: TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            validator: Validators.validateEmail,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
-            style: const TextStyle(fontSize: 15),
-            decoration: InputDecoration(
-              hintText: 'example@email.com',
-              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFFE07A5F), size: 22),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
-              ),
-              errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.red.shade400, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 18),
-              errorStyle: const TextStyle(fontSize: 12),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHelpText() {
-    return Row(
-      children: [
-        Icon(Icons.info_outline, size: 14, color: Colors.grey.shade400),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            'Link đặt lại mật khẩu sẽ hết hạn trong 10 phút.',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSubmitButton() {
-    return ElevatedButton(
-      onPressed: _isLoading ? null : _handleSendResetLink,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF6D4C41),
-        minimumSize: const Size(double.infinity, 56),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        elevation: 2,
-        shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
-      ),
-      child: _isLoading
-          ? const SizedBox(
-              width: 24, height: 24,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-            )
-          : const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 10),
-                Text(
-                  'Gửi link đặt lại',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildBackToLoginLink() {
-    return Center(
-      child: TextButton.icon(
-        onPressed: () => Navigator.pop(context),
-        icon: const Icon(Icons.arrow_back_ios_rounded, size: 14, color: Color(0xFFE07A5F)),
-        label: const Text(
-          'Quay lại đăng nhập',
-          style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-      ),
-    );
-  }
-
-  // ─── Giao diện thông báo thành công ─────────────────────────────────────────
-  Widget _buildSuccessView() {
-    return Column(
-      children: [
-        const SizedBox(height: 40),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE07A5F).withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.mark_email_read_rounded, size: 80, color: Color(0xFFE07A5F)),
-        ),
-        const SizedBox(height: 32),
-        const Text(
-          'Đã gửi email thành công',
-          style: TextStyle(
-            fontSize: 26,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF6D4C41),
-            fontFamily: 'BeVietnamPro',
-          ),
-        ),
-        const SizedBox(height: 16),
-        Text.rich(
-          TextSpan(
-            text: 'Chúng tôi đã gửi đường dẫn đặt lại mật khẩu đến email ',
-            style: TextStyle(fontSize: 15, color: Colors.grey.shade600, height: 1.6),
-            children: [
-              TextSpan(
-                text: _emailController.text.trim(),
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
-              ),
-              const TextSpan(text: '. Vui lòng kiểm tra hộp thư của bạn (kèm thư mục spam).'),
-            ],
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 48),
-        ElevatedButton(
-          onPressed: () {
-            setState(() {
-              _emailSent = false;
-              _emailController.clear();
-            });
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: const Color(0xFF6D4C41),
-            side: const BorderSide(color: Color(0xFF6D4C41)),
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          child: const Text('Dùng email khác', style: TextStyle(fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(height: 16),
-        ElevatedButton(
+        const SizedBox(height: 24),
+        _button('Gửi mã', _send),
+        TextButton(
           onPressed: () => Navigator.pop(context),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6D4C41),
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          child: const Text('Quay lại đăng nhập', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: const Text('< Quay lại đăng nhập'),
         ),
-        const SizedBox(height: 40),
       ],
-    );
-  }
+    ),
+  );
+
+  Widget _sentViewWidget() => Column(
+    children: [
+      const SizedBox(height: 40),
+      const Icon(
+        Icons.mark_email_read_rounded,
+        size: 80,
+        color: Color(0xFFE07A5F),
+      ),
+      const SizedBox(height: 28),
+      const Text(
+        'Đã gửi email thành công',
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF6D4C41),
+        ),
+      ),
+      const SizedBox(height: 16),
+      Text(
+        'Chúng tôi đã gửi mã đặt lại mật khẩu đến email ${_email.text.trim()}. Vui lòng kiểm tra hộp thư của bạn (kèm thư mục thư rác).',
+        textAlign: TextAlign.center,
+      ),
+      const SizedBox(height: 40),
+      _button('Nhập mã OTP', () => setState(() => _otpStep = true)),
+      const SizedBox(height: 12),
+      OutlinedButton(
+        onPressed: () => setState(() {
+          _sentView = false;
+          _email.clear();
+        }),
+        child: const Text('Dùng email khác'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 56),
+        ),
+      ),
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Quay lại đăng nhập'),
+      ),
+    ],
+  );
+
+  Widget _otpView() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SizedBox(height: 30),
+      const Icon(
+        Icons.mark_email_read_outlined,
+        size: 60,
+        color: Color(0xFFE07A5F),
+      ),
+      const SizedBox(height: 20),
+      const Text(
+        'Đặt lại mật khẩu',
+        style: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF6D4C41),
+        ),
+      ),
+      const SizedBox(height: 12),
+      Text('Mã OTP đã gửi tới ${_email.text.trim()}.'),
+      const SizedBox(height: 24),
+      TextField(
+        controller: _otp,
+        keyboardType: TextInputType.number,
+        maxLength: 6,
+        decoration: const InputDecoration(
+          labelText: 'Mã OTP 6 số',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 24),
+      _button('Xác nhận mã', _verifyOtp),
+    ],
+  );
+
+  Widget _passwordView() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SizedBox(height: 30),
+      const Icon(Icons.password_rounded, size: 60, color: Color(0xFFE07A5F)),
+      const SizedBox(height: 20),
+      const Text(
+        'Tạo mật khẩu mới',
+        style: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF6D4C41),
+        ),
+      ),
+      const SizedBox(height: 12),
+      const Text('Mã xác nhận chính xác. Hãy nhập mật khẩu mới của bạn.'),
+      const SizedBox(height: 24),
+      TextField(
+        controller: _password,
+        obscureText: true,
+        decoration: const InputDecoration(
+          labelText: 'Mật khẩu mới',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 12),
+      TextField(
+        controller: _confirm,
+        obscureText: true,
+        decoration: const InputDecoration(
+          labelText: 'Nhập lại mật khẩu mới',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      const SizedBox(height: 24),
+      _button('Đổi mật khẩu', _reset),
+    ],
+  );
+
+  Widget _button(String text, VoidCallback action) => ElevatedButton(
+    onPressed: _loading ? null : action,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFF6D4C41),
+      foregroundColor: Colors.white,
+      minimumSize: const Size(double.infinity, 56),
+    ),
+    child: _loading
+        ? const CircularProgressIndicator(color: Colors.white)
+        : Text(text, style: const TextStyle(fontWeight: FontWeight.bold)),
+  );
 }

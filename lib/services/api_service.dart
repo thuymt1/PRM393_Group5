@@ -162,7 +162,8 @@ class ApiService {
           .select('''
             *,
             homestay_images(url),
-            categories(name)
+            categories(name),
+            reviews(rating)
           ''')
           .eq('status', 'active');
 
@@ -193,7 +194,16 @@ class ApiService {
         }).toList();
       }
 
-      return results.map((json) => Homestay.fromJson(json)).toList();
+      return results.map((raw) {
+        final json = Map<String, dynamic>.from(raw);
+        final ratings = (json['reviews'] as List? ?? [])
+            .map((r) => (r['rating'] as num).toDouble())
+            .toList();
+        json['rating'] = ratings.isEmpty
+            ? 0.0
+            : ratings.reduce((a, b) => a + b) / ratings.length;
+        return Homestay.fromJson(json);
+      }).toList();
     } catch (e) {
       print('Error fetching homestays: $e');
       return [];
@@ -211,12 +221,22 @@ class ApiService {
           .select('''
             *,
             homestay_images(url),
-            categories(name)
+            categories(name),
+            reviews(rating)
           ''')
           .eq('host_id', user.id)
           .order('id', ascending: false);
 
-      return (response as List).map((json) => Homestay.fromJson(json)).toList();
+      return (response as List).map((raw) {
+        final json = Map<String, dynamic>.from(raw);
+        final ratings = (json['reviews'] as List? ?? [])
+            .map((r) => (r['rating'] as num).toDouble())
+            .toList();
+        json['rating'] = ratings.isEmpty
+            ? 0.0
+            : ratings.reduce((a, b) => a + b) / ratings.length;
+        return Homestay.fromJson(json);
+      }).toList();
     } catch (e) {
       print('Error fetching my homestays: $e');
       return [];
@@ -370,10 +390,11 @@ class ApiService {
           .select('''
             *,
             homestays (
-              name,
-              address,
-              city,
-              homestay_images (url)
+              *,
+              homestay_images (url),
+              categories (name),
+              profiles!host_id (full_name, avatar_url),
+              reviews (rating)
             )
           ''')
           .eq('customer_id', user.id)
@@ -480,11 +501,10 @@ class ApiService {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập');
     await _supabase.from('reviews').insert({
-      'booking_id': bookingId,
       'homestay_id': homestayId,
       'customer_id': user.id,
       'rating': rating,
-      'content': content,
+      'comment': content,
     });
   }
 
@@ -546,14 +566,24 @@ class ApiService {
 
   // 17. Gửi email đặt lại mật khẩu (link mở thẳng app qua Deep Link hoặc Web)
   Future<void> sendPasswordResetOtp(String email) async {
-    String redirectTo =
-        'io.supabase.test_screen_project://login-callback/?type=recovery';
-    if (kIsWeb) {
-      // Trên Web, tự động lấy origin và cổng hiện tại của trang đang chạy
-      redirectTo = '${Uri.base.origin}/?type=recovery';
-    }
+    // Supabase tạo recovery OTP. Template Reset Password phải hiển thị
+    // {{ .Token }} thay vì chỉ hiển thị {{ .ConfirmationURL }}.
+    await _supabase.auth.resetPasswordForEmail(email);
+  }
 
-    await _supabase.auth.resetPasswordForEmail(email, redirectTo: redirectTo);
+  Future<AuthResponse> verifyPasswordResetOtp(
+    String email,
+    String token,
+  ) async {
+    return _supabase.auth.verifyOTP(
+      email: email,
+      token: token,
+      type: OtpType.recovery,
+    );
+  }
+
+  Future<void> updatePassword(String password) async {
+    await _supabase.auth.updateUser(UserAttributes(password: password));
   }
 
   // 18. Cập nhật thông tin Profile (tên, số điện thoại, avatar)

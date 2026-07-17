@@ -30,7 +30,9 @@ class _LoginScreenState extends State<LoginScreen> {
     _checkAndRedirectRecovery();
 
     // 2. Lắng nghe sự kiện Auth để điều hướng (bao gồm cả đăng nhập Google)
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((
+      data,
+    ) {
       // LoginScreen vẫn còn trong navigator khi người dùng mở trang đăng ký.
       // Không xử lý signedIn phát ra từ verify OTP của RegisterScreen, nếu không
       // role mặc định "customer" sẽ điều hướng trước màn hình chọn vai trò.
@@ -39,7 +41,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (data.event == AuthChangeEvent.passwordRecovery) {
         if (mounted) {
           UrlHelper.clearQueryParameters();
-          Navigator.pushNamedAndRemoveUntil(context, '/reset-password', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/reset-password',
+            (route) => false,
+          );
         }
       } else if (data.event == AuthChangeEvent.signedIn) {
         _handlePostSignIn();
@@ -49,7 +55,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _checkAndRedirectRecovery() {
     final uri = Uri.base;
-    if (uri.queryParameters['type'] == 'recovery' || uri.toString().contains('type=recovery')) {
+    if (uri.queryParameters['type'] == 'recovery' ||
+        uri.toString().contains('type=recovery')) {
       // Xoá tham số URL ngay lập tức để tránh vòng lặp nếu quay lại hoặc tải lại
       UrlHelper.clearQueryParameters();
       _waitForSessionAndRedirect();
@@ -64,7 +71,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null) {
-        Navigator.pushNamedAndRemoveUntil(context, '/reset-password', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/reset-password',
+          (route) => false,
+        );
       } else {
         // Tiếp tục đợi đến khi Supabase tải xong session
         _waitForSessionAndRedirect(retries + 1);
@@ -104,8 +115,6 @@ class _LoginScreenState extends State<LoginScreen> {
               _buildForgotPassword(),
               const SizedBox(height: 32),
               _buildLoginButton(),
-              const SizedBox(height: 32),
-              _buildSocialLogin(),
               const SizedBox(height: 40),
               _buildSignUpLink(),
               const SizedBox(height: 40),
@@ -217,7 +226,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.grey,
                         size: 20,
                       ),
-                      onPressed: () => setState(() => _obscureText = !_obscureText),
+                      onPressed: () =>
+                          setState(() => _obscureText = !_obscureText),
                     )
                   : null,
               border: OutlineInputBorder(
@@ -230,7 +240,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -316,37 +329,74 @@ class _LoginScreenState extends State<LoginScreen> {
       if (profile['role'] != null) {
         final role = profile['role'];
         if (role == 'admin') {
-          Navigator.pushNamedAndRemoveUntil(context, '/admin-dashboard', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/admin-dashboard',
+            (route) => false,
+          );
         } else if (role == 'customer') {
           // Tài khoản đã chọn role trước đó thì đăng nhập thẳng vào trang tương ứng.
           final app = await _apiService.getMyHostApplication();
           if (!mounted) return;
-          if (app != null && (app.status == 'pending' || app.status == 'rejected')) {
-            Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
+          if (app != null &&
+              (app.status == 'pending' || app.status == 'rejected')) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/host-pending',
+              (route) => false,
+            );
           } else {
-            Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/customer-home',
+              (route) => false,
+            );
           }
         } else if (role == 'host') {
-          Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/host-dashboard',
+            (route) => false,
+          );
         } else if (role == 'author') {
-          Navigator.pushNamedAndRemoveUntil(context, '/author-dashboard', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/author-dashboard',
+            (route) => false,
+          );
         } else if (role == 'pending_host') {
           // Dự phòng cho trường hợp role DB vẫn là pending_host
-          Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/host-pending',
+            (route) => false,
+          );
         } else {
-          Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/choose-role',
+            (route) => false,
+          );
         }
       } else {
         // Profile exists but has no role: this is the only valid route to role setup.
-        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/choose-role',
+          (route) => false,
+        );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().contains('OTP')
-              ? 'Tài khoản chưa hoàn tất xác minh OTP.'
-              : 'Không thể tải thông tin tài khoản.')),
+          SnackBar(
+            content: Text(
+              e.toString().contains('OTP')
+                  ? 'Tài khoản chưa hoàn tất xác minh OTP.'
+                  : 'Không thể tải thông tin tài khoản.',
+            ),
+          ),
         );
       }
     } finally {
@@ -379,7 +429,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       final error = e.toString().toLowerCase();
-      final message = error.contains('email chưa được xác minh') ||
+      final message =
+          error.contains('email chưa được xác minh') ||
               error.contains('email not confirmed')
           ? 'Email chưa được xác minh. Vui lòng đăng ký và nhập mã OTP trước.'
           : 'Tài khoản không tồn tại hoặc mật khẩu không chính xác';
@@ -388,7 +439,9 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Text(message),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       if (mounted) {
@@ -443,7 +496,8 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       final errorText = e.toString();
-      final isProviderDisabled = errorText.contains('provider is not enabled') ||
+      final isProviderDisabled =
+          errorText.contains('provider is not enabled') ||
           errorText.contains('Unsupported provider');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
