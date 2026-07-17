@@ -19,6 +19,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Đồng ý điều khoản
   bool _agreeToTerms = false;
   bool _isLoading = false;
+  bool _awaitingOtp = false;
+  int _resendCount = 0;
+  DateTime? _lastResendAt;
+  static const int _maxResends = 3;
 
   // Password strength tracking
   int _passwordStrength = 0; // 0=Yếu, 1=Trung bình, 2=Mạnh
@@ -29,7 +33,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  final TextEditingController _otpController = TextEditingController();
 
   @override
   void dispose() {
@@ -38,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
@@ -55,26 +62,130 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
-              _buildHeader(),
-              const SizedBox(height: 32),
-              _buildRegisterForm(),
-              const SizedBox(height: 16),
-              _buildTermsCheckbox(),
-              const SizedBox(height: 32),
-              _buildRegisterButton(),
-              const SizedBox(height: 32),
-              _buildLoginLink(),
-              const SizedBox(height: 40),
-            ],
+        child: _awaitingOtp ? _buildOtpStep() : _buildRegistrationStep(),
+      ),
+    );
+  }
+
+  Widget _buildRegistrationStep() {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 10),
+          _buildHeader(),
+          const SizedBox(height: 32),
+          _buildRegisterForm(),
+          const SizedBox(height: 16),
+          _buildTermsCheckbox(),
+          const SizedBox(height: 32),
+          _buildRegisterButton(),
+          const SizedBox(height: 32),
+          _buildLoginLink(),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOtpStep() {
+    final email = _emailController.text.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        const Icon(
+          Icons.mark_email_read_outlined,
+          size: 64,
+          color: Color(0xFFE07A5F),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Xác minh email',
+          style: TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF6D4C41),
           ),
         ),
-      ),
+        const SizedBox(height: 12),
+        Text(
+          'Mã xác nhận đã được gửi tới $email. Nhập mã trong email '
+          'để hoàn tất đăng ký.',
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey.shade600,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 32),
+        TextField(
+          controller: _otpController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 10,
+          ),
+          decoration: InputDecoration(
+            labelText: 'Mã xác nhận 6 số',
+            counterText: '',
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+          onSubmitted: (_) => _verifyOtp(),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _verifyOtp,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF6D4C41),
+            minimumSize: const Size(double.infinity, 56),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : const Text(
+                  'Xác nhận và đăng ký',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: _isLoading ? null : _resendOtp,
+              child: const Text('Gửi lại mã'),
+            ),
+            TextButton(
+              onPressed: _isLoading
+                  ? null
+                  : () => setState(() {
+                      _awaitingOtp = false;
+                      _otpController.clear();
+                    }),
+              child: const Text('Đổi email'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -147,8 +258,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           controller: _confirmPasswordController,
           isPassword: true,
           obscureText: _obscureConfirmPassword,
-          onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-          validator: (val) => Validators.validateConfirmPassword(val, _passwordController.text),
+          onToggleVisibility: () => setState(
+            () => _obscureConfirmPassword = !_obscureConfirmPassword,
+          ),
+          validator: (val) =>
+              Validators.validateConfirmPassword(val, _passwordController.text),
         ),
       ],
     );
@@ -221,7 +335,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -280,14 +397,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: InputDecoration(
               hintText: '••••••••',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFE07A5F), size: 22),
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                color: Color(0xFFE07A5F),
+                size: 22,
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                   color: Colors.grey,
                   size: 20,
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -299,7 +421,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -326,7 +451,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ─── Thanh đánh giá độ mạnh mật khẩu ────────────────────────────────────
   Widget _buildPasswordStrengthBar() {
     final labels = ['Yếu', 'Trung bình', 'Mạnh'];
-    final colors = [Colors.red.shade400, Colors.orange.shade400, Colors.green.shade500];
+    final colors = [
+      Colors.red.shade400,
+      Colors.orange.shade400,
+      Colors.green.shade500,
+    ];
     final filledSegments = _passwordStrength + 1; // 1, 2, hoặc 3 đoạn
 
     return Column(
@@ -390,7 +519,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             value: _agreeToTerms,
             onChanged: (val) => setState(() => _agreeToTerms = val!),
             activeColor: const Color(0xFFE07A5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -442,7 +573,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
             )
           : const Text(
               'Đăng ký tài khoản',
@@ -464,7 +598,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: const Text('Vui lòng kiểm tra lại thông tin đã nhập'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -476,60 +612,198 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: const Text('Vui lòng đồng ý với Điều khoản dịch vụ'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
     }
 
-    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final phone = _phoneController.text.trim();
     final password = _passwordController.text;
 
     setState(() => _isLoading = true);
 
     try {
+      // Xóa session còn lưu trong trình duyệt từ tài khoản đã bị xóa hoặc lần
+      // đăng ký trước, tránh Supabase nhận nhầm thành repeated signup.
+      await _apiService.signOut();
       final authResponse = await _apiService.register(email, password);
-      final user = authResponse.user;
-
-      if (user != null) {
-        // Tạo profile trong table profiles
-        await _apiService.createProfile(
-          id: user.id,
-          email: email,
-          fullName: name,
-          phone: phone,
+      // Supabase returns a session immediately when Confirm email is disabled.
+      // Reject that configuration so nobody can bypass email verification.
+      if (authResponse.session != null) {
+        await _apiService.signOut();
+        throw Exception(
+          'Supabase chưa bật xác minh email. Hãy bật Confirm email trong '
+          'Authentication > Providers > Email rồi thử lại.',
         );
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Đăng ký tài khoản thành công! 🎉'),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
-        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
-      } else {
+      }
+      if (authResponse.user == null) {
         throw Exception('Không nhận được thông tin User');
       }
+      // Khi email đã có một tài khoản chưa xác minh, Supabase có thể trả về
+      // user không có identity và không tự gửi lại thư. Chủ động resend OTP để
+      // người dùng vẫn hoàn tất được lần đăng ký dang dở.
+      if (authResponse.user!.identities?.isEmpty ?? true) {
+        // Xóa ở public.profiles không xóa user trong Supabase Auth. Nếu email
+        // đã xác minh và người dùng nhập đúng mật khẩu cũ, khôi phục profile
+        // thay vì báo rằng một OTP mới đã được gửi (Supabase sẽ không gửi).
+        try {
+          final existing = await _apiService.login(email, password);
+          if (existing.user != null) {
+            await _apiService.createProfile(
+              id: existing.user!.id,
+              email: email,
+              fullName: _nameController.text.trim(),
+              phone: _phoneController.text.trim(),
+            );
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Tài khoản đã tồn tại. Hồ sơ đã được khôi phục và đăng nhập.',
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/choose-role',
+              (route) => false,
+            );
+            return;
+          }
+        } catch (_) {
+          // Tài khoản có thể vẫn đang chờ xác minh; thử gửi lại signup OTP.
+        }
+
+        try {
+          await _apiService.resendRegistrationOtp(email);
+        } catch (_) {
+          throw Exception(
+            'Email này vẫn còn trong Authentication > Users. Nếu bạn muốn '
+            'đăng ký lại từ đầu, hãy xóa user ở đó (không chỉ xóa bảng '
+            'profiles), rồi đợi 60 giây và thử lại.',
+          );
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _awaitingOtp = true;
+        _otpController.clear();
+        _resendCount = 0;
+        _lastResendAt = DateTime.now();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mã xác minh đã được gửi. Hãy kiểm tra email của bạn.'),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
+      final rawError = e.toString().toLowerCase();
+      final message = rawError.contains('error sending confirmation email')
+          ? 'Không thể gửi email xác minh. Supabase đang chặn địa chỉ này hoặc cấu hình SMTP chưa đúng.'
+          : 'Đăng ký thất bại: ${e.toString()}';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Đăng ký thất bại: ${e.toString()}'),
+          content: Text(message),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final token = _otpController.text.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(token)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập đủ mã xác nhận 6 số')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final email = _emailController.text.trim();
+      final response = await _apiService.verifyRegistrationOtp(email, token);
+      final user = response.user;
+      if (user == null) {
+        throw Exception('Không thể xác minh tài khoản');
+      }
+
+      await _apiService.createProfile(
+        id: user.id,
+        email: email,
+        fullName: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Xác minh email và đăng ký thành công!'),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/choose-role',
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Mã xác nhận không đúng hoặc đã hết hạn'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resendOtp() async {
+    if (_resendCount >= _maxResends) return;
+    if (_lastResendAt != null &&
+        DateTime.now().difference(_lastResendAt!) <
+            const Duration(seconds: 30)) {
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      await _apiService.resendRegistrationOtp(_emailController.text.trim());
+      _resendCount++;
+      _lastResendAt = DateTime.now();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đã gửi lại mã xác nhận. Hãy kiểm tra email.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chưa thể gửi lại mã: $e'),
+          backgroundColor: Colors.red.shade600,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 

@@ -14,19 +14,6 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   // Bộ điều khiển nội dung văn bản cho ô nhập nhận xét chi tiết
   final TextEditingController _reviewController = TextEditingController();
 
-  // Danh sách động lưu trữ các nhãn ấn tượng nhanh được người dùng tích chọn
-  final List<String> _selectedTags = [];
-
-  // Danh sách các thẻ từ khóa gợi ý nhanh để khách dễ dàng click lựa chọn
-  final List<String> _quickTags = [
-    'Sạch sẽ',
-    'Chủ nhà thân thiện',
-    'Vị trí đẹp',
-    'Tiện nghi đầy đủ',
-    'Yên tĩnh',
-    'Giá hợp lý',
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,8 +60,6 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
             const SizedBox(height: 32),
             _buildStarRating(), // Khối hàng ngang hiển thị 5 ngôi sao tương tác chọn điểm xếp hạng
             const SizedBox(height: 40),
-            _buildQuickTagsSection(), // Khối lựa chọn nhanh các từ khóa ấn tượng nổi bật (Wrap Chips)
-            const SizedBox(height: 32),
             _buildReviewInput(), // Ô nhập đoạn văn bản cảm nhận tự do đa dòng
             const SizedBox(height: 40),
             _buildSubmitButton(), // Nút xác nhận gửi thông tin đánh giá lên hệ thống
@@ -160,56 +145,6 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
   }
 
   // Khối danh sách các bộ tag ấn tượng nhanh bọc trong Wrap tự động xuống hàng thông minh chống tràn
-  Widget _buildQuickTagsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Bạn ấn tượng nhất điều gì?',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41), fontSize: 16),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 10, // Khoảng hở ngang giữa các thẻ tag kề cạnh nhau
-          runSpacing: 10, // Khoảng hở dọc giữa các hàng khi bị tự động đẩy xuống dòng
-          children: _quickTags.map((tag) {
-            bool isSelected = _selectedTags.contains(tag); // Đối chiếu kiểm tra trạng thái tích chọn của thẻ từ khóa
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (isSelected) {
-                    _selectedTags.remove(tag); // Loại bỏ khỏi danh sách mảng nếu nhấn lại vào thẻ đang bật
-                  } else {
-                    _selectedTags.add(tag); // Bổ sung thêm vào mảng nếu nhấn chọn mới tích cực
-                  }
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  // Đổi hẳn màu nền sang sắc cam thương hiệu khi thẻ tag được chọn kích hoạt
-                  color: isSelected ? const Color(0xFFE07A5F) : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected ? Colors.transparent : Colors.grey.shade200,
-                  ),
-                ),
-                child: Text(
-                  tag,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : const Color(0xFF6D4C41), // Thay màu chữ tương phản theo nền
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
   // Khối ô TextField nhập liệu văn bản nhận xét chi tiết đa dòng
   Widget _buildReviewInput() {
     return Column(
@@ -254,7 +189,6 @@ class _CreateReviewPageState extends State<CreateReviewPage> {
         // Tiến hành in log kiểm thử thông số State trước khi kích hoạt hiển thị Dialog thành công
         print("--- Dữ liệu gửi Đánh Giá ---");
         print("Xếp hạng: $_rating sao");
-        print("Nhãn lựa chọn: $_selectedTags");
         print("Nội dung cảm nhận: ${_reviewController.text}");
 
         _showSuccessDialog(); // Khởi chạy hiển thị cửa sổ thông báo pop-up cảm ơn thành công

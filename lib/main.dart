@@ -80,12 +80,12 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/choose-role': (context) => const ChooseRoleScreen(),
+        '/choose-role': (context) => const AuthGuard(child: ChooseRoleScreen()),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
         '/reset-password': (context) => const ResetPasswordScreen(),
 
         // Customer flow
-        '/customer-home': (context) => const CustomerHomeScreen(),
+        '/customer-home': (context) => const AuthGuard(child: CustomerHomeScreen()),
         '/homestay-detail': (context) => const HomestayDetailPage(),
         '/filter': (context) => const FilterScreen(),
         '/booking-form': (context) => const BookingFormScreen(),
@@ -96,7 +96,7 @@ class MyApp extends StatelessWidget {
         '/create-review': (context) => const CreateReviewPage(),
 
         // Host flow
-        '/host-dashboard': (context) => const HostDashboardScreen(),
+        '/host-dashboard': (context) => const AuthGuard(child: HostDashboardScreen()),
         '/host-booking-requests': (context) => const HostBookingRequestsScreen(),
         '/host-booking-detail': (context) => const HostBookingDetailScreen(),
         '/homestay-list': (context) => const HomestayListScreen(),
@@ -106,7 +106,7 @@ class MyApp extends StatelessWidget {
         '/add-homestay-price-rules': (context) => const AddHomestayPriceRulesScreen(),
 
         // Author flow
-        '/author-dashboard': (context) => const AuthorDashboardScreen(),
+        '/author-dashboard': (context) => const AuthGuard(child: AuthorDashboardScreen()),
         '/article-list': (context) => const ArticleListScreen(),
         '/create-article': (context) => const CreateArticleScreen(),
         '/article-detail': (context) => const ArticleDetailScreen(),
@@ -131,5 +131,21 @@ class MyApp extends StatelessWidget {
         },
       },
     );
+  }
+}
+
+/// Chặn truy cập bằng URL hoặc route trực tiếp khi chưa đăng nhập/xác minh OTP.
+class AuthGuard extends StatelessWidget {
+  final Widget child;
+  const AuthGuard({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Supabase.instance.client.auth;
+    final user = auth.currentUser;
+    if (auth.currentSession == null || user == null || user.emailConfirmedAt == null) {
+      return const LoginScreen();
+    }
+    return child;
   }
 }

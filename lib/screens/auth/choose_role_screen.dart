@@ -44,7 +44,7 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            Padding(
+            SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -77,7 +77,7 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
                     'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
                     () => _selectRole('author', '/author-dashboard'),
                   ),
-                  const Spacer(), // Đẩy phần footer xuống sát mép dưới cùng của màn hình
+                  const SizedBox(height: 24),
                   _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò
                 ],
               ),
