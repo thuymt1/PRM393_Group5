@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/author/viewmodels/article_form_view_model.dart';
 
-class CreateArticleScreen extends StatefulWidget {
+class CreateArticleScreen extends ConsumerStatefulWidget {
   const CreateArticleScreen({super.key});
 
   @override
-  State<CreateArticleScreen> createState() => _CreateArticleScreenState();
+  ConsumerState<CreateArticleScreen> createState() =>
+      _CreateArticleScreenState();
 }
 
-class _CreateArticleScreenState extends State<CreateArticleScreen> {
+class _CreateArticleScreenState extends ConsumerState<CreateArticleScreen> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _homestayController = TextEditingController();
   final TextEditingController _contentController = TextEditingController();
 
   String _selectedCategory = 'Review Trải Nghiệm';
   int _homestayRating = 5;
-  bool _isLoading = false;
-  final ApiService _apiService = ApiService();
+  bool get _isLoading => ref.read(articleFormViewModelProvider).isLoading;
 
   final List<String> _categories = [
     'Review Trải Nghiệm',
@@ -35,6 +36,7 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(articleFormViewModelProvider);
     const Color purpleColor = Color(0xFF8E24AA);
     const Color primaryBrown = Color(0xFF6D4C41);
 
@@ -90,7 +92,8 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                 const SizedBox(height: 16),
                 _buildTextField(
                   label: 'Nội dung bài viết',
-                  hint: 'Chia sẻ chi tiết về phòng ốc, phong cảnh, dịch vụ, chủ nhà và những kỷ niệm của bạn...',
+                  hint:
+                      'Chia sẻ chi tiết về phòng ốc, phong cảnh, dịch vụ, chủ nhà và những kỷ niệm của bạn...',
                   controller: _contentController,
                   maxLines: 10,
                 ),
@@ -229,7 +232,9 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -256,7 +261,10 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
         print("Tải ảnh bài viết lên...");
       },
       icon: Icon(Icons.add_photo_alternate_outlined, color: color),
-      label: Text('Thêm hình ảnh bài đăng', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+      label: Text(
+        'Thêm hình ảnh bài đăng',
+        style: TextStyle(color: color, fontWeight: FontWeight.bold),
+      ),
       style: OutlinedButton.styleFrom(
         minimumSize: const Size(double.infinity, 56),
         side: BorderSide(color: color.withOpacity(0.5)),
@@ -276,11 +284,17 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 56),
               side: const BorderSide(color: Color(0xFF6D4C41)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
             ),
             child: const Text(
               'Hủy bỏ',
-              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                color: Color(0xFF6D4C41),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
@@ -291,12 +305,18 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
               minimumSize: const Size(double.infinity, 56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               elevation: 2,
             ),
             child: const Text(
               'Đăng bài viết',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ),
         ),
@@ -310,16 +330,18 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
 
     if (title.isEmpty || content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập đầy đủ tiêu đề và nội dung bài viết')),
+        const SnackBar(
+          content: Text('Vui lòng nhập đầy đủ tiêu đề và nội dung bài viết'),
+        ),
       );
       return;
     }
 
-    setState(() => _isLoading = true);
-
     try {
       // Lưu bài viết thật vào Supabase
-      await _apiService.createArticle(title, content);
+      await ref
+          .read(articleFormViewModelProvider.notifier)
+          .create(title, content);
 
       if (!mounted) return;
       _showSuccessDialog(context);
@@ -328,10 +350,6 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Không thể đăng bài viết: ${e.toString()}')),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
@@ -358,7 +376,11 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
               const SizedBox(height: 24),
               const Text(
                 'Đăng bài thành công!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6D4C41),
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -375,9 +397,17 @@ class _CreateArticleScreenState extends State<CreateArticleScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Đồng ý', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Đồng ý',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),

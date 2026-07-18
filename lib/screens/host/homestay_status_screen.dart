@@ -19,17 +19,24 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
   bool _isPublic = true;
 
   // Chuỗi lưu trữ trạng thái phê duyệt hiện tại của bài đăng homestay trên hệ thống
-  String _status = 'Đang hoạt động'; // Đang hoạt động, Chờ duyệt, Bị từ chối, Đã ẩn
+  String _status =
+      'Đang hoạt động'; // Đang hoạt động, Chờ duyệt, Bị từ chối, Đã ẩn
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       appBar: AppBar(
-        backgroundColor: Colors.white, // Nền trắng giúp phần thanh công cụ phía trên hiển thị tách biệt rõ ràng
+        backgroundColor: Colors
+            .white, // Nền trắng giúp phần thanh công cụ phía trên hiển thị tách biệt rõ ràng
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút bấm quay lại trang quản lý trước đó
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color(0xFF6D4C41),
+          ), // Nút bấm quay lại trang quản lý trước đó
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -38,12 +45,16 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
             color: Color(0xFF6D4C41),
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history, color: Color(0xFF6D4C41)), // Nút xem lịch sử thay đổi trạng thái tin đăng
+            icon: const Icon(
+              Icons.history,
+              color: Color(0xFF6D4C41),
+            ), // Nút xem lịch sử thay đổi trạng thái tin đăng
             onPressed: () {
               // Xử lý mở màn hình nhật ký lịch sử bài đăng
             },
@@ -51,7 +62,9 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng quản lý
+        padding: const EdgeInsets.all(
+          24,
+        ), // Tạo biên đệm 24 đơn vị bao quanh vùng quản lý
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -80,10 +93,12 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ mịn nhẹ tạo hiệu ứng bề mặt
+            color: Colors.black.withOpacity(
+              0.03,
+            ), // Đổ bóng mờ mịn nhẹ tạo hiệu ứng bề mặt
             blurRadius: 10,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -95,7 +110,8 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
               'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000',
               width: 80,
               height: 80,
-              fit: BoxFit.cover, // Cắt và điều chỉnh ảnh lấp đầy khung vuông tỉ lệ
+              fit: BoxFit
+                  .cover, // Cắt và điều chỉnh ảnh lấp đầy khung vuông tỉ lệ
             ),
           ),
           const SizedBox(width: 16),
@@ -106,7 +122,11 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
               children: [
                 Text(
                   'The Terracotta Nest',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF424242),
+                  ),
                 ),
                 SizedBox(height: 4),
                 Text(
@@ -116,7 +136,11 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
                 SizedBox(height: 8),
                 Text(
                   '1.250.000đ / đêm',
-                  style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14),
+                  style: TextStyle(
+                    color: Color(0xFFE07A5F),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -129,28 +153,40 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
   // Khối hộp hiển thị trạng thái phê duyệt của hệ thống (Đổi màu sắc linh hoạt theo State)
   Widget _buildStatusCard() {
     // Tự động gán mã màu sắc phù hợp tương ứng với từng trạng thái kiểm duyệt cụ thể
-    Color statusColor = _status == 'Đang hoạt động' ? Colors.green : (_status == 'Chờ duyệt' ? Colors.orange : Colors.red);
+    Color statusColor = _status == 'Đang hoạt động'
+        ? Colors.green
+        : (_status == 'Chờ duyệt' ? Colors.orange : Colors.red);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.05), // Phủ màu nền mờ nhạt tương đồng sắc màu trạng thái 5%
+        color: statusColor.withOpacity(
+          0.05,
+        ), // Phủ màu nền mờ nhạt tương đồng sắc màu trạng thái 5%
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withOpacity(0.2)), // Đường viền bao quanh sắc độ nhạt 20%
+        border: Border.all(
+          color: statusColor.withOpacity(0.2),
+        ), // Đường viền bao quanh sắc độ nhạt 20%
       ),
       child: Column(
         children: [
           // Thay đổi Icon biểu tượng hiển thị tương ứng với trạng thái
           Icon(
-            _status == 'Đang hoạt động' ? Icons.check_circle_outline : Icons.pending_actions,
+            _status == 'Đang hoạt động'
+                ? Icons.check_circle_outline
+                : Icons.pending_actions,
             color: statusColor,
             size: 40,
           ),
           const SizedBox(height: 12),
           Text(
             'Trạng thái: $_status',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: statusColor),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: statusColor,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -170,16 +206,38 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
       children: [
         const Text(
           'Quản lý nhanh',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41), fontSize: 16),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF6D4C41),
+            fontSize: 16,
+          ),
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _actionButton(Icons.edit_outlined, 'Chỉnh sửa', () => print("Bấm nút Sửa"))),
+            Expanded(
+              child: _actionButton(
+                Icons.edit_outlined,
+                'Chỉnh sửa',
+                () => print("Bấm nút Sửa"),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _actionButton(Icons.calendar_today_outlined, 'Lịch trống', () => print("Bấm nút Lịch"))),
+            Expanded(
+              child: _actionButton(
+                Icons.calendar_today_outlined,
+                'Lịch trống',
+                () => print("Bấm nút Lịch"),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _actionButton(Icons.preview_outlined, 'Xem thử', () => print("Bấm nút Xem trước"))),
+            Expanded(
+              child: _actionButton(
+                Icons.preview_outlined,
+                'Xem thử',
+                () => print("Bấm nút Xem trước"),
+              ),
+            ),
           ],
         ),
       ],
@@ -201,7 +259,10 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
           children: [
             Icon(icon, color: const Color(0xFF6D4C41), size: 24),
             const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       ),
@@ -235,7 +296,8 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
             ),
           ),
           Switch(
-            value: _isPublic, // Gắn giá trị trạng thái ẩn hiện hiện thời của hệ thống
+            value:
+                _isPublic, // Gắn giá trị trạng thái ẩn hiện hiện thời của hệ thống
             onChanged: (val) {
               setState(() {
                 _isPublic = val;
@@ -243,7 +305,9 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
                 _status = _isPublic ? 'Đang hoạt động' : 'Đã ẩn';
               });
             },
-            activeColor: const Color(0xFFE07A5F), // Tông màu cam thương hiệu cho nút gạt khi kích hoạt bật
+            activeColor: const Color(
+              0xFFE07A5F,
+            ), // Tông màu cam thương hiệu cho nút gạt khi kích hoạt bật
           ),
         ],
       ),
@@ -256,7 +320,9 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.05), // Phủ sắc nền hồng/đỏ nhạt mờ cảnh báo nguy hiểm
+        color: Colors.red.withOpacity(
+          0.05,
+        ), // Phủ sắc nền hồng/đỏ nhạt mờ cảnh báo nguy hiểm
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.red.withOpacity(0.1)),
       ),
@@ -265,7 +331,11 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
         children: [
           const Text(
             'Khu vực nguy hiểm',
-            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+              fontSize: 14,
+            ),
           ),
           const SizedBox(height: 12),
           const Text(
@@ -275,14 +345,20 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
           const SizedBox(height: 16),
           // Nút bấm viền Outlined màu đỏ nổi bật kích hoạt cơ chế xóa mềm bài đăng
           OutlinedButton.icon(
-            onPressed: () => _confirmDelete(), // Gọi mở hàm hiển thị thông báo hộp thoại Dialog xác nhận gỡ tin bài
+            onPressed: () =>
+                _confirmDelete(), // Gọi mở hàm hiển thị thông báo hộp thoại Dialog xác nhận gỡ tin bài
             icon: const Icon(Icons.delete_outline, size: 18),
             label: const Text('Xóa bài đăng (Xóa mềm)'),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.red,
               side: const BorderSide(color: Colors.red),
-              minimumSize: const Size(double.infinity, 48), // Kéo dãn full hàng ngang chiều rộng, chiều cao ô nút 48
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              minimumSize: const Size(
+                double.infinity,
+                48,
+              ), // Kéo dãn full hàng ngang chiều rộng, chiều cao ô nút 48
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],
@@ -296,7 +372,9 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận xóa?'),
-        content: const Text('Bạn có chắc chắn muốn ẩn bài đăng này? Khách hàng sẽ không thể tìm thấy hoặc đặt phòng nữa.'),
+        content: const Text(
+          'Bạn có chắc chắn muốn ẩn bài đăng này? Khách hàng sẽ không thể tìm thấy hoặc đặt phòng nữa.',
+        ),
         actions: [
           // Nút chức năng hủy bỏ tác vụ đóng cửa sổ pop-up
           TextButton(
@@ -313,8 +391,13 @@ class _HomestayStatusScreenState extends State<HomestayStatusScreen> {
               Navigator.pop(context); // Đóng hộp thoại AlertDialog
               print("Xử lý gọi API xóa mềm bài đăng Homestay hoàn tất!");
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red), // Nền màu đỏ nổi bật hành động nguy hiểm
-            child: const Text('Xác nhận xóa', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ), // Nền màu đỏ nổi bật hành động nguy hiểm
+            child: const Text(
+              'Xác nhận xóa',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),

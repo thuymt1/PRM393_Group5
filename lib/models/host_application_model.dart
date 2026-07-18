@@ -38,8 +38,12 @@ class HostApplication {
       experience: json['experience'],
       status: json['status'] ?? 'pending',
       adminNote: json['admin_note'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      reviewedAt: json['reviewed_at'] != null ? DateTime.parse(json['reviewed_at']) : null,
+      createdAt: DateTime.parse(
+        json['created_at'] ?? DateTime.now().toIso8601String(),
+      ),
+      reviewedAt: json['reviewed_at'] != null
+          ? DateTime.parse(json['reviewed_at'])
+          : null,
       reviewedBy: json['reviewed_by'],
     );
   }
@@ -67,10 +71,14 @@ class HostApplication {
 
   String get statusLabel {
     switch (status) {
-      case 'pending': return 'Đang chờ xét duyệt';
-      case 'approved': return 'Đã được phê duyệt';
-      case 'rejected': return 'Bị từ chối';
-      default: return 'Không xác định';
+      case 'pending':
+        return 'Đang chờ xét duyệt';
+      case 'approved':
+        return 'Đã được phê duyệt';
+      case 'rejected':
+        return 'Bị từ chối';
+      default:
+        return 'Không xác định';
     }
   }
 }

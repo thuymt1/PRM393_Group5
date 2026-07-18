@@ -6,10 +6,12 @@ class AddHomestayBasicInfoScreen extends StatefulWidget {
   const AddHomestayBasicInfoScreen({super.key});
 
   @override
-  State<AddHomestayBasicInfoScreen> createState() => _AddHomestayBasicInfoScreenState();
+  State<AddHomestayBasicInfoScreen> createState() =>
+      _AddHomestayBasicInfoScreenState();
 }
 
-class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen> {
+class _AddHomestayBasicInfoScreenState
+    extends State<AddHomestayBasicInfoScreen> {
   // Bộ điều khiển dữ liệu nhập vào cho trường Tên và trường Mô tả chi tiết
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -18,7 +20,12 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
   String _selectedStayType = 'Toàn bộ nhà';
 
   // Danh sách các loại hình lưu trú được hệ thống hỗ trợ đăng tải
-  final List<String> _stayTypes = ['Toàn bộ nhà', 'Phòng riêng', 'Phòng chung', 'Khách sạn'];
+  final List<String> _stayTypes = [
+    'Toàn bộ nhà',
+    'Phòng riêng',
+    'Phòng chung',
+    'Khách sạn',
+  ];
 
   Uint8List? _imageBytes;
   String? _imageName;
@@ -38,13 +45,20 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       appBar: AppBar(
-        backgroundColor: Colors.white, // Màu nền trắng làm nổi bật thanh công cụ phía trên
+        backgroundColor:
+            Colors.white, // Màu nền trắng làm nổi bật thanh công cụ phía trên
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFF6D4C41)), // Biểu tượng dấu X để hủy tiến trình đăng tin
-          onPressed: () => Navigator.pop(context), // Thoát và quay lại màn hình trước đó
+          icon: const Icon(
+            Icons.close,
+            color: Color(0xFF6D4C41),
+          ), // Biểu tượng dấu X để hủy tiến trình đăng tin
+          onPressed: () =>
+              Navigator.pop(context), // Thoát và quay lại màn hình trước đó
         ),
         title: const Text(
           'Đăng tin homestay mới',
@@ -52,7 +66,8 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
             color: Color(0xFF6D4C41),
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
           ),
         ),
       ),
@@ -61,7 +76,9 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
           _buildProgressBar(), // Thanh trạng thái tiến độ trực quan đặt sát dưới AppBar
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng nhập liệu
+              padding: const EdgeInsets.all(
+                24,
+              ), // Tạo biên đệm 24 đơn vị bao quanh vùng nhập liệu
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -97,21 +114,35 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade300, width: 2, style: BorderStyle.solid),
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 2,
+                          style: BorderStyle.solid,
+                        ),
                       ),
                       child: _imageBytes != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(14),
-                              child: Image.memory(_imageBytes!, fit: BoxFit.cover),
+                              child: Image.memory(
+                                _imageBytes!,
+                                fit: BoxFit.cover,
+                              ),
                             )
                           : Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.add_photo_alternate_outlined, size: 48, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.add_photo_alternate_outlined,
+                                  size: 48,
+                                  color: Colors.grey.shade400,
+                                ),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Bấm để tải ảnh từ thư viện',
-                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ],
                             ),
@@ -129,7 +160,8 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
                   // Ô nhập liệu đoạn văn bản Mô tả ngắn gọn (Cho phép nhập nhiều dòng)
                   _buildInputField(
                     label: 'Mô tả',
-                    hint: 'Giới thiệu về không gian, tiện ích đặc biệt và phong cách sống tại đây...',
+                    hint:
+                        'Giới thiệu về không gian, tiện ích đặc biệt và phong cách sống tại đây...',
                     controller: _descriptionController,
                     maxLines: 5, // Mở rộng không gian hiển thị lên 5 dòng
                     icon: Icons.description_outlined,
@@ -159,9 +191,12 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
   // Thanh hiển thị tiến trình hoàn thiện hồ sơ (Linear Progress Indicator)
   Widget _buildProgressBar() {
     return LinearProgressIndicator(
-      value: 0.25, // Thể hiện đang hoàn thành 25% chặng đường (Bước 1 của 4 bước)
+      value:
+          0.25, // Thể hiện đang hoàn thành 25% chặng đường (Bước 1 của 4 bước)
       backgroundColor: Colors.grey.shade200,
-      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE07A5F)), // Sắc cam cam biểu thị tiến độ
+      valueColor: const AlwaysStoppedAnimation<Color>(
+        Color(0xFFE07A5F),
+      ), // Sắc cam cam biểu thị tiến độ
       minHeight: 6, // Độ dày của thanh tiến trình
     );
   }
@@ -189,10 +224,14 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16), // Bo tròn góc hộp 16 đơn vị
+            borderRadius: BorderRadius.circular(
+              16,
+            ), // Bo tròn góc hộp 16 đơn vị
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
+                color: Colors.black.withOpacity(
+                  0.03,
+                ), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -205,12 +244,20 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 22), // Biểu tượng đặc trưng đặt đầu ô
+              prefixIcon: Icon(
+                icon,
+                color: const Color(0xFFE07A5F),
+                size: 22,
+              ), // Biểu tượng đặc trưng đặt đầu ô
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none, // Ẩn đường viền mặc định để dùng thiết kế đổ bóng của Container
+                borderSide: BorderSide
+                    .none, // Ẩn đường viền mặc định để dùng thiết kế đổ bóng của Container
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 18,
+              ),
             ),
           ),
         ),
@@ -221,12 +268,18 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
   // Khối giao diện sắp xếp các nút chọn loại hình lưu trú đa dòng linh hoạt chống tràn (Wrap)
   Widget _buildStayTypeSelector() {
     return Wrap(
-      spacing: 12, // Khoảng cách hở giữa các mảnh thẻ liền kề nhau trên cùng một hàng
-      runSpacing: 12, // Khoảng cách hở giữa các hàng khi bị tự động đẩy xuống dòng
+      spacing:
+          12, // Khoảng cách hở giữa các mảnh thẻ liền kề nhau trên cùng một hàng
+      runSpacing:
+          12, // Khoảng cách hở giữa các hàng khi bị tự động đẩy xuống dòng
       children: _stayTypes.map((type) {
-        bool isSelected = _selectedStayType == type; // Đối chiếu kiểm tra trạng thái kích hoạt của thẻ
+        bool isSelected =
+            _selectedStayType ==
+            type; // Đối chiếu kiểm tra trạng thái kích hoạt của thẻ
         return GestureDetector(
-          onTap: () => setState(() => _selectedStayType = type), // Cập nhật State khi người dùng nhấn chọn loại hình mới
+          onTap: () => setState(
+            () => _selectedStayType = type,
+          ), // Cập nhật State khi người dùng nhấn chọn loại hình mới
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             decoration: BoxDecoration(
@@ -234,14 +287,20 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
               color: isSelected ? const Color(0xFFF7F4E1) : Colors.white,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? const Color(0xFFE07A5F) : Colors.grey.shade200, // Đường viền cam làm điểm nhấn
+                color: isSelected
+                    ? const Color(0xFFE07A5F)
+                    : Colors.grey.shade200, // Đường viền cam làm điểm nhấn
                 width: 1.5,
               ),
             ),
             child: Text(
               type,
               style: TextStyle(
-                color: isSelected ? const Color(0xFFE07A5F) : const Color(0xFF6D4C41), // Đổi màu văn bản tương phản tương ứng
+                color: isSelected
+                    ? const Color(0xFFE07A5F)
+                    : const Color(
+                        0xFF6D4C41,
+                      ), // Đổi màu văn bản tương phản tương ứng
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -254,15 +313,22 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
   // Thanh thao tác chức năng đặt cố định ở phần đáy màn hình (Bottom Bar Actions)
   Widget _buildBottomActions() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ hệ thống
+      padding: const EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        32,
+      ), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ hệ thống
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới với body cụ thể
+            color: Colors.black.withOpacity(
+              0.05,
+            ), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới với body cụ thể
             blurRadius: 10,
             offset: const Offset(0, -5),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -286,7 +352,9 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
 
               if (name.isEmpty || description.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vui lòng điền đầy đủ tên và mô tả homestay')),
+                  const SnackBar(
+                    content: Text('Vui lòng điền đầy đủ tên và mô tả homestay'),
+                  ),
                 );
                 return;
               }
@@ -304,10 +372,18 @@ class _AddHomestayBasicInfoScreenState extends State<AddHomestayBasicInfoScreen>
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống
-              minimumSize: const Size(140, 56), // Độ rộng tối thiểu 140 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
+              backgroundColor: const Color(
+                0xFF6D4C41,
+              ), // Sắc nâu đậm chủ đạo hệ thống
+              minimumSize: const Size(
+                140,
+                56,
+              ), // Độ rộng tối thiểu 140 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation:
+                  0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
             ),
             child: const Text(
               'Tiếp theo',

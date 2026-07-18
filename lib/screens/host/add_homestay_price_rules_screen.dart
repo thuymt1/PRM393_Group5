@@ -1,35 +1,49 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
 
-class AddHomestayPriceRulesScreen extends StatefulWidget {
+class AddHomestayPriceRulesScreen extends ConsumerStatefulWidget {
   const AddHomestayPriceRulesScreen({super.key});
 
   @override
-  State<AddHomestayPriceRulesScreen> createState() => _AddHomestayPriceRulesScreenState();
+  ConsumerState<AddHomestayPriceRulesScreen> createState() =>
+      _AddHomestayPriceRulesScreenState();
 }
 
-class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScreen> {
+class _AddHomestayPriceRulesScreenState
+    extends ConsumerState<AddHomestayPriceRulesScreen> {
   // Bộ điều khiển dữ liệu nhập vào cho các trường thông tin
   final TextEditingController _priceController = TextEditingController();
-  final TextEditingController _checkInController = TextEditingController(text: '14:00'); // Khởi tạo giờ nhận phòng mặc định
-  final TextEditingController _checkOutController = TextEditingController(text: '12:00'); // Khởi tạo giờ trả phòng mặc định
+  final TextEditingController _checkInController = TextEditingController(
+    text: '14:00',
+  ); // Khởi tạo giờ nhận phòng mặc định
+  final TextEditingController _checkOutController = TextEditingController(
+    text: '12:00',
+  ); // Khởi tạo giờ trả phòng mặc định
   final TextEditingController _rulesController = TextEditingController();
 
-  final ApiService _apiService = ApiService();
   bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
+        {};
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       appBar: AppBar(
-        backgroundColor: Colors.white, // Màu nền trắng làm nổi bật thanh công cụ phía trên
+        backgroundColor:
+            Colors.white, // Màu nền trắng làm nổi bật thanh công cụ phía trên
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại bước trước đó
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color(0xFF6D4C41),
+          ), // Nút quay lại bước trước đó
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -38,7 +52,8 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
             color: Color(0xFF6D4C41),
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
           ),
         ),
       ),
@@ -49,7 +64,9 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
               _buildProgressBar(), // Thanh trạng thái tiến độ trực quan đạt sát dưới AppBar
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng nhập liệu
+                  padding: const EdgeInsets.all(
+                    24,
+                  ), // Tạo biên đệm 24 đơn vị bao quanh vùng nhập liệu
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -73,7 +90,8 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                         hint: 'VD: 1200000',
                         controller: _priceController,
                         icon: Icons.payments_outlined,
-                        keyboardType: TextInputType.number, // Tối ưu cấu hình bàn phím hiển thị các nút số
+                        keyboardType: TextInputType
+                            .number, // Tối ưu cấu hình bàn phím hiển thị các nút số
                       ),
                       const SizedBox(height: 24),
                       // Hàng ngang kết hợp song song hai trường cấu hình thời gian Check-in và Check-out
@@ -87,7 +105,9 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                               icon: Icons.login_rounded,
                             ),
                           ),
-                          const SizedBox(width: 16), // Khoảng hở đệm giữa hai ô nhập thời gian
+                          const SizedBox(
+                            width: 16,
+                          ), // Khoảng hở đệm giữa hai ô nhập thời gian
                           Expanded(
                             child: _buildInputField(
                               label: 'Giờ trả phòng',
@@ -102,9 +122,11 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                       // Ô nhập liệu văn bản ghi chú các nội quy chung tại homestay (Cho phép nhập nhiều dòng)
                       _buildInputField(
                         label: 'Quy định chung',
-                        hint: 'VD: Không hút thuốc, không thú cưng, giữ yên lặng sau 22h...',
+                        hint:
+                            'VD: Không hút thuốc, không thú cưng, giữ yên lặng sau 22h...',
                         controller: _rulesController,
-                        maxLines: 4, // Thiết lập chiều cao mở rộng ô nhập liệu lên 4 dòng
+                        maxLines:
+                            4, // Thiết lập chiều cao mở rộng ô nhập liệu lên 4 dòng
                         icon: Icons.gavel_outlined,
                       ),
                       const SizedBox(height: 32),
@@ -114,16 +136,16 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                   ),
                 ),
               ),
-              _buildBottomActions(args), // Thanh điều hướng tác vụ ("Hoàn tất") cố định dưới đáy màn hình
+              _buildBottomActions(
+                args,
+              ), // Thanh điều hướng tác vụ ("Hoàn tất") cố định dưới đáy màn hình
             ],
           ),
           if (_isLoading)
             Container(
               color: Colors.black26,
               child: const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFE07A5F),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
               ),
             ),
         ],
@@ -134,9 +156,12 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
   // Thanh hiển thị tiến trình hoàn thiện hồ sơ (Linear Progress Indicator)
   Widget _buildProgressBar() {
     return LinearProgressIndicator(
-      value: 1.0, // Đạt mốc tối đa biểu thị đã hoàn thành tất cả các bước (Bước 4 của 4 bước)
+      value:
+          1.0, // Đạt mốc tối đa biểu thị đã hoàn thành tất cả các bước (Bước 4 của 4 bước)
       backgroundColor: Colors.grey.shade200,
-      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE07A5F)), // Sắc cam cam biểu thị tiến độ hành trình
+      valueColor: const AlwaysStoppedAnimation<Color>(
+        Color(0xFFE07A5F),
+      ), // Sắc cam cam biểu thị tiến độ hành trình
       minHeight: 6, // Đổi độ dày thanh tiến trình
     );
   }
@@ -165,10 +190,14 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16), // Bo tròn góc hộp 16 đơn vị
+            borderRadius: BorderRadius.circular(
+              16,
+            ), // Bo tròn góc hộp 16 đơn vị
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
+                color: Colors.black.withOpacity(
+                  0.03,
+                ), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -182,12 +211,20 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 22), // Biểu tượng đặc trưng đặt đầu ô
+              prefixIcon: Icon(
+                icon,
+                color: const Color(0xFFE07A5F),
+                size: 22,
+              ), // Biểu tượng đặc trưng đặt đầu ô
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none, // Ẩn đường viền mặc định để dùng thiết kế đổ bóng của Container
+                borderSide: BorderSide
+                    .none, // Ẩn đường viền mặc định để dùng thiết kế đổ bóng của Container
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 18,
+              ),
             ),
           ),
         ),
@@ -200,18 +237,28 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F4E1), // Sắc nền be vàng nhạt nhã nhặn phù hợp khối thông tin lưu ý
+        color: const Color(
+          0xFFF7F4E1,
+        ), // Sắc nền be vàng nhạt nhã nhặn phù hợp khối thông tin lưu ý
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, color: Color(0xFF6D4C41), size: 20), // Biểu tượng dấu chấm hỏi thông tin mờ
+          Icon(
+            Icons.info_outline,
+            color: Color(0xFF6D4C41),
+            size: 20,
+          ), // Biểu tượng dấu chấm hỏi thông tin mờ
           SizedBox(width: 12),
           Expanded(
             child: Text(
               'Bằng cách hoàn tất, bạn đồng ý với các Điều khoản dịch vụ và Chính sách hoạt động của Hearth & Horizon.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF6D4C41), height: 1.4),
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF6D4C41),
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -222,15 +269,22 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
   // Thanh điều khiển chức năng đặt cố định ở phần đáy màn hình (Bottom Bar Actions)
   Widget _buildBottomActions(Map<String, dynamic> args) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ hệ thống
+      padding: const EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        32,
+      ), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ hệ thống
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới rõ ràng với body
+            color: Colors.black.withOpacity(
+              0.05,
+            ), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới rõ ràng với body
             blurRadius: 10,
             offset: const Offset(0, -5),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -248,10 +302,18 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
           ElevatedButton(
             onPressed: _isLoading ? null : () => _handleComplete(args),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống
-              minimumSize: const Size(160, 56), // Độ rộng tối thiểu 160 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
+              backgroundColor: const Color(
+                0xFF6D4C41,
+              ), // Sắc nâu đậm chủ đạo hệ thống
+              minimumSize: const Size(
+                160,
+                56,
+              ), // Độ rộng tối thiểu 160 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation:
+                  0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
             ),
             child: const Text(
               'Hoàn tất',
@@ -299,13 +361,16 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
       if (args['imageBytes'] != null && args['imageName'] != null) {
         final Uint8List bytes = args['imageBytes'];
         final String name = args['imageName'];
-        imageUrl = await _apiService.uploadHomestayImage(bytes, name);
+        imageUrl = await ref
+            .read(homestayRepositoryProvider)
+            .uploadImage(bytes, name);
       } else {
         // Fallback an toàn (nếu lỗi ko truyền được ảnh)
-        imageUrl = 'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
+        imageUrl =
+            'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
       }
 
-      await _apiService.createHomestay(homestayData, imageUrl);
+      await ref.read(homestayRepositoryProvider).create(homestayData, imageUrl);
 
       if (!mounted) return;
       _showSuccessDialog();
@@ -344,7 +409,11 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
               const SizedBox(height: 24),
               const Text(
                 'Đăng tin thành công!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6D4C41),
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -357,14 +426,26 @@ class _AddHomestayPriceRulesScreenState extends State<AddHomestayPriceRulesScree
                 onPressed: () {
                   Navigator.pop(dialogContext); // Đóng pop-up Dialog
                   // Quay về trang chủ dashboard của Host
-                  Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/host-dashboard',
+                    (route) => false,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Đồng ý', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Đồng ý',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),

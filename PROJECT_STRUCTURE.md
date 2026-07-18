@@ -235,9 +235,13 @@ Ví dụ khi thêm chức năng quản lý yêu thích:
 
 ## 8. Trạng thái chuyển đổi hiện tại
 
-Phần Auth đã bắt đầu sử dụng MVVM và Riverpod, gồm provider Supabase, repository Auth/Profile/HostApplication và `AuthViewModel`.
+Phần Auth đã sử dụng provider Supabase, repository Auth/Profile/HostApplication và `AuthViewModel`.
 
-Các màn Customer, Host, Author, Admin và Common vẫn còn một số chỗ gọi `ApiService`, `Supabase.instance`, `FutureBuilder` hoặc quản lý business state bằng `setState`. Các phần này cần tiếp tục được chuyển theo thứ tự:
+Phần Customer đã có `HomestayRepository`, `BookingRepository`, `CustomerHomeState` và `CustomerHomeViewModel`. Các màn Customer nhận dependency qua Riverpod thay vì tự tạo `ApiService` hoặc gọi `Supabase.instance`.
+
+Phần Common đã có `ProfileViewModel` và `NotificationViewModel`; phần Host có `HostApplicationViewModel`. Loading và dữ liệu backend của các màn này được quản lý bằng `AsyncValue`, không còn nằm trong `setState`.
+
+Các màn hình đã nhận dependency qua Riverpod repository và không còn gọi trực tiếp `ApiService` hoặc `Supabase.instance`. Các dashboard đã hiển thị trạng thái bất đồng bộ bằng `AsyncValue.when` thay cho `FutureBuilder`.
 
 1. Auth và Profile.
 2. Customer và Booking.
@@ -245,4 +249,4 @@ Các màn Customer, Host, Author, Admin và Common vẫn còn một số chỗ g
 4. Author và Article.
 5. Admin, Notification và các màn Common.
 
-Chỉ xóa `services/api_service.dart` sau khi không còn file nào tham chiếu đến service này và toàn bộ kiểm thử đã thành công.
+`services/api_service.dart` đã được xóa sau khi toàn bộ lời gọi dữ liệu được chuyển sang repository.

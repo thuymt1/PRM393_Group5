@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../models/host_application_model.dart';
 
 /// Màn hình chi tiết đơn đăng ký host - Admin xem thông tin và phê duyệt/từ chối
-class HostApplicationDetailScreen extends StatefulWidget {
+class HostApplicationDetailScreen extends ConsumerStatefulWidget {
   final HostApplication application;
 
   const HostApplicationDetailScreen({super.key, required this.application});
 
   @override
-  State<HostApplicationDetailScreen> createState() =>
+  ConsumerState<HostApplicationDetailScreen> createState() =>
       _HostApplicationDetailScreenState();
 }
 
 class _HostApplicationDetailScreenState
-    extends State<HostApplicationDetailScreen> {
-  final ApiService _apiService = ApiService();
+    extends ConsumerState<HostApplicationDetailScreen> {
   final _noteController = TextEditingController();
   bool _isProcessing = false;
 
@@ -37,21 +37,25 @@ class _HostApplicationDetailScreenState
 
     setState(() => _isProcessing = true);
     try {
-      await _apiService.reviewHostApplication(
-        applicationId: widget.application.id,
-        userId: widget.application.userId,
-        status: 'approved',
-        adminNote: _noteController.text.trim().isEmpty
-            ? null
-            : _noteController.text.trim(),
-      );
+      await ref
+          .read(adminRepositoryProvider)
+          .reviewApplication(
+            applicationId: widget.application.id,
+            userId: widget.application.userId,
+            status: 'approved',
+            adminNote: _noteController.text.trim().isEmpty
+                ? null
+                : _noteController.text.trim(),
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Đã phê duyệt đơn thành công! ✅'),
           backgroundColor: Colors.green.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       Navigator.pop(context);
@@ -76,7 +80,9 @@ class _HostApplicationDetailScreenState
           content: const Text('Vui lòng nhập lý do từ chối trước khi xác nhận'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -93,26 +99,33 @@ class _HostApplicationDetailScreenState
 
     setState(() => _isProcessing = true);
     try {
-      await _apiService.reviewHostApplication(
-        applicationId: widget.application.id,
-        userId: widget.application.userId,
-        status: 'rejected',
-        adminNote: _noteController.text.trim(),
-      );
+      await ref
+          .read(adminRepositoryProvider)
+          .reviewApplication(
+            applicationId: widget.application.id,
+            userId: widget.application.userId,
+            status: 'rejected',
+            adminNote: _noteController.text.trim(),
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Đã từ chối đơn.'),
           backgroundColor: Colors.grey.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red.shade600),
+        SnackBar(
+          content: Text('Lỗi: $e'),
+          backgroundColor: Colors.red.shade600,
+        ),
       );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
@@ -129,11 +142,17 @@ class _HostApplicationDetailScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(title,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, color: Color(0xFF424242))),
-        content: Text(content,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF424242),
+          ),
+        ),
+        content: Text(
+          content,
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -144,10 +163,13 @@ class _HostApplicationDetailScreenState
             style: ElevatedButton.styleFrom(
               backgroundColor: confirmColor,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text(confirmLabel,
-                style: const TextStyle(color: Colors.white)),
+            child: Text(
+              confirmLabel,
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -185,7 +207,8 @@ class _HostApplicationDetailScreenState
                 _buildApplicationContent(app),
                 const SizedBox(height: 16),
                 if (isPending) _buildAdminNoteField(),
-                if (!isPending && app.adminNote != null) _buildExistingNote(app),
+                if (!isPending && app.adminNote != null)
+                  _buildExistingNote(app),
                 const SizedBox(height: 24),
                 if (isPending) _buildActionButtons(),
                 if (!isPending) _buildStatusBadge(app),
@@ -197,7 +220,8 @@ class _HostApplicationDetailScreenState
             Container(
               color: Colors.black26,
               child: const Center(
-                  child: CircularProgressIndicator(color: Color(0xFFE07A5F))),
+                child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+              ),
             ),
         ],
       ),
@@ -226,9 +250,10 @@ class _HostApplicationDetailScreenState
             child: Text(
               app.fullName.isNotEmpty ? app.fullName[0].toUpperCase() : '?',
               style: const TextStyle(
-                  color: Color(0xFFE07A5F),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 26),
+                color: Color(0xFFE07A5F),
+                fontWeight: FontWeight.bold,
+                fontSize: 26,
+              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -236,11 +261,14 @@ class _HostApplicationDetailScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(app.fullName,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Color(0xFF424242))),
+                Text(
+                  app.fullName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Color(0xFF424242),
+                  ),
+                ),
                 const SizedBox(height: 4),
                 _contactRow(Icons.email_outlined, app.email),
                 const SizedBox(height: 2),
@@ -263,8 +291,7 @@ class _HostApplicationDetailScreenState
       children: [
         Icon(icon, size: 13, color: Colors.grey.shade400),
         const SizedBox(width: 6),
-        Text(text,
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        Text(text, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
       ],
     );
   }
@@ -315,21 +342,27 @@ class _HostApplicationDetailScreenState
             children: [
               Icon(icon, size: 16, color: const Color(0xFFE07A5F)),
               const SizedBox(width: 8),
-              Text(title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Color(0xFF6D4C41))),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF6D4C41),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
           const Divider(height: 1),
           const SizedBox(height: 10),
-          Text(content,
-              style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade700,
-                  height: 1.6)),
+          Text(
+            content,
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey.shade700,
+              height: 1.6,
+            ),
+          ),
         ],
       ),
     );
@@ -342,9 +375,10 @@ class _HostApplicationDetailScreenState
         const Text(
           'Ghi chú Admin',
           style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              color: Color(0xFF6D4C41)),
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+            color: Color(0xFF6D4C41),
+          ),
         ),
         const SizedBox(height: 4),
         Text(
@@ -376,7 +410,10 @@ class _HostApplicationDetailScreenState
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               contentPadding: const EdgeInsets.all(16),
             ),
@@ -403,15 +440,22 @@ class _HostApplicationDetailScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Ghi chú Admin:',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        color: Color(0xFF92400E))),
+                const Text(
+                  'Ghi chú Admin:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    color: Color(0xFF92400E),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(app.adminNote!,
-                    style: const TextStyle(
-                        fontSize: 13, color: Color(0xFF78350F))),
+                Text(
+                  app.adminNote!,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF78350F),
+                  ),
+                ),
               ],
             ),
           ),
@@ -430,19 +474,26 @@ class _HostApplicationDetailScreenState
               minimumSize: const Size(double.infinity, 52),
               side: BorderSide(color: Colors.red.shade400, width: 1.5),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.cancel_outlined,
-                    color: Colors.red.shade500, size: 18),
+                Icon(
+                  Icons.cancel_outlined,
+                  color: Colors.red.shade500,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
-                Text('Từ chối',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: Colors.red.shade500)),
+                Text(
+                  'Từ chối',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.red.shade500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -455,7 +506,8 @@ class _HostApplicationDetailScreenState
               backgroundColor: Colors.green.shade600,
               minimumSize: const Size(double.infinity, 52),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
+                borderRadius: BorderRadius.circular(14),
+              ),
               elevation: 2,
             ),
             child: const Row(
@@ -463,11 +515,14 @@ class _HostApplicationDetailScreenState
               children: [
                 Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                 SizedBox(width: 8),
-                Text('Phê duyệt',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: Colors.white)),
+                Text(
+                  'Phê duyệt',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
+                ),
               ],
             ),
           ),
@@ -497,7 +552,10 @@ class _HostApplicationDetailScreenState
           Text(
             app.statusLabel,
             style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.bold, color: color),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
           if (app.reviewedAt != null) ...[
             const SizedBox(width: 8),

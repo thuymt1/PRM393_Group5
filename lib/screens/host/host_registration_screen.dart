@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/host/viewmodels/host_registration_view_model.dart';
 
 /// Màn hình form đăng ký làm Chủ nhà (Host)
 /// Người dùng điền thông tin và lý do, sau đó gửi đơn chờ Admin xét duyệt.
-class HostRegistrationScreen extends StatefulWidget {
+class HostRegistrationScreen extends ConsumerStatefulWidget {
   const HostRegistrationScreen({super.key});
 
   @override
-  State<HostRegistrationScreen> createState() => _HostRegistrationScreenState();
+  ConsumerState<HostRegistrationScreen> createState() =>
+      _HostRegistrationScreenState();
 }
 
-class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
+class _HostRegistrationScreenState
+    extends ConsumerState<HostRegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ApiService _apiService = ApiService();
-  bool _isLoading = false;
+  bool get _isLoading => ref.read(hostRegistrationViewModelProvider).isLoading;
 
   // Controllers
   final _nameController = TextEditingController();
@@ -30,7 +32,9 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
 
   Future<void> _loadProfileData() async {
     try {
-      final profile = await _apiService.getMyProfile();
+      final profile = await ref
+          .read(hostRegistrationViewModelProvider.notifier)
+          .loadProfile();
       if (profile != null && mounted) {
         setState(() {
           _nameController.text = profile['full_name'] ?? '';
@@ -54,17 +58,22 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
     try {
-      await _apiService.submitHostApplication(
-        fullName: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        email: _emailController.text.trim(),
-        reason: _reasonController.text.trim(),
-        experience: _experienceController.text.trim(),
-      );
+      await ref
+          .read(hostRegistrationViewModelProvider.notifier)
+          .submit(
+            fullName: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+            email: _emailController.text.trim(),
+            reason: _reasonController.text.trim(),
+            experience: _experienceController.text.trim(),
+          );
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/host-pending',
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,16 +81,17 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
           content: Text(e.toString().replaceAll('Exception: ', '')),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(hostRegistrationViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -152,7 +162,8 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
                   const SizedBox(height: 16),
                   _buildTextAreaField(
                     label: 'Lý do muốn trở thành Chủ nhà *',
-                    hint: 'Vd: Tôi có căn hộ trống muốn cho thuê để có thêm thu nhập...',
+                    hint:
+                        'Vd: Tôi có căn hộ trống muốn cho thuê để có thêm thu nhập...',
                     controller: _reasonController,
                     validator: (val) {
                       if (val == null || val.trim().length < 20) {
@@ -164,7 +175,8 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
                   const SizedBox(height: 16),
                   _buildTextAreaField(
                     label: 'Kinh nghiệm quản lý (nếu có)',
-                    hint: 'Vd: Tôi đã từng quản lý khách sạn 2 sao trong 3 năm...',
+                    hint:
+                        'Vd: Tôi đã từng quản lý khách sạn 2 sao trong 3 năm...',
                     controller: _experienceController,
                     maxLines: 3,
                   ),
@@ -270,15 +282,25 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
             ),
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 20),
-              border: readOnly ? InputBorder.none : OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
+              border: readOnly
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+              focusedBorder: readOnly
+                  ? InputBorder.none
+                  : OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE07A5F),
+                        width: 1.5,
+                      ),
+                    ),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 16,
               ),
-              focusedBorder: readOnly ? InputBorder.none : OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
             ),
           ),
         ),
@@ -336,7 +358,10 @@ class _HostRegistrationScreenState extends State<HostRegistrationScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),

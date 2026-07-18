@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/config/app_config.dart';
 
 // Auth screens
 import 'screens/auth/login_screen.dart';
@@ -58,9 +59,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    url: 'https://vsmlzmwgqyaduavrisme.supabase.co',
-    publishableKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzbWx6bXdncXlhZHVhdnJpc21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTc0MTIsImV4cCI6MjA5NzIzMzQxMn0.MQqxeMaxp3i7uJXZ4kWN2UxyUmul3N5E7_XWZ2FIcfU',
+    url: AppConfig.supabaseUrl,
+    publishableKey: AppConfig.supabasePublishableKey,
   );
 
   runApp(const ProviderScope(child: MyApp()));
@@ -92,18 +92,23 @@ class MyApp extends StatelessWidget {
         '/booking-confirmation': (context) => const BookingConfirmationPage(),
         '/payment': (context) => const PaymentScreen(),
         '/my-bookings': (context) => const MyBookingsScreen(),
-        '/customer-booking-detail': (context) => const CustomerBookingDetailScreen(),
+        '/customer-booking-detail': (context) =>
+            const CustomerBookingDetailScreen(),
         '/create-review': (context) => const CreateReviewPage(),
 
         // Host flow
         '/host-dashboard': (context) => const HostDashboardScreen(),
-        '/host-booking-requests': (context) => const HostBookingRequestsScreen(),
+        '/host-booking-requests': (context) =>
+            const HostBookingRequestsScreen(),
         '/host-booking-detail': (context) => const HostBookingDetailScreen(),
         '/homestay-list': (context) => const HomestayListScreen(),
         '/homestay-status': (context) => const HomestayStatusScreen(),
-        '/add-homestay-basic-info': (context) => const AddHomestayBasicInfoScreen(),
-        '/add-homestay-location': (context) => const AddHomestayLocationScreen(),
-        '/add-homestay-price-rules': (context) => const AddHomestayPriceRulesScreen(),
+        '/add-homestay-basic-info': (context) =>
+            const AddHomestayBasicInfoScreen(),
+        '/add-homestay-location': (context) =>
+            const AddHomestayLocationScreen(),
+        '/add-homestay-price-rules': (context) =>
+            const AddHomestayPriceRulesScreen(),
 
         // Author flow
         '/author-dashboard': (context) => const AuthorDashboardScreen(),
@@ -122,8 +127,9 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfilePage(),
         '/notifications': (context) => const NotificationScreen(),
         '/edit-profile': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, String>?;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, String>?;
           return EditProfileScreen(
             currentName: args?['name'] ?? '',
             currentPhone: args?['phone'] ?? '',

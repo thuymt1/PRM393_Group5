@@ -1,29 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
+import '../../features/admin/viewmodels/admin_dashboard_view_model.dart';
 import '../../models/host_application_model.dart';
 import '../../models/homestay_model.dart';
 import 'host_application_detail_screen.dart';
 
 /// Admin Dashboard - 4 tab chính + Tab Người dùng có sub-tab theo role
-class AdminDashboardScreen extends StatefulWidget {
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
-  final ApiService _apiService = ApiService();
   late TabController _mainTabController;
 
-  // Cache data
-  Map<String, int>? _stats;
-  List<HostApplication>? _applications;
-  List<Map<String, dynamic>>? _allHomestays;
-  List<Map<String, dynamic>>? _allUsers;
   String _applicationFilter = 'pending';
 
   @override
@@ -42,19 +38,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   void _handleLogout() async {
-    await Supabase.instance.client.auth.signOut();
+    await ref.read(authRepositoryProvider).signOut();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
-  void _refreshAll() {
-    setState(() {
-      _stats = null;
-      _applications = null;
-      _allHomestays = null;
-      _allUsers = null;
-    });
-  }
+  void _refreshAll() =>
+      ref.read(adminDashboardViewModelProvider.notifier).refresh();
 
   @override
   Widget build(BuildContext context) {
@@ -91,8 +81,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.admin_panel_settings_rounded,
-                color: Colors.white, size: 20),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 10),
           const Text(
@@ -164,7 +157,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         items[i]['label'] as String,
                         style: TextStyle(
                           fontSize: 10,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           color: isSelected
                               ? const Color(0xFFE07A5F)
                               : Colors.grey.shade400,
@@ -185,35 +180,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // TAB 1: TỔNG QUAN
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildOverviewTab() {
-    return FutureBuilder<Map<String, int>>(
-      future: _stats != null ? Future.value(_stats!) : _apiService.getDashboardStats(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-        }
-        final stats = snapshot.data ?? {};
-        if (snapshot.hasData) _stats = snapshot.data;
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildWelcomeCard(),
-              const SizedBox(height: 24),
-              const Text(
-                'Thống kê hệ thống',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
-              ),
-              const SizedBox(height: 16),
-              _buildStatsGrid(stats),
-              const SizedBox(height: 24),
-              _buildQuickActions(),
-            ],
+    return ref
+        .watch(adminDashboardViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
           ),
+          error: (error, _) => Center(child: Text('Lỗi tải dữ liệu: $error')),
+          data: (dashboard) {
+            final stats = dashboard.stats;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeCard(),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Thống kê hệ thống',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6D4C41),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildStatsGrid(stats),
+                  const SizedBox(height: 24),
+                  _buildQuickActions(),
+                ],
+              ),
+            );
+          },
         );
-      },
-    );
   }
 
   Widget _buildWelcomeCard() {
@@ -242,18 +242,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 32),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: Colors.white,
+              size: 32,
+            ),
           ),
           const SizedBox(width: 16),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Xin chào, Admin!',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  'Xin chào, Admin!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 SizedBox(height: 4),
-                Text('Hearth & Horizon — Bảng điều khiển quản trị',
-                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+                Text(
+                  'Hearth & Horizon — Bảng điều khiển quản trị',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -301,7 +313,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       },
       {
         'label': 'Tổng Homestay',
-        'value': (stats['active_homestays'] ?? 0) + (stats['inactive_homestays'] ?? 0),
+        'value':
+            (stats['active_homestays'] ?? 0) +
+            (stats['inactive_homestays'] ?? 0),
         'icon': Icons.apartment_rounded,
         'color': const Color(0xFF8B5CF6),
         'bg': const Color(0xFFF5F3FF),
@@ -343,7 +357,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               color: item['bg'] as Color,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(item['icon'] as IconData, color: item['color'] as Color, size: 20),
+            child: Icon(
+              item['icon'] as IconData,
+              color: item['color'] as Color,
+              size: 20,
+            ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,11 +369,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               Text(
                 '${item['value']}',
                 style: TextStyle(
-                    fontSize: 26, fontWeight: FontWeight.bold, color: item['color'] as Color),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: item['color'] as Color,
+                ),
               ),
               Text(
                 item['label'] as String,
-                style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
@@ -368,8 +393,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Thao tác nhanh',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41))),
+        const Text(
+          'Thao tác nhanh',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF6D4C41),
+          ),
+        ),
         const SizedBox(height: 12),
         _quickActionTile(
           icon: Icons.assignment_turned_in_rounded,
@@ -406,9 +437,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3)),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Row(
@@ -416,7 +448,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: 14),
@@ -424,14 +458,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14, color: Color(0xFF424242))),
-                  Text(subtitle, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Color(0xFF424242),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  ),
                 ],
               ),
             ),
-            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey.shade400),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 14,
+              color: Colors.grey.shade400,
+            ),
           ],
         ),
       ),
@@ -447,39 +493,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       children: [
         _buildApplicationFilterBar(),
         Expanded(
-          child: FutureBuilder<List<HostApplication>>(
-            future: _applications != null
-                ? Future.value(_applications!)
-                : _apiService.getHostApplications(
-                    status: _applicationFilter == 'all' ? null : _applicationFilter),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                    child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-              }
-              final list = snapshot.data ?? [];
-              if (snapshot.hasData) _applications = snapshot.data;
-
-              if (list.isEmpty) {
-                return _buildEmptyState(
-                  icon: Icons.assignment_outlined,
-                  message: 'Không có đơn nào',
-                  subtitle: 'Chưa có đơn đăng ký host trong trạng thái này',
-                );
-              }
-
-              return RefreshIndicator(
-                onRefresh: () async => setState(() => _applications = null),
-                color: const Color(0xFFE07A5F),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, i) => _buildApplicationCard(list[i]),
+          child: ref
+              .watch(adminDashboardViewModelProvider)
+              .when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
                 ),
-              );
-            },
-          ),
+                error: (error, _) =>
+                    Center(child: Text('Lỗi tải dữ liệu: $error')),
+                data: (dashboard) {
+                  final list = _applicationFilter == 'all'
+                      ? dashboard.applications
+                      : dashboard.applications
+                            .where((app) => app.status == _applicationFilter)
+                            .toList();
+
+                  if (list.isEmpty) {
+                    return _buildEmptyState(
+                      icon: Icons.assignment_outlined,
+                      message: 'Không có đơn nào',
+                      subtitle: 'Chưa có đơn đăng ký host trong trạng thái này',
+                    );
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () => ref
+                        .read(adminDashboardViewModelProvider.notifier)
+                        .refresh(),
+                    color: const Color(0xFFE07A5F),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, i) =>
+                          _buildApplicationCard(list[i]),
+                    ),
+                  );
+                },
+              ),
         ),
       ],
     );
@@ -504,14 +555,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             return GestureDetector(
               onTap: () => setState(() {
                 _applicationFilter = f['key']!;
-                _applications = null;
               }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFFE07A5F) : Colors.grey.shade100,
+                  color: isActive
+                      ? const Color(0xFFE07A5F)
+                      : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -554,9 +609,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 
     return GestureDetector(
       onTap: () async {
-        await Navigator.push(context,
-            MaterialPageRoute(builder: (_) => HostApplicationDetailScreen(application: app)));
-        setState(() => _applications = null);
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HostApplicationDetailScreen(application: app),
+          ),
+        );
+        await ref.read(adminDashboardViewModelProvider.notifier).refresh();
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -565,9 +624,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 3)),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Column(
@@ -579,9 +639,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   radius: 22,
                   backgroundColor: const Color(0xFFF7F4E1),
                   child: Text(
-                    app.fullName.isNotEmpty ? app.fullName[0].toUpperCase() : '?',
+                    app.fullName.isNotEmpty
+                        ? app.fullName[0].toUpperCase()
+                        : '?',
                     style: const TextStyle(
-                        color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 18),
+                      color: Color(0xFFE07A5F),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -589,25 +654,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(app.fullName,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF424242))),
-                      Text(app.email,
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                      Text(
+                        app.fullName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Color(0xFF424242),
+                        ),
+                      ),
+                      Text(
+                        app.email,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(statusIcon, size: 12, color: statusColor),
                       const SizedBox(width: 4),
-                      Text(app.statusLabel,
-                          style: TextStyle(
-                              fontSize: 11, fontWeight: FontWeight.bold, color: statusColor)),
+                      Text(
+                        app.statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -617,27 +703,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
-              Text(app.reason!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Text(
+                app.reason!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
             ],
             const SizedBox(height: 8),
             Row(
               children: [
                 Icon(Icons.access_time, size: 12, color: Colors.grey.shade400),
                 const SizedBox(width: 4),
-                Text(_formatDate(app.createdAt),
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                Text(
+                  _formatDate(app.createdAt),
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                ),
                 const Spacer(),
                 if (app.isPending)
                   Row(
                     children: [
-                      const Text('Xét duyệt',
-                          style: TextStyle(
-                              fontSize: 12, color: Color(0xFFE07A5F), fontWeight: FontWeight.w600)),
+                      const Text(
+                        'Xét duyệt',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFE07A5F),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.grey.shade400),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 12,
+                        color: Colors.grey.shade400,
+                      ),
                     ],
                   ),
               ],
@@ -652,52 +751,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   // TAB 3: QUẢN LÝ HOMESTAY (có search)
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildHomestaysTab() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _allHomestays != null
-          ? Future.value(_allHomestays!)
-          : _apiService.getAllHomestaysAdmin(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-        }
-        final allList = snapshot.data ?? [];
-        if (snapshot.hasData) _allHomestays = snapshot.data;
+    return ref
+        .watch(adminDashboardViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+          ),
+          error: (error, _) => Center(child: Text('Lỗi tải dữ liệu: $error')),
+          data: (dashboard) {
+            final allList = dashboard.homestays;
 
-        return _HomestaysTabContent(
-          allHomestays: allList,
-          apiService: _apiService,
-          onRefresh: () => setState(() {
-            _allHomestays = null;
-            _stats = null;
-          }),
+            return _HomestaysTabContent(
+              allHomestays: allList,
+              onRefresh: () =>
+                  ref.read(adminDashboardViewModelProvider.notifier).refresh(),
+            );
+          },
         );
-      },
-    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
   // TAB 4: QUẢN LÝ NGƯỜI DÙNG (sub-tab theo role + search + pagination)
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildUsersTab() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _allUsers != null ? Future.value(_allUsers!) : _apiService.getAllUsers(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-        }
-        final allUsers = snapshot.data ?? [];
-        if (snapshot.hasData) _allUsers = snapshot.data;
+    return ref
+        .watch(adminDashboardViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+          ),
+          error: (error, _) => Center(child: Text('Lỗi tải dữ liệu: $error')),
+          data: (dashboard) {
+            final allUsers = dashboard.users;
 
-        return _UsersTabContent(
-          allUsers: allUsers,
-          apiService: _apiService,
-          onRefresh: () => setState(() {
-            _allUsers = null;
-            _stats = null;
-          }),
+            return _UsersTabContent(
+              allUsers: allUsers,
+              onRefresh: () =>
+                  ref.read(adminDashboardViewModelProvider.notifier).refresh(),
+            );
+          },
         );
-      },
-    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -715,13 +808,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         children: [
           Icon(icon, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          Text(message,
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade500)),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade500,
+            ),
+          ),
           const SizedBox(height: 8),
-          Text(subtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+          ),
         ],
       ),
     );
@@ -735,22 +835,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
 // ─────────────────────────────────────────────────────────────────────────────
 // USERS TAB — Widget riêng để dùng StatefulWidget cho sub-tabs + pagination
 // ─────────────────────────────────────────────────────────────────────────────
-class _UsersTabContent extends StatefulWidget {
+class _UsersTabContent extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> allUsers;
-  final ApiService apiService;
   final VoidCallback onRefresh;
 
-  const _UsersTabContent({
-    required this.allUsers,
-    required this.apiService,
-    required this.onRefresh,
-  });
+  const _UsersTabContent({required this.allUsers, required this.onRefresh});
 
   @override
-  State<_UsersTabContent> createState() => _UsersTabContentState();
+  ConsumerState<_UsersTabContent> createState() => _UsersTabContentState();
 }
 
-class _UsersTabContentState extends State<_UsersTabContent>
+class _UsersTabContentState extends ConsumerState<_UsersTabContent>
     with SingleTickerProviderStateMixin {
   late TabController _roleTabController;
   final TextEditingController _searchController = TextEditingController();
@@ -771,11 +866,13 @@ class _UsersTabContentState extends State<_UsersTabContent>
   void initState() {
     super.initState();
     _roleTabController = TabController(length: _tabs.length, vsync: this);
-    _roleTabController.addListener(() => setState(() {
-          for (int i = 0; i < _tabs.length; i++) {
-            _currentPage[i] = 0;
-          }
-        }));
+    _roleTabController.addListener(
+      () => setState(() {
+        for (int i = 0; i < _tabs.length; i++) {
+          _currentPage[i] = 0;
+        }
+      }),
+    );
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -834,7 +931,10 @@ class _UsersTabContentState extends State<_UsersTabContent>
             unselectedLabelColor: Colors.grey.shade500,
             indicatorColor: const Color(0xFFE07A5F),
             indicatorWeight: 2.5,
-            labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            labelStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
             unselectedLabelStyle: const TextStyle(fontSize: 12),
             tabs: _tabs.map((t) {
               final role = t['role'] as String?;
@@ -848,14 +948,20 @@ class _UsersTabContentState extends State<_UsersTabContent>
                     Text(t['label'] as String),
                     const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '$count',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -872,7 +978,10 @@ class _UsersTabContentState extends State<_UsersTabContent>
               final role = _tabs[tabIdx]['role'] as String?;
               final users = _getFilteredUsers(role);
               final page = _currentPage[tabIdx] ?? 0;
-              final totalPages = (users.length / _pageSize).ceil().clamp(1, 9999);
+              final totalPages = (users.length / _pageSize).ceil().clamp(
+                1,
+                9999,
+              );
               final start = page * _pageSize;
               final end = (start + _pageSize).clamp(0, users.length);
               final pageUsers = users.sublist(start, end);
@@ -891,11 +1000,13 @@ class _UsersTabContentState extends State<_UsersTabContent>
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         itemCount: pageUsers.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, i) => _buildUserCard(pageUsers[i]),
+                        itemBuilder: (context, i) =>
+                            _buildUserCard(pageUsers[i]),
                       ),
                     ),
                     // Pagination
-                    if (totalPages > 1) _buildPagination(tabIdx, page, totalPages),
+                    if (totalPages > 1)
+                      _buildPagination(tabIdx, page, totalPages),
                   ],
                 ),
               );
@@ -915,10 +1026,18 @@ class _UsersTabContentState extends State<_UsersTabContent>
         decoration: InputDecoration(
           hintText: 'Tìm theo tên, email, số điện thoại...',
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-          prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade400, size: 20),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: Colors.grey.shade400,
+            size: 20,
+          ),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.clear_rounded, color: Colors.grey.shade400, size: 18),
+                  icon: Icon(
+                    Icons.clear_rounded,
+                    color: Colors.grey.shade400,
+                    size: 18,
+                  ),
                   onPressed: () => _searchController.clear(),
                 )
               : null,
@@ -940,20 +1059,29 @@ class _UsersTabContentState extends State<_UsersTabContent>
   }
 
   Widget _buildEmpty(String? role) {
-    String message = role == null ? 'Chưa có người dùng' : 'Chưa có người dùng trong nhóm này';
+    String message = role == null
+        ? 'Chưa có người dùng'
+        : 'Chưa có người dùng trong nhóm này';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.people_outline, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          Text(message,
-              style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey.shade500)),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade500,
+            ),
+          ),
           if (_searchQuery.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Thử tìm với từ khóa khác',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+            Text(
+              'Thử tìm với từ khóa khác',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            ),
           ],
         ],
       ),
@@ -974,7 +1102,9 @@ class _UsersTabContentState extends State<_UsersTabContent>
                 : null,
             icon: const Icon(Icons.chevron_left_rounded),
             iconSize: 22,
-            color: currentPage > 0 ? const Color(0xFFE07A5F) : Colors.grey.shade300,
+            color: currentPage > 0
+                ? const Color(0xFFE07A5F)
+                : Colors.grey.shade300,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
@@ -982,9 +1112,13 @@ class _UsersTabContentState extends State<_UsersTabContent>
           ...List.generate(totalPages, (i) {
             final isActive = i == currentPage;
             // Show only current page ±2
-            if (totalPages > 7 && (i - currentPage).abs() > 2 && i != 0 && i != totalPages - 1) {
+            if (totalPages > 7 &&
+                (i - currentPage).abs() > 2 &&
+                i != 0 &&
+                i != totalPages - 1) {
               if (i == 1 && currentPage > 3) return const Text(' ... ');
-              if (i == totalPages - 2 && currentPage < totalPages - 4) return const Text(' ... ');
+              if (i == totalPages - 2 && currentPage < totalPages - 4)
+                return const Text(' ... ');
               if ((i - currentPage).abs() > 2) return const SizedBox.shrink();
             }
             return GestureDetector(
@@ -995,16 +1129,22 @@ class _UsersTabContentState extends State<_UsersTabContent>
                 height: 32,
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFFE07A5F) : Colors.transparent,
+                  color: isActive
+                      ? const Color(0xFFE07A5F)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
-                  border: isActive ? null : Border.all(color: Colors.grey.shade200),
+                  border: isActive
+                      ? null
+                      : Border.all(color: Colors.grey.shade200),
                 ),
                 child: Center(
                   child: Text(
                     '${i + 1}',
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isActive
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                       color: isActive ? Colors.white : Colors.grey.shade600,
                     ),
                   ),
@@ -1019,7 +1159,9 @@ class _UsersTabContentState extends State<_UsersTabContent>
                 : null,
             icon: const Icon(Icons.chevron_right_rounded),
             iconSize: 22,
-            color: currentPage < totalPages - 1 ? const Color(0xFFE07A5F) : Colors.grey.shade300,
+            color: currentPage < totalPages - 1
+                ? const Color(0xFFE07A5F)
+                : Colors.grey.shade300,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           ),
@@ -1044,9 +1186,10 @@ class _UsersTabContentState extends State<_UsersTabContent>
         ),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
@@ -1056,14 +1199,17 @@ class _UsersTabContentState extends State<_UsersTabContent>
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundImage:
-                    user['avatar_url'] != null ? NetworkImage(user['avatar_url']) : null,
+                backgroundImage: user['avatar_url'] != null
+                    ? NetworkImage(user['avatar_url'])
+                    : null,
                 backgroundColor: const Color(0xFFF7F4E1),
                 child: user['avatar_url'] == null
                     ? Text(
                         (user['full_name'] ?? 'U')[0].toUpperCase(),
                         style: const TextStyle(
-                            color: Color(0xFFE07A5F), fontWeight: FontWeight.bold),
+                          color: Color(0xFFE07A5F),
+                          fontWeight: FontWeight.bold,
+                        ),
                       )
                     : null,
               ),
@@ -1096,30 +1242,45 @@ class _UsersTabContentState extends State<_UsersTabContent>
                       child: Text(
                         user['full_name'] ?? 'Chưa cập nhật',
                         style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            color: isLocked ? Colors.red.shade700 : const Color(0xFF424242)),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          color: isLocked
+                              ? Colors.red.shade700
+                              : const Color(0xFF424242),
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     if (isLocked)
                       Container(
                         margin: const EdgeInsets.only(left: 6),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.shade600,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('Đã khóa',
-                            style: TextStyle(
-                                color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                        child: const Text(
+                          'Đã khóa',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                   ],
                 ),
-                Text(user['email'] ?? '',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                Text(user['phone'] ?? 'Chưa có SĐT',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                Text(
+                  user['email'] ?? '',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+                Text(
+                  user['phone'] ?? 'Chưa có SĐT',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+                ),
               ],
             ),
           ),
@@ -1138,9 +1299,10 @@ class _UsersTabContentState extends State<_UsersTabContent>
                 child: Text(
                   roleConfig['label'] as String,
                   style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: roleConfig['color'] as Color),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: roleConfig['color'] as Color,
+                  ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -1148,12 +1310,17 @@ class _UsersTabContentState extends State<_UsersTabContent>
               GestureDetector(
                 onTap: () => _toggleLockUser(user),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: isLocked ? Colors.green.shade50 : Colors.red.shade50,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: isLocked ? Colors.green.shade300 : Colors.red.shade300,
+                      color: isLocked
+                          ? Colors.green.shade300
+                          : Colors.red.shade300,
                       width: 1,
                     ),
                   ),
@@ -1163,7 +1330,9 @@ class _UsersTabContentState extends State<_UsersTabContent>
                       Icon(
                         isLocked ? Icons.lock_open_rounded : Icons.lock_rounded,
                         size: 11,
-                        color: isLocked ? Colors.green.shade700 : Colors.red.shade600,
+                        color: isLocked
+                            ? Colors.green.shade700
+                            : Colors.red.shade600,
                       ),
                       const SizedBox(width: 3),
                       Text(
@@ -1171,7 +1340,9 @@ class _UsersTabContentState extends State<_UsersTabContent>
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: isLocked ? Colors.green.shade700 : Colors.red.shade600,
+                          color: isLocked
+                              ? Colors.green.shade700
+                              : Colors.red.shade600,
                         ),
                       ),
                     ],
@@ -1193,8 +1364,10 @@ class _UsersTabContentState extends State<_UsersTabContent>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(isLocked ? 'Mở khóa tài khoản?' : 'Khóa tài khoản?',
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          isLocked ? 'Mở khóa tài khoản?' : 'Khóa tài khoản?',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: Text(
           isLocked
               ? '$userName sẽ có thể đăng nhập bình thường trở lại.'
@@ -1203,16 +1376,23 @@ class _UsersTabContentState extends State<_UsersTabContent>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Hủy', style: TextStyle(color: Colors.grey.shade600))),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Hủy', style: TextStyle(color: Colors.grey.shade600)),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isLocked ? Colors.green.shade600 : Colors.red.shade600,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: isLocked
+                  ? Colors.green.shade600
+                  : Colors.red.shade600,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: Text(isLocked ? 'Mở khóa' : 'Khóa',
-                style: const TextStyle(color: Colors.white)),
+            child: Text(
+              isLocked ? 'Mở khóa' : 'Khóa',
+              style: const TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -1220,10 +1400,9 @@ class _UsersTabContentState extends State<_UsersTabContent>
 
     if (confirm == true) {
       try {
-        await Supabase.instance.client
-            .from('profiles')
-            .update({'is_locked': !isLocked})
-            .eq('id', user['id']);
+        await ref
+            .read(adminRepositoryProvider)
+            .setUserLocked(user['id'], !isLocked);
         widget.onRefresh();
       } catch (e) {
         if (!mounted) return;
@@ -1277,22 +1456,21 @@ class _UsersTabContentState extends State<_UsersTabContent>
 // ─────────────────────────────────────────────────────────────────────────────
 // HOMESTAYS TAB — Widget riêng để cô lập trạng thái search và điều hướng chi tiết
 // ─────────────────────────────────────────────────────────────────────────────
-class _HomestaysTabContent extends StatefulWidget {
+class _HomestaysTabContent extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>> allHomestays;
-  final ApiService apiService;
   final VoidCallback onRefresh;
 
   const _HomestaysTabContent({
     required this.allHomestays,
-    required this.apiService,
     required this.onRefresh,
   });
 
   @override
-  State<_HomestaysTabContent> createState() => _HomestaysTabContentState();
+  ConsumerState<_HomestaysTabContent> createState() =>
+      _HomestaysTabContentState();
 }
 
-class _HomestaysTabContentState extends State<_HomestaysTabContent> {
+class _HomestaysTabContentState extends ConsumerState<_HomestaysTabContent> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -1317,7 +1495,9 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
     return list.where((h) {
       final name = (h['name'] ?? '').toString().toLowerCase();
       final city = (h['city'] ?? '').toString().toLowerCase();
-      final hostName = (h['profiles']?['full_name'] ?? '').toString().toLowerCase();
+      final hostName = (h['profiles']?['full_name'] ?? '')
+          .toString()
+          .toLowerCase();
       return name.contains(_searchQuery) ||
           city.contains(_searchQuery) ||
           hostName.contains(_searchQuery);
@@ -1363,10 +1543,18 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
         decoration: InputDecoration(
           hintText: 'Tìm theo tên, thành phố, chủ nhà...',
           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-          prefixIcon: Icon(Icons.search_rounded, color: Colors.grey.shade400, size: 20),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: Colors.grey.shade400,
+            size: 20,
+          ),
           suffixIcon: _searchController.text.isNotEmpty
               ? IconButton(
-                  icon: Icon(Icons.clear_rounded, color: Colors.grey.shade400, size: 18),
+                  icon: Icon(
+                    Icons.clear_rounded,
+                    color: Colors.grey.shade400,
+                    size: 18,
+                  ),
                   onPressed: () => _searchController.clear(),
                 )
               : null,
@@ -1419,12 +1607,25 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
     );
   }
 
-  Widget _miniStatChip({required String label, required Color color, required Color bg}) {
+  Widget _miniStatChip({
+    required String label,
+    required Color color,
+    required Color bg,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(label,
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
     );
   }
 
@@ -1443,9 +1644,10 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
         ),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 3)),
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: ClipRRect(
@@ -1455,7 +1657,11 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
           child: InkWell(
             onTap: () {
               final homestayObj = Homestay.fromJson(homestay);
-              Navigator.pushNamed(context, '/homestay-detail', arguments: homestayObj);
+              Navigator.pushNamed(
+                context,
+                '/homestay-detail',
+                arguments: homestayObj,
+              );
             },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1468,12 +1674,18 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
                         height: 110,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        color: isActive ? null : Colors.white.withValues(alpha: 0.5),
+                        color: isActive
+                            ? null
+                            : Colors.white.withValues(alpha: 0.5),
                         colorBlendMode: isActive ? null : BlendMode.lighten,
                         errorBuilder: (_, __, ___) => Container(
                           height: 110,
                           color: Colors.grey.shade100,
-                          child: const Icon(Icons.home, color: Colors.grey, size: 40),
+                          child: const Icon(
+                            Icons.home,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
                         ),
                       ),
                       if (!isActive)
@@ -1481,16 +1693,22 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
                           top: 8,
                           left: 8,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade700,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text('Đã tắt',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold)),
+                            child: const Text(
+                              'Đã tắt',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
                     ],
@@ -1507,27 +1725,47 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
                             Text(
                               homestay['name'] ?? 'Homestay',
                               style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: isActive ? const Color(0xFF424242) : Colors.grey.shade500),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: isActive
+                                    ? const Color(0xFF424242)
+                                    : Colors.grey.shade500,
+                              ),
                             ),
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 12,
+                                  color: Colors.grey.shade400,
+                                ),
                                 const SizedBox(width: 2),
-                                Text(homestay['city'] ?? '',
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                                Text(
+                                  homestay['city'] ?? '',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 3),
                             Row(
                               children: [
-                                Icon(Icons.person_outline, size: 12, color: Colors.grey.shade400),
+                                Icon(
+                                  Icons.person_outline,
+                                  size: 12,
+                                  color: Colors.grey.shade400,
+                                ),
                                 const SizedBox(width: 2),
                                 Text(
-                                  homestay['profiles']?['full_name'] ?? 'Không rõ',
-                                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                                  homestay['profiles']?['full_name'] ??
+                                      'Không rõ',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                  ),
                                 ),
                               ],
                             ),
@@ -1553,24 +1791,37 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
         final confirm = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             title: Text(isActive ? 'Tắt Homestay?' : 'Kích hoạt Homestay?'),
-            content: Text(isActive
-                ? 'Homestay sẽ không còn hiển thị với khách hàng.'
-                : 'Homestay sẽ được hiển thị trở lại.'),
+            content: Text(
+              isActive
+                  ? 'Homestay sẽ không còn hiển thị với khách hàng.'
+                  : 'Homestay sẽ được hiển thị trở lại.',
+            ),
             actions: [
               TextButton(
-                  onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Hủy'),
+              ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE07A5F)),
-                child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE07A5F),
+                ),
+                child: const Text(
+                  'Xác nhận',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),
         );
         if (confirm == true) {
-          await widget.apiService.updateHomestayStatus(homestay['id'], newStatus);
+          await ref
+              .read(adminRepositoryProvider)
+              .updateHomestayStatus(homestay['id'], newStatus);
           widget.onRefresh();
         }
       },
@@ -1595,9 +1846,10 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
             Text(
               isActive ? 'Hoạt động' : 'Tắt',
               style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isActive ? Colors.green.shade700 : Colors.grey.shade600),
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.green.shade700 : Colors.grey.shade600,
+              ),
             ),
           ],
         ),
@@ -1610,16 +1862,28 @@ class _HomestaysTabContentState extends State<_HomestaysTabContent> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.home_work_outlined, size: 64, color: Color(0xFFE07A5F)),
+          const Icon(
+            Icons.home_work_outlined,
+            size: 64,
+            color: Color(0xFFE07A5F),
+          ),
           const SizedBox(height: 16),
           Text(
-            _searchQuery.isEmpty ? 'Chưa có homestay nào' : 'Không tìm thấy kết quả',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey.shade500),
+            _searchQuery.isEmpty
+                ? 'Chưa có homestay nào'
+                : 'Không tìm thấy kết quả',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade500,
+            ),
           ),
           if (_searchQuery.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text('Thử tìm với từ khóa khác',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+            Text(
+              'Thử tìm với từ khóa khác',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+            ),
           ],
         ],
       ),

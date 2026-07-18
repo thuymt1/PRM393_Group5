@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/common/viewmodels/edit_profile_view_model.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../utils/validators.dart';
 
 /// Màn hình chỉnh sửa thông tin cá nhân – Họ tên & Số điện thoại
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   final String currentName;
   final String currentPhone;
 
@@ -15,15 +16,14 @@ class EditProfileScreen extends StatefulWidget {
   });
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
-  final ApiService _apiService = ApiService();
-  bool _isLoading = false;
+  bool get _isLoading => ref.read(editProfileViewModelProvider).isLoading;
 
   @override
   void initState() {
@@ -42,13 +42,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
     try {
-      await _apiService.updateProfile(
-        fullName: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-      );
+      await ref
+          .read(editProfileViewModelProvider.notifier)
+          .save(
+            fullName: _nameController.text.trim(),
+            phone: _phoneController.text.trim(),
+          );
 
       if (!mounted) return;
 
@@ -57,7 +57,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           content: const Text('Cập nhật thông tin thành công! ✓'),
           backgroundColor: Colors.green.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
@@ -65,13 +67,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Cập nhật thất bại: ${e.toString()}'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -79,6 +82,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(editProfileViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -137,7 +141,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   // ─── Avatar section ───────────────────────────────────────────────────────
   Widget _buildAvatarSection() {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     final avatarUrl = user?.userMetadata?['avatar_url'] as String?;
 
     return Center(
@@ -160,7 +164,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 color: Color(0xFFE07A5F),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 16,
+              ),
             ),
           ),
         ],
@@ -221,7 +229,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, size: 16, color: Color(0xFF6D4C41)),
+                const Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: Color(0xFF6D4C41),
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Email không thể thay đổi sau khi đăng ký',
@@ -281,7 +293,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -315,7 +330,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ? const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
             )
           : const Text(
               'Lưu thay đổi',

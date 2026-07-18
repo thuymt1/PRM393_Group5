@@ -1,30 +1,49 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/customer/viewmodels/payment_view_model.dart';
 import '../../models/homestay_model.dart';
 
-class PaymentScreen extends StatefulWidget {
+class PaymentScreen extends ConsumerStatefulWidget {
   const PaymentScreen({super.key});
 
   @override
-  State<PaymentScreen> createState() => _PaymentScreenState();
+  ConsumerState<PaymentScreen> createState() => _PaymentScreenState();
 }
 
-class _PaymentScreenState extends State<PaymentScreen> {
-  int _selectedPaymentMethod = 0; // 0: MoMo, 1: ZaloPay, 2: Bank Transfer, 3: Credit Card
-  bool _isLoading = false;
-  final ApiService _apiService = ApiService();
+class _PaymentScreenState extends ConsumerState<PaymentScreen> {
+  int _selectedPaymentMethod =
+      0; // 0: MoMo, 1: ZaloPay, 2: Bank Transfer, 3: Credit Card
+  bool get _isLoading => ref.read(paymentViewModelProvider).isLoading;
 
   final List<Map<String, dynamic>> _paymentMethods = [
-    {'name': 'Ví MoMo', 'icon': Icons.account_balance_wallet_outlined, 'color': Colors.pink},
-    {'name': 'ZaloPay', 'icon': Icons.wallet_membership_outlined, 'color': Colors.blue},
-    {'name': 'Chuyển khoản ngân hàng', 'icon': Icons.account_balance_outlined, 'color': const Color(0xFF6D4C41)},
-    {'name': 'Thẻ tín dụng / Ghi nợ', 'icon': Icons.credit_card_outlined, 'color': const Color(0xFFE07A5F)},
+    {
+      'name': 'Ví MoMo',
+      'icon': Icons.account_balance_wallet_outlined,
+      'color': Colors.pink,
+    },
+    {
+      'name': 'ZaloPay',
+      'icon': Icons.wallet_membership_outlined,
+      'color': Colors.blue,
+    },
+    {
+      'name': 'Chuyển khoản ngân hàng',
+      'icon': Icons.account_balance_outlined,
+      'color': const Color(0xFF6D4C41),
+    },
+    {
+      'name': 'Thẻ tín dụng / Ghi nợ',
+      'icon': Icons.credit_card_outlined,
+      'color': const Color(0xFFE07A5F),
+    },
   ];
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(paymentViewModelProvider);
     // Nhận thông tin đặt phòng truyền qua arguments
-    final Map<String, dynamic> args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final Map<String, dynamic> args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final Homestay homestay = args['homestay'] as Homestay;
     final DateTime checkIn = args['checkIn'] as DateTime;
     final DateTime checkOut = args['checkOut'] as DateTime;
@@ -32,9 +51,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     final int nights = checkOut.difference(checkIn).inDays;
     final String checkInStr = '${checkIn.day}/${checkIn.month}/${checkIn.year}';
-    final String checkOutStr = '${checkOut.day}/${checkOut.month}/${checkOut.year}';
+    final String checkOutStr =
+        '${checkOut.day}/${checkOut.month}/${checkOut.year}';
 
-    final String totalPriceStr = totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    final String totalPriceStr = totalPrice.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
@@ -62,7 +85,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildOrderSummary(homestay, checkInStr, checkOutStr, nights, totalPriceStr),
+                _buildOrderSummary(
+                  homestay,
+                  checkInStr,
+                  checkOutStr,
+                  nights,
+                  totalPriceStr,
+                ),
                 const SizedBox(height: 32),
                 const Text(
                   'Chọn phương thức thanh toán',
@@ -75,7 +104,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(height: 16),
                 _buildPaymentMethodsList(),
                 const SizedBox(height: 40),
-                _buildPayButton(homestay.id, checkIn.toIso8601String(), checkOut.toIso8601String(), totalPrice),
+                _buildPayButton(
+                  homestay.id,
+                  checkIn.toIso8601String(),
+                  checkOut.toIso8601String(),
+                  totalPrice,
+                ),
                 const SizedBox(height: 24),
                 _buildSecurityNotice(),
               ],
@@ -85,9 +119,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             Container(
               color: Colors.black26,
               child: const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFE07A5F),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
               ),
             ),
         ],
@@ -95,7 +127,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildOrderSummary(Homestay homestay, String checkIn, String checkOut, int nights, String totalPriceStr) {
+  Widget _buildOrderSummary(
+    Homestay homestay,
+    String checkIn,
+    String checkOut,
+    int nights,
+    String totalPriceStr,
+  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -167,7 +205,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
               color: isSelected ? const Color(0xFFF7F4E1) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected ? const Color(0xFFE07A5F) : Colors.transparent,
+                color: isSelected
+                    ? const Color(0xFFE07A5F)
+                    : Colors.transparent,
                 width: 1.5,
               ),
             ),
@@ -186,15 +226,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   child: Text(
                     method['name'],
                     style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       color: const Color(0xFF424242),
                     ),
                   ),
                 ),
                 if (isSelected)
-                  const Icon(Icons.check_circle, color: Color(0xFFE07A5F), size: 24)
+                  const Icon(
+                    Icons.check_circle,
+                    color: Color(0xFFE07A5F),
+                    size: 24,
+                  )
                 else
-                  Icon(Icons.radio_button_off, color: Colors.grey.shade300, size: 24),
+                  Icon(
+                    Icons.radio_button_off,
+                    color: Colors.grey.shade300,
+                    size: 24,
+                  ),
               ],
             ),
           ),
@@ -203,9 +253,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildPayButton(int homestayId, String checkIn, String checkOut, double totalPrice) {
+  Widget _buildPayButton(
+    int homestayId,
+    String checkIn,
+    String checkOut,
+    double totalPrice,
+  ) {
     return ElevatedButton(
-      onPressed: _isLoading ? null : () => _handlePayment(homestayId, checkIn, checkOut, totalPrice),
+      onPressed: _isLoading
+          ? null
+          : () => _handlePayment(homestayId, checkIn, checkOut, totalPrice),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
         minimumSize: const Size(double.infinity, 60),
@@ -224,11 +281,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  void _handlePayment(int homestayId, String checkIn, String checkOut, double totalPrice) {
+  void _handlePayment(
+    int homestayId,
+    String checkIn,
+    String checkOut,
+    double totalPrice,
+  ) {
     if (_selectedPaymentMethod == 3) {
       // Thẻ tín dụng chưa hỗ trợ
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tính năng thanh toán qua thẻ tín dụng đang được phát triển.')),
+        const SnackBar(
+          content: Text(
+            'Tính năng thanh toán qua thẻ tín dụng đang được phát triển.',
+          ),
+        ),
       );
       return;
     }
@@ -236,11 +302,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _showQRCodeDialog(homestayId, checkIn, checkOut, totalPrice);
   }
 
-  void _showQRCodeDialog(int homestayId, String checkIn, String checkOut, double totalPrice) {
+  void _showQRCodeDialog(
+    int homestayId,
+    String checkIn,
+    String checkOut,
+    double totalPrice,
+  ) {
     final int amount = totalPrice.toInt();
     final String transferContent = 'ThanhToanBK$homestayId';
     // Ngân hàng MBBank (970422), STK: 0123456789
-    final String vietQrUrl = 'https://img.vietqr.io/image/970422-0123456789-compact2.jpg?amount=$amount&addInfo=$transferContent&accountName=NGUYEN%20VAN%20A';
+    final String vietQrUrl =
+        'https://img.vietqr.io/image/970422-0123456789-compact2.jpg?amount=$amount&addInfo=$transferContent&accountName=NGUYEN%20VAN%20A';
 
     final bool isMoMo = _selectedPaymentMethod == 0;
 
@@ -256,7 +328,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
             children: [
               Text(
                 isMoMo ? 'Quét mã MoMo để thanh toán' : 'Quét mã để thanh toán',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6D4C41),
+                ),
               ),
               const SizedBox(height: 16),
               Container(
@@ -266,51 +342,75 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: isMoMo 
-                    ? Image.asset(
-                        'assets/images/momo_qr.png',
-                        height: 250,
-                        width: 250,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => const SizedBox(
+                  child: isMoMo
+                      ? Image.asset(
+                          'assets/images/momo_qr.png',
                           height: 250,
                           width: 250,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                                SizedBox(height: 8),
-                                Text('Thiếu file momo_qr.png', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      )
-                    : Image.network(
-                        vietQrUrl,
-                        height: 250,
-                        width: 250,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const SizedBox(
-                            height: 250,
-                            width: 250,
-                            child: Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F))),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) => const SizedBox(
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                                height: 250,
+                                width: 250,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.broken_image,
+                                        size: 50,
+                                        color: Colors.grey,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Thiếu file momo_qr.png',
+                                        style: TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                        )
+                      : Image.network(
+                          vietQrUrl,
                           height: 250,
                           width: 250,
-                          child: Center(child: Icon(Icons.qr_code, size: 80, color: Colors.grey)),
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const SizedBox(
+                              height: 250,
+                              width: 250,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFE07A5F),
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                                height: 250,
+                                width: 250,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.qr_code,
+                                    size: 80,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
                         ),
-                      ),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
-                isMoMo ? 'Vui lòng kiểm tra kỹ số tiền và tên người nhận.' : 'Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống duyệt tự động nhanh nhất.',
+                isMoMo
+                    ? 'Vui lòng kiểm tra kỹ số tiền và tên người nhận.'
+                    : 'Vui lòng giữ nguyên nội dung chuyển khoản để hệ thống duyệt tự động nhanh nhất.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.grey, fontSize: 13),
               ),
@@ -318,14 +418,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(dialogContext); // Đóng pop-up QR
-                  _confirmPaymentAndCreateBooking(homestayId, checkIn, checkOut, totalPrice);
+                  _confirmPaymentAndCreateBooking(
+                    homestayId,
+                    checkIn,
+                    checkOut,
+                    totalPrice,
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Tôi đã thanh toán', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Tôi đã thanh toán',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               const SizedBox(height: 12),
               TextButton(
@@ -339,28 +452,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  void _confirmPaymentAndCreateBooking(int homestayId, String checkIn, String checkOut, double totalPrice) async {
-    setState(() => _isLoading = true);
-
+  void _confirmPaymentAndCreateBooking(
+    int homestayId,
+    String checkIn,
+    String checkOut,
+    double totalPrice,
+  ) async {
     try {
-      // Kiểm tra lần cuối trước khi tạo đơn (phòng trường hợp ai đó đặt trước)
-      final isAvailable = await _apiService.checkDateAvailability(
-        homestayId: homestayId,
-        checkIn: checkIn,
-        checkOut: checkOut,
-      );
+      final isAvailable = await ref
+          .read(paymentViewModelProvider.notifier)
+          .createBooking(
+            homestayId: homestayId,
+            checkIn: checkIn,
+            checkOut: checkOut,
+            totalPrice: totalPrice,
+          );
       if (!isAvailable) {
         if (!mounted) return;
-        setState(() => _isLoading = false);
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             title: const Row(
               children: [
                 Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
                 SizedBox(width: 12),
-                Text('Hết phòng', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'Hết phòng',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             content: const Text(
@@ -371,13 +493,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Navigator.popUntil(context, ModalRoute.withName('/booking-form'));
+                  Navigator.popUntil(
+                    context,
+                    ModalRoute.withName('/booking-form'),
+                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Chọn ngày khác', style: TextStyle(color: Colors.white)),
+                child: const Text(
+                  'Chọn ngày khác',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -385,13 +515,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
         return;
       }
 
-      // Thực hiện chèn booking vào Supabase qua ApiService
-      await _apiService.createBooking(
-        homestayId: homestayId,
-        checkIn: checkIn,
-        checkOut: checkOut,
-        totalPrice: totalPrice,
-      );
       if (!mounted) return;
       _showSuccessDialog(context);
     } catch (e) {
@@ -399,10 +522,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi tạo đơn đặt phòng: ${e.toString()}')),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
@@ -429,7 +548,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
               const SizedBox(height: 24),
               const Text(
                 'Thanh toán thành công!',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF6D4C41),
+                ),
               ),
               const SizedBox(height: 12),
               const Text(
@@ -452,9 +575,17 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF6D4C41),
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Đồng ý', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text(
+                  'Đồng ý',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),

@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 class AppTheme {
   // Brand Colors
   static const Color primaryBrown = Color(0xFF6D4C41); // #6D4C41
-  static const Color accentOrange = Color(0xFFE07A5F); // #E07A5F (Customer & Host Accent)
-  static const Color accentPurple = Color(0xFF8E24AA); // #8E24AA (Author Accent)
-  static const Color backgroundColor = Color(0xFFFDFAE7); // #FDFAE7 (Warm background)
+  static const Color accentOrange = Color(
+    0xFFE07A5F,
+  ); // #E07A5F (Customer & Host Accent)
+  static const Color accentPurple = Color(
+    0xFF8E24AA,
+  ); // #8E24AA (Author Accent)
+  static const Color backgroundColor = Color(
+    0xFFFDFAE7,
+  ); // #FDFAE7 (Warm background)
   static const Color surfaceWhite = Colors.white;
   static const Color textDark = Color(0xFF424242);
   static const Color textLight = Color(0xFF757575);
@@ -98,7 +104,7 @@ class AppTheme {
           color: Colors.black.withOpacity(0.04),
           blurRadius: blurRadius,
           offset: offset,
-        )
+        ),
       ],
     );
   }
