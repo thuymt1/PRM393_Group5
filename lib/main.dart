@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Auth screens
@@ -16,7 +17,6 @@ import 'screens/customer/booking_form_screen.dart';
 import 'screens/customer/booking_confirmation_page.dart';
 import 'screens/customer/payment_screen.dart';
 import 'screens/customer/my_bookings_screen.dart';
-import 'screens/customer/cancel_booking_page.dart';
 import 'screens/customer/create_review_page.dart';
 import 'screens/customer/customer_booking_detail_screen.dart';
 
@@ -59,11 +59,11 @@ void main() async {
 
   await Supabase.initialize(
     url: 'https://vsmlzmwgqyaduavrisme.supabase.co',
-    anonKey:
+    publishableKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZzbWx6bXdncXlhZHVhdnJpc21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTc0MTIsImV4cCI6MjA5NzIzMzQxMn0.MQqxeMaxp3i7uJXZ4kWN2UxyUmul3N5E7_XWZ2FIcfU',
   );
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

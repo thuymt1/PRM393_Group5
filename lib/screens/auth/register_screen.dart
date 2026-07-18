@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/auth/viewmodels/auth_view_model.dart';
 import '../../utils/validators.dart';
 
-class RegisterScreen extends StatefulWidget {
+class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Trạng thái ẩn/hiện mật khẩu
@@ -18,18 +19,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // Đồng ý điều khoản
   bool _agreeToTerms = false;
-  bool _isLoading = false;
+  bool get _isLoading => ref.read(authViewModelProvider).isLoading;
 
   // Password strength tracking
   int _passwordStrength = 0; // 0=Yếu, 1=Trung bình, 2=Mạnh
-
-  final ApiService _apiService = ApiService();
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -43,6 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -147,8 +148,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           controller: _confirmPasswordController,
           isPassword: true,
           obscureText: _obscureConfirmPassword,
-          onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-          validator: (val) => Validators.validateConfirmPassword(val, _passwordController.text),
+          onToggleVisibility: () => setState(
+            () => _obscureConfirmPassword = !_obscureConfirmPassword,
+          ),
+          validator: (val) =>
+              Validators.validateConfirmPassword(val, _passwordController.text),
         ),
       ],
     );
@@ -221,7 +225,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -280,14 +287,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: InputDecoration(
               hintText: '••••••••',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFE07A5F), size: 22),
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                color: Color(0xFFE07A5F),
+                size: 22,
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                   color: Colors.grey,
                   size: 20,
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -299,7 +311,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -326,7 +341,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // ─── Thanh đánh giá độ mạnh mật khẩu ────────────────────────────────────
   Widget _buildPasswordStrengthBar() {
     final labels = ['Yếu', 'Trung bình', 'Mạnh'];
-    final colors = [Colors.red.shade400, Colors.orange.shade400, Colors.green.shade500];
+    final colors = [
+      Colors.red.shade400,
+      Colors.orange.shade400,
+      Colors.green.shade500,
+    ];
     final filledSegments = _passwordStrength + 1; // 1, 2, hoặc 3 đoạn
 
     return Column(
@@ -390,7 +409,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
             value: _agreeToTerms,
             onChanged: (val) => setState(() => _agreeToTerms = val!),
             activeColor: const Color(0xFFE07A5F),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -442,7 +463,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ? const SizedBox(
               width: 24,
               height: 24,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
             )
           : const Text(
               'Đăng ký tài khoản',
@@ -464,7 +488,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: const Text('Vui lòng kiểm tra lại thông tin đã nhập'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -476,7 +502,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: const Text('Vui lòng đồng ý với Điều khoản dịch vụ'),
           backgroundColor: Colors.orange.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -487,35 +515,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final phone = _phoneController.text.trim();
     final password = _passwordController.text;
 
-    setState(() => _isLoading = true);
-
     try {
-      final authResponse = await _apiService.register(email, password);
-      final user = authResponse.user;
-
-      if (user != null) {
-        // Tạo profile trong table profiles
-        await _apiService.createProfile(
-          id: user.id,
-          email: email,
-          fullName: name,
-          phone: phone,
-        );
-
-        if (!mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Đăng ký tài khoản thành công! 🎉'),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      final result = await ref
+          .read(authViewModelProvider.notifier)
+          .register(
+            email: email,
+            password: password,
+            fullName: name,
+            phone: phone,
+          );
+      if (!mounted) return;
+      final message = result.requiresEmailConfirmation
+          ? 'Đăng ký thành công. Vui lòng xác nhận email rồi đăng nhập.'
+          : 'Đăng ký tài khoản thành công! 🎉';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
-        );
-        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
-      } else {
-        throw Exception('Không nhận được thông tin User');
-      }
+        ),
+      );
+      final destination = result.requiresEmailConfirmation
+          ? '/login'
+          : '/choose-role';
+      Navigator.pushNamedAndRemoveUntil(context, destination, (route) => false);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -523,13 +549,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text('Đăng ký thất bại: ${e.toString()}'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 

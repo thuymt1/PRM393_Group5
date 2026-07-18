@@ -38,6 +38,7 @@ dependencies:
   supabase_flutter: ^2.15.0
   intl: ^0.20.3
   image_picker: ^1.2.3
+  flutter_riverpod: ^3.0.3
 
 dev_dependencies:
   flutter_test:

@@ -1,23 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/api_service.dart';
+import '../../data/repositories/repository_providers.dart';
+import '../../features/auth/viewmodels/auth_view_model.dart';
 import '../../utils/validators.dart';
 
 import '../../utils/url_helper.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _obscureText = true;
-  bool _isLoading = false;
-  final ApiService _apiService = ApiService();
+  bool get _isLoading => ref.read(authViewModelProvider).isLoading;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   late final StreamSubscription<AuthState> _authSubscription;
@@ -29,20 +30,28 @@ class _LoginScreenState extends State<LoginScreen> {
     _checkAndRedirectRecovery();
 
     // 2. Lắng nghe sự kiện khôi phục mật khẩu trực tiếp tại màn hình Đăng nhập
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        if (mounted) {
-          // Xoá query parameters trên thanh địa chỉ trước khi chuyển trang
-          UrlHelper.clearQueryParameters();
-          Navigator.pushNamedAndRemoveUntil(context, '/reset-password', (route) => false);
-        }
-      }
-    });
+    _authSubscription = ref
+        .read(authRepositoryProvider)
+        .authStateChanges
+        .listen((data) {
+          if (data.event == AuthChangeEvent.passwordRecovery) {
+            if (mounted) {
+              // Xoá query parameters trên thanh địa chỉ trước khi chuyển trang
+              UrlHelper.clearQueryParameters();
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/reset-password',
+                (route) => false,
+              );
+            }
+          }
+        });
   }
 
   void _checkAndRedirectRecovery() {
     final uri = Uri.base;
-    if (uri.queryParameters['type'] == 'recovery' || uri.toString().contains('type=recovery')) {
+    if (uri.queryParameters['type'] == 'recovery' ||
+        uri.toString().contains('type=recovery')) {
       // Xoá tham số URL ngay lập tức để tránh vòng lặp nếu quay lại hoặc tải lại
       UrlHelper.clearQueryParameters();
       _waitForSessionAndRedirect();
@@ -55,9 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     Future.delayed(const Duration(milliseconds: 150), () {
       if (!mounted) return;
-      final session = Supabase.instance.client.auth.currentSession;
+      final session = ref.read(authRepositoryProvider).currentSession;
       if (session != null) {
-        Navigator.pushNamedAndRemoveUntil(context, '/reset-password', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/reset-password',
+          (route) => false,
+        );
       } else {
         // Tiếp tục đợi đến khi Supabase tải xong session
         _waitForSessionAndRedirect(retries + 1);
@@ -75,6 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -210,7 +224,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.grey,
                         size: 20,
                       ),
-                      onPressed: () => setState(() => _obscureText = !_obscureText),
+                      onPressed: () =>
+                          setState(() => _obscureText = !_obscureText),
                     )
                   : null,
               border: OutlineInputBorder(
@@ -223,7 +238,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -290,47 +308,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleLogin() async {
-    // Chạy validation toàn form trước khi gửi request
     if (!_formKey.currentState!.validate()) return;
 
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    setState(() => _isLoading = true);
-
     try {
-      await _apiService.login(email, password);
-      final profile = await _apiService.getMyProfile();
-
+      final destination = await ref
+          .read(authViewModelProvider.notifier)
+          .login(email, password);
       if (!mounted) return;
-
-      if (profile != null) {
-        final role = profile['role'];
-        if (role == 'admin') {
-          Navigator.pushNamedAndRemoveUntil(context, '/admin-dashboard', (route) => false);
-        } else if (role == 'customer') {
-          // Kiểm tra xem khách hàng này có đơn đăng ký host đang chờ duyệt hoặc bị từ chối không
-          final app = await _apiService.getMyHostApplication();
-          if (!mounted) return;
-          if (app != null && (app.status == 'pending' || app.status == 'rejected')) {
-            Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
-          } else {
-            Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
-          }
-        } else if (role == 'host') {
-          Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
-        } else if (role == 'author') {
-          Navigator.pushNamedAndRemoveUntil(context, '/author-dashboard', (route) => false);
-        } else if (role == 'pending_host') {
-          // Dự phòng cho trường hợp role DB vẫn là pending_host
-          Navigator.pushNamedAndRemoveUntil(context, '/host-pending', (route) => false);
-        } else {
-          Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
-        }
-      } else {
-        // Chưa có profile -> Mới đăng ký qua mạng xã hội hoặc lỗi chưa tạo profile
-        Navigator.pushNamedAndRemoveUntil(context, '/choose-role', (route) => false);
-      }
+      Navigator.pushNamedAndRemoveUntil(context, destination, (route) => false);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -338,13 +326,11 @@ class _LoginScreenState extends State<LoginScreen> {
           content: const Text('Tài khoản hoặc mật khẩu không chính xác'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
@@ -368,9 +354,13 @@ class _LoginScreenState extends State<LoginScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _socialIcon('https://img.icons8.com/color/48/000000/google-logo.png'),
+            _socialIcon(
+              'https://img.icons8.com/color/48/000000/google-logo.png',
+            ),
             const SizedBox(width: 24),
-            _socialIcon('https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png'),
+            _socialIcon(
+              'https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png',
+            ),
           ],
         ),
       ],

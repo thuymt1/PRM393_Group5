@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
+import '../../features/auth/viewmodels/auth_view_model.dart';
 import '../../utils/validators.dart';
 
 /// Màn hình đặt lại mật khẩu mới – được mở khi người dùng click link trong email
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  bool _isLoading = false;
+  bool get _isLoading => ref.read(authViewModelProvider).isLoading;
   bool _passwordChanged = false;
   int _passwordStrength = 0;
 
@@ -30,48 +33,34 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> _handleResetPassword() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-
     try {
       // Supabase tự động dùng session từ deep link để cập nhật mật khẩu
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: _passwordController.text),
-      );
+      await ref
+          .read(authViewModelProvider.notifier)
+          .updatePassword(_passwordController.text);
 
       if (!mounted) return;
       setState(() {
         _passwordChanged = true;
-        _isLoading = false;
       });
-    } on AuthException catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi: ${e.message}'),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Có lỗi xảy ra: ${e.toString()}'),
+          content: Text('Lỗi: $e'),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
   }
 
   Future<void> _signOutAndGoToLogin() async {
-    setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signOut();
+      await ref.read(authViewModelProvider.notifier).signOut();
     } catch (_) {}
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
@@ -79,6 +68,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -115,10 +105,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           Center(
             child: TextButton.icon(
               onPressed: _signOutAndGoToLogin,
-              icon: const Icon(Icons.arrow_back_ios_rounded, size: 14, color: Color(0xFFE07A5F)),
+              icon: const Icon(
+                Icons.arrow_back_ios_rounded,
+                size: 14,
+                color: Color(0xFFE07A5F),
+              ),
               label: const Text(
                 'Quay lại đăng nhập',
-                style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 14),
+                style: TextStyle(
+                  color: Color(0xFFE07A5F),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
           ),
@@ -129,7 +127,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   }
 
   Widget _buildHeader() {
-    final userEmail = Supabase.instance.client.auth.currentUser?.email ?? '';
+    final userEmail = ref.read(authRepositoryProvider).currentUser?.email ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,24 +218,41 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             validator: Validators.validatePassword,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             onChanged: (val) {
-              setState(() => _passwordStrength = Validators.passwordStrength(val));
+              setState(
+                () => _passwordStrength = Validators.passwordStrength(val),
+              );
             },
             decoration: InputDecoration(
               hintText: '••••••••',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFE07A5F), size: 22),
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                color: Color(0xFFE07A5F),
+                size: 22,
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey, size: 20,
+                  color: Colors.grey,
+                  size: 20,
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -263,23 +278,32 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   Widget _buildStrengthBar() {
     final labels = ['Yếu', 'Trung bình', 'Mạnh'];
-    final colors = [Colors.red.shade400, Colors.orange.shade400, Colors.green.shade500];
+    final colors = [
+      Colors.red.shade400,
+      Colors.orange.shade400,
+      Colors.green.shade500,
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          children: List.generate(3, (i) => Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: 5,
-              margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
-              decoration: BoxDecoration(
-                color: i <= _passwordStrength ? colors[_passwordStrength] : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(4),
+          children: List.generate(
+            3,
+            (i) => Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: 5,
+                margin: EdgeInsets.only(right: i < 2 ? 6 : 0),
+                decoration: BoxDecoration(
+                  color: i <= _passwordStrength
+                      ? colors[_passwordStrength]
+                      : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(4),
+                ),
               ),
             ),
-          )),
+          ),
         ),
         const SizedBox(height: 6),
         Text(
@@ -324,25 +348,42 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             controller: _confirmController,
             obscureText: _obscureConfirm,
             style: const TextStyle(fontSize: 15),
-            validator: (val) =>
-                Validators.validateConfirmPassword(val, _passwordController.text),
+            validator: (val) => Validators.validateConfirmPassword(
+              val,
+              _passwordController.text,
+            ),
             autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration: InputDecoration(
               hintText: '••••••••',
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: const Icon(Icons.lock_reset_outlined, color: Color(0xFFE07A5F), size: 22),
+              prefixIcon: const Icon(
+                Icons.lock_reset_outlined,
+                color: Color(0xFFE07A5F),
+                size: 22,
+              ),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureConfirm ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey, size: 20,
+                  color: Colors.grey,
+                  size: 20,
                 ),
-                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                onPressed: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: Color(0xFFE07A5F), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE07A5F),
+                  width: 1.5,
+                ),
               ),
               errorBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -373,12 +414,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       ),
       child: _isLoading
           ? const SizedBox(
-              width: 24, height: 24,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
             )
           : const Text(
               'Xác nhận mật khẩu mới',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
     );
   }
@@ -394,7 +443,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             color: Colors.green.shade50,
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.check_circle_rounded, size: 72, color: Colors.green.shade500),
+          child: Icon(
+            Icons.check_circle_rounded,
+            size: 72,
+            color: Colors.green.shade500,
+          ),
         ),
         const SizedBox(height: 32),
         const Text(
@@ -410,7 +463,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         Text(
           'Mật khẩu của bạn đã được cập nhật.\nHãy đăng nhập lại để tiếp tục.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 15, color: Colors.grey.shade600, height: 1.6),
+          style: TextStyle(
+            fontSize: 15,
+            color: Colors.grey.shade600,
+            height: 1.6,
+          ),
         ),
         const SizedBox(height: 48),
         ElevatedButton(
@@ -418,12 +475,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF6D4C41),
             minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             elevation: 2,
           ),
           child: const Text(
             'Đăng nhập ngay',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
         ),
         const SizedBox(height: 40),

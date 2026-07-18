@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
+import '../../features/auth/viewmodels/auth_view_model.dart';
 
 // Màn hình cho phép người dùng lựa chọn vai trò (Khách hàng / Chủ nhà / Tác giả)
-class ChooseRoleScreen extends StatefulWidget {
+class ChooseRoleScreen extends ConsumerStatefulWidget {
   const ChooseRoleScreen({super.key});
 
   @override
-  State<ChooseRoleScreen> createState() => _ChooseRoleScreenState();
+  ConsumerState<ChooseRoleScreen> createState() => _ChooseRoleScreenState();
 }
 
-class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
-  final ApiService _apiService = ApiService();
-  bool _isLoading = false;
+class _ChooseRoleScreenState extends ConsumerState<ChooseRoleScreen> {
+  bool get _isLoading => ref.read(authViewModelProvider).isLoading;
 
   void _selectRole(String role, String routeName) async {
-    setState(() => _isLoading = true);
     try {
-      await _apiService.updateProfileRole(role);
+      await ref.read(authViewModelProvider.notifier).updateRole(role);
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, routeName, (route) => false);
     } catch (e) {
@@ -24,11 +24,25 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi cập nhật vai trò: ${e.toString()}')),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
+  }
+
+  void _selectCustomer() {
+    // `profiles.role` mac dinh la customer. Khi Supabase bat xac nhan email,
+    // signUp tra ve user nhung chua co session/currentUser, nen khong the goi
+    // UPDATE theo RLS. Van cho phep vao luong Customer thay vi bao loi
+    // "Chua dang nhap"; cac thao tac can tai khoan se hoat dong sau khi user
+    // xac nhan email va dang nhap.
+    if (ref.read(authRepositoryProvider).currentUser == null) {
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/customer-home',
+        (route) => false,
+      );
+      return;
+    }
+
+    _selectRole('customer', '/customer-home');
   }
 
   // Điều hướng đến form đăng ký host (không kích hoạt ngay)
@@ -39,13 +53,19 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(authViewModelProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Màu nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Màu nền nhẹ (Surface color từ design system)
       body: SafeArea(
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 40.0,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -59,7 +79,7 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
                     Icons.person_outline,
                     'Khách hàng',
                     'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
-                    () => _selectRole('customer', '/customer-home'),
+                    _selectCustomer,
                   ),
                   const SizedBox(height: 16),
                   _roleCard(
@@ -86,9 +106,7 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
               Container(
                 color: Colors.black26,
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFFE07A5F),
-                  ),
+                  child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
                 ),
               ),
           ],
@@ -106,10 +124,12 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
         shape: BoxShape.circle, // Định dạng khung hình tròn
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFE07A5F).withOpacity(0.15), // Bóng đổ mang sắc cam nhạt
+            color: const Color(
+              0xFFE07A5F,
+            ).withOpacity(0.15), // Bóng đổ mang sắc cam nhạt
             blurRadius: 20,
             spreadRadius: 5,
-          )
+          ),
         ],
       ),
       child: const Icon(
@@ -130,7 +150,8 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: Color(0xFF6D4C41), // Tông màu nâu đậm chủ đạo
-            fontFamily: 'BeVietnamPro', // Cần cấu hình font này trong file pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Cần cấu hình font này trong file pubspec.yaml
           ),
         ),
         const SizedBox(height: 12),
@@ -149,26 +170,32 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
 
   // Hàm tùy biến dùng chung để tạo thẻ lựa chọn vai trò (Card) dạng hàng ngang (Row)
   Widget _roleCard(
-      BuildContext context,
-      IconData icon,
-      String title,
-      String sub,
-      VoidCallback onTap,
-      ) {
+    BuildContext context,
+    IconData icon,
+    String title,
+    String sub,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
-      onTap: _isLoading ? null : onTap, // Kích hoạt hành động chuyển màn hình khi bấm vào thẻ
+      onTap: _isLoading
+          ? null
+          : onTap, // Kích hoạt hành động chuyển màn hình khi bấm vào thẻ
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24), // Bo tròn góc thẻ 24 đơn vị
-          border: Border.all(color: Colors.grey.shade100), // Đường viền xám siêu mảnh
+          border: Border.all(
+            color: Colors.grey.shade100,
+          ), // Đường viền xám siêu mảnh
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04), // Đổ bóng nhẹ phía dưới tạo chiều sâu
+              color: Colors.black.withOpacity(
+                0.04,
+              ), // Đổ bóng nhẹ phía dưới tạo chiều sâu
               blurRadius: 15,
               offset: const Offset(0, 8),
-            )
+            ),
           ],
         ),
         child: Row(
@@ -177,7 +204,9 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7F4E1), // Nền màu be nhạt làm nổi bật Icon
+                color: const Color(
+                  0xFFF7F4E1,
+                ), // Nền màu be nhạt làm nổi bật Icon
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(icon, color: const Color(0xFFE07A5F), size: 32),

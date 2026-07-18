@@ -7,6 +7,8 @@ import '../models/host_application_model.dart';
 class ApiService {
   final _supabase = Supabase.instance.client;
 
+  bool get isAuthenticated => _supabase.auth.currentUser != null;
+
   // --- HỆ THỐNG XÁC THỰC & PROFILE ---
 
   // 1. Đăng nhập
@@ -19,10 +21,7 @@ class ApiService {
 
   // 2. Đăng ký tài khoản
   Future<AuthResponse> register(String email, String password) async {
-    return await _supabase.auth.signUp(
-      email: email,
-      password: password,
-    );
+    return await _supabase.auth.signUp(email: email, password: password);
   }
 
   // 3. Tạo Profile mới sau khi đăng ký
@@ -45,7 +44,7 @@ class ApiService {
   Future<Map<String, dynamic>?> getMyProfile() async {
     final user = _supabase.auth.currentUser;
     if (user == null) return null;
-    
+
     return await getProfileById(user.id);
   }
 
@@ -83,12 +82,16 @@ class ApiService {
       // 23505: Duplicate key -> Có nghĩa là profile ĐÃ TỒN TẠI (do RegisterScreen tạo)
       if (e.code == '23505') {
         // Chuyển sang chế độ cập nhật
-        final res = await _supabase.from('profiles').update({
-          'role': role,
-        }).eq('id', user.id).select();
-        
+        final res = await _supabase
+            .from('profiles')
+            .update({'role': role})
+            .eq('id', user.id)
+            .select();
+
         if (res.isEmpty) {
-          throw Exception('Không thể cập nhật vai trò do bị chặn bởi RLS. Vui lòng cấp quyền UPDATE cho bảng profiles.');
+          throw Exception(
+            'Không thể cập nhật vai trò do bị chặn bởi RLS. Vui lòng cấp quyền UPDATE cho bảng profiles.',
+          );
         }
       } else {
         rethrow;
@@ -97,7 +100,6 @@ class ApiService {
       rethrow;
     }
   }
-
 
   // --- PHÂN HỆ HOMESTAY & TIỆN ÍCH ---
 
@@ -167,7 +169,7 @@ class ApiService {
           ''')
           .eq('host_id', user.id)
           .order('id', ascending: false);
-      
+
       return (response as List).map((json) => Homestay.fromJson(json)).toList();
     } catch (e) {
       print('Error fetching my homestays: $e');
@@ -176,26 +178,30 @@ class ApiService {
   }
 
   // Hàm upload ảnh lên Supabase Storage (Hỗ trợ cả Web & Mobile)
-  Future<String> uploadHomestayImage(Uint8List fileBytes, String fileName) async {
+  Future<String> uploadHomestayImage(
+    Uint8List fileBytes,
+    String fileName,
+  ) async {
     final uniqueName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
-    await _supabase.storage.from('homestays').uploadBinary(
-      uniqueName, 
-      fileBytes,
-      fileOptions: const FileOptions(contentType: 'image/jpeg'),
-    );
+    await _supabase.storage
+        .from('homestays')
+        .uploadBinary(
+          uniqueName,
+          fileBytes,
+          fileOptions: const FileOptions(contentType: 'image/jpeg'),
+        );
     return _supabase.storage.from('homestays').getPublicUrl(uniqueName);
   }
 
   // 8. Đăng tin Homestay mới
-  Future<void> createHomestay(Map<String, dynamic> homestayData, String imageUrl) async {
+  Future<void> createHomestay(
+    Map<String, dynamic> homestayData,
+    String imageUrl,
+  ) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Chưa đăng nhập');
 
-    final data = {
-      ...homestayData,
-      'host_id': user.id,
-      'status': 'active',
-    };
+    final data = {...homestayData, 'host_id': user.id, 'status': 'active'};
 
     // Chèn homestay mới
     final response = await _supabase
@@ -203,7 +209,7 @@ class ApiService {
         .insert(data)
         .select('id')
         .single();
-    
+
     final int newHomestayId = response['id'];
 
     // Chèn hình ảnh homestay (ảnh vừa chọn)
@@ -223,7 +229,6 @@ class ApiService {
     }
   }
 
-
   // --- PHÂN HỆ ĐẶT PHÒNG (BOOKINGS) ---
 
   // Kiểm tra ngày có trống không (chống trùng lịch)
@@ -242,8 +247,9 @@ class ApiService {
           .not('status', 'in', '(cancelled,rejected,cancel_pending,refunded)')
           .lt('check_in', checkOut)
           .gt('check_out', checkIn);
-      
-      return (response as List).isEmpty; // true = available, false = already booked
+
+      return (response as List)
+          .isEmpty; // true = available, false = already booked
     } catch (e) {
       print('Error checking availability: $e');
       return false;
@@ -258,11 +264,15 @@ class ApiService {
           .select('check_in, check_out')
           .eq('homestay_id', homestayId)
           .not('status', 'in', '(cancelled,rejected,cancel_pending,refunded)');
-      
-      return (response as List).map((json) => {
-        'check_in': json['check_in'] as String,
-        'check_out': json['check_out'] as String,
-      }).toList();
+
+      return (response as List)
+          .map(
+            (json) => {
+              'check_in': json['check_in'] as String,
+              'check_out': json['check_out'] as String,
+            },
+          )
+          .toList();
     } catch (e) {
       print('Error fetching booked dates: $e');
       return [];
@@ -287,7 +297,9 @@ class ApiService {
       checkOut: checkOut,
     );
     if (!isAvailable) {
-      throw Exception('Homestay đã có người đặt trong khoảng thời gian này. Vui lòng chọn ngày khác.');
+      throw Exception(
+        'Homestay đã có người đặt trong khoảng thời gian này. Vui lòng chọn ngày khác.',
+      );
     }
 
     await _supabase.from('bookings').insert({
@@ -337,8 +349,10 @@ class ApiService {
           .from('homestays')
           .select('id')
           .eq('host_id', user.id);
-      
-      final homestayIds = (homestayList as List).map((h) => h['id'] as int).toList();
+
+      final homestayIds = (homestayList as List)
+          .map((h) => h['id'] as int)
+          .toList();
       if (homestayIds.isEmpty) return [];
 
       // Truy vấn bookings tương ứng
@@ -352,7 +366,7 @@ class ApiService {
           ''')
           .inFilter('homestay_id', homestayIds)
           .order('created_at', ascending: false);
-          
+
       final bookings = List<Map<String, dynamic>>.from(bookingsResponse);
       for (var booking in bookings) {
         if (booking['customer_id'] != null) {
@@ -373,12 +387,13 @@ class ApiService {
         .update({'status': status})
         .eq('id', bookingId)
         .select();
-        
+
     if ((response as List).isEmpty) {
-      throw Exception('Không có quyền cập nhật hoặc không tìm thấy đơn phòng (Lỗi RLS)');
+      throw Exception(
+        'Không có quyền cập nhật hoặc không tìm thấy đơn phòng (Lỗi RLS)',
+      );
     }
   }
-
 
   // --- PHÂN HỆ REVIEW & BÀI VIẾT (ARTICLES) ---
 
@@ -426,21 +441,18 @@ class ApiService {
     });
   }
 
-
   // --- HỆ THỐNG QUÊN MẬT KHẨU & CẬP NHẬT PROFILE ---
 
   // 17. Gửi email đặt lại mật khẩu (link mở thẳng app qua Deep Link hoặc Web)
   Future<void> sendPasswordResetOtp(String email) async {
-    String redirectTo = 'io.supabase.test_screen_project://login-callback/?type=recovery';
+    String redirectTo =
+        'io.supabase.test_screen_project://login-callback/?type=recovery';
     if (kIsWeb) {
       // Trên Web, tự động lấy origin và cổng hiện tại của trang đang chạy
       redirectTo = '${Uri.base.origin}/?type=recovery';
     }
 
-    await _supabase.auth.resetPasswordForEmail(
-      email,
-      redirectTo: redirectTo,
-    );
+    await _supabase.auth.resetPasswordForEmail(email, redirectTo: redirectTo);
   }
 
   // 18. Cập nhật thông tin Profile (tên, số điện thoại, avatar)
@@ -463,9 +475,11 @@ class ApiService {
         .update(updates)
         .eq('id', user.id)
         .select();
-        
+
     if (res.isEmpty) {
-      throw Exception('Không thể cập nhật hồ sơ do bị chặn bởi RLS. Vui lòng cấp quyền UPDATE cho bảng profiles.');
+      throw Exception(
+        'Không thể cập nhật hồ sơ do bị chặn bởi RLS. Vui lòng cấp quyền UPDATE cho bảng profiles.',
+      );
     }
   }
 
@@ -481,7 +495,7 @@ class ApiService {
           .from('favorites')
           .select('homestay_id')
           .eq('user_id', user.id);
-      
+
       return (response as List).map((item) {
         // Ép kiểu an toàn, tránh lỗi cast String to int
         return int.tryParse(item['homestay_id'].toString()) ?? 0;
@@ -543,7 +557,8 @@ class ApiService {
           if (b['status'] == 'pending') {
             notifications.add({
               'title': 'Yêu cầu thanh toán mới',
-              'desc': 'Khách hàng ${b['profiles']?['full_name'] ?? 'Ẩn danh'} đã báo chuyển khoản đặt phòng tại ${b['homestays']?['name']}. Vui lòng kiểm tra tài khoản và xác nhận.',
+              'desc':
+                  'Khách hàng ${b['profiles']?['full_name'] ?? 'Ẩn danh'} đã báo chuyển khoản đặt phòng tại ${b['homestays']?['name']}. Vui lòng kiểm tra tài khoản và xác nhận.',
               'time': b['created_at'],
               'type': 'payment_pending',
               'is_unread': true,
@@ -551,7 +566,8 @@ class ApiService {
           } else if (b['status'] == 'confirmed') {
             notifications.add({
               'title': 'Đặt phòng đã xác nhận',
-              'desc': 'Bạn đã xác nhận đặt phòng cho ${b['profiles']?['full_name'] ?? 'Ẩn danh'} tại ${b['homestays']?['name']}.',
+              'desc':
+                  'Bạn đã xác nhận đặt phòng cho ${b['profiles']?['full_name'] ?? 'Ẩn danh'} tại ${b['homestays']?['name']}.',
               'time': b['created_at'],
               'type': 'payment_confirmed',
               'is_unread': false,
@@ -565,15 +581,17 @@ class ApiService {
           if (b['status'] == 'confirmed') {
             notifications.add({
               'title': 'Thanh toán hoàn tất!',
-              'desc': 'Đơn đặt phòng tại ${b['homestays']?['name'] ?? 'homestay'} đã được chủ nhà xác nhận. Chúc bạn có một chuyến đi vui vẻ!',
+              'desc':
+                  'Đơn đặt phòng tại ${b['homestays']?['name'] ?? 'homestay'} đã được chủ nhà xác nhận. Chúc bạn có một chuyến đi vui vẻ!',
               'time': b['created_at'],
               'type': 'payment_confirmed',
               'is_unread': true,
             });
           } else if (b['status'] == 'pending') {
-             notifications.add({
+            notifications.add({
               'title': 'Đang chờ chủ nhà xác nhận',
-              'desc': 'Bạn đã gửi yêu cầu thanh toán cho ${b['homestays']?['name'] ?? 'homestay'}. Vui lòng chờ chủ nhà xác nhận giao dịch.',
+              'desc':
+                  'Bạn đã gửi yêu cầu thanh toán cho ${b['homestays']?['name'] ?? 'homestay'}. Vui lòng chờ chủ nhà xác nhận giao dịch.',
               'time': b['created_at'],
               'type': 'payment_pending',
               'is_unread': false,
@@ -581,7 +599,8 @@ class ApiService {
           } else if (b['status'] == 'rejected') {
             notifications.add({
               'title': 'Đặt phòng thất bại',
-              'desc': 'Chủ nhà đã từ chối yêu cầu đặt phòng tại ${b['homestays']?['name'] ?? 'homestay'}.',
+              'desc':
+                  'Chủ nhà đã từ chối yêu cầu đặt phòng tại ${b['homestays']?['name'] ?? 'homestay'}.',
               'time': b['created_at'],
               'type': 'payment_rejected',
               'is_unread': false,
@@ -589,7 +608,7 @@ class ApiService {
           }
         }
       }
-      
+
       // Sắp xếp thông báo mới nhất lên đầu
       notifications.sort((a, b) {
         DateTime timeA = DateTime.parse(a['time']);
@@ -603,7 +622,6 @@ class ApiService {
       return [];
     }
   }
-
 
   // ─────────────────────────────────────────────────────────────────────────
   // --- PHÂN HỆ ĐƠN ĐĂNG KÝ HOST (HOST APPLICATIONS) ---
@@ -646,10 +664,7 @@ class ApiService {
     // Cập nhật profile: cập nhật thông tin họ tên, SĐT mới (giữ nguyên role là customer)
     await _supabase
         .from('profiles')
-        .update({
-          'full_name': fullName,
-          'phone': phone,
-        })
+        .update({'full_name': fullName, 'phone': phone})
         .eq('id', user.id);
   }
 
@@ -682,9 +697,7 @@ class ApiService {
   // 25. [ADMIN] Lấy tất cả đơn đăng ký host (có thể lọc theo status)
   Future<List<HostApplication>> getHostApplications({String? status}) async {
     try {
-      var query = _supabase
-          .from('host_applications')
-          .select();
+      var query = _supabase.from('host_applications').select();
 
       if (status != null) {
         query = query.eq('status', status);
@@ -711,19 +724,19 @@ class ApiService {
     if (admin == null) throw Exception('Chưa đăng nhập');
 
     // Cập nhật trạng thái đơn
-    await _supabase.from('host_applications').update({
-      'status': status,
-      'admin_note': adminNote,
-      'reviewed_at': DateTime.now().toIso8601String(),
-      'reviewed_by': admin.id,
-    }).eq('id', applicationId);
+    await _supabase
+        .from('host_applications')
+        .update({
+          'status': status,
+          'admin_note': adminNote,
+          'reviewed_at': DateTime.now().toIso8601String(),
+          'reviewed_by': admin.id,
+        })
+        .eq('id', applicationId);
 
     // Cập nhật role người dùng tương ứng
     final newRole = status == 'approved' ? 'host' : 'customer';
-    await _supabase
-        .from('profiles')
-        .update({'role': newRole})
-        .eq('id', userId);
+    await _supabase.from('profiles').update({'role': newRole}).eq('id', userId);
   }
 
   // 27. [ADMIN] Lấy tất cả người dùng
@@ -800,4 +813,3 @@ class ApiService {
     }
   }
 }
-
