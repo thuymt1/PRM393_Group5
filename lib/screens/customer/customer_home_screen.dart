@@ -160,8 +160,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   Widget _buildExploreTab() {
     return RefreshIndicator(
       onRefresh: () async {
-        await _loadHomestays(reset: true);
-        await _loadFavorites();
+        await ref.read(customerHomeViewModelProvider.notifier).refresh();
       },
       color: const Color(0xFFE07A5F),
       child: CustomScrollView(

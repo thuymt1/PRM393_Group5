@@ -53,7 +53,9 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
 
             return RefreshIndicator(
               onRefresh: () async {
-                setState(() {});
+                await ref
+                    .read(authorDashboardViewModelProvider.notifier)
+                    .refresh();
               },
               color: purpleColor,
               child: SingleChildScrollView(
@@ -514,7 +516,9 @@ class _AuthorDashboardScreenState extends ConsumerState<AuthorDashboardScreen> {
               ),
               body: RefreshIndicator(
                 onRefresh: () async {
-                  setState(() {});
+                  await ref
+                      .read(authorDashboardViewModelProvider.notifier)
+                      .refresh();
                 },
                 color: color,
                 child: articles.isEmpty

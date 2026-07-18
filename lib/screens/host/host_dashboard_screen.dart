@@ -109,7 +109,9 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
 
             return RefreshIndicator(
               onRefresh: () async {
-                setState(() {});
+                await ref
+                    .read(hostDashboardViewModelProvider.notifier)
+                    .refresh();
               },
               color: const Color(0xFFE07A5F),
               child: SingleChildScrollView(
@@ -610,7 +612,9 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
               ),
               body: RefreshIndicator(
                 onRefresh: () async {
-                  setState(() {});
+                  await ref
+                      .read(hostDashboardViewModelProvider.notifier)
+                      .refresh();
                 },
                 color: const Color(0xFFE07A5F),
                 child: bookings.isEmpty
@@ -677,7 +681,9 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
               ),
               body: RefreshIndicator(
                 onRefresh: () async {
-                  setState(() {});
+                  await ref
+                      .read(hostDashboardViewModelProvider.notifier)
+                      .refresh();
                 },
                 color: const Color(0xFFE07A5F),
                 child: homestays.isEmpty
