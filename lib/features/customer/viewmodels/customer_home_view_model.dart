@@ -114,13 +114,6 @@ class CustomerHomeViewModel extends AsyncNotifier<CustomerHomeState> {
     }
   }
 
-  Future<void> cancelBooking(int bookingId) async {
-    await ref
-        .read(bookingRepositoryProvider)
-        .updateStatus(bookingId, 'cancelled');
-    await refresh();
-  }
-
   Future<List<Homestay>> _loadHomes({
     required int page,
     required String search,

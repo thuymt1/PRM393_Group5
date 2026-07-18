@@ -1,6 +1,10 @@
-# test_screen_project
+# Hearth & Horizon
 
-A new Flutter project.
+Ứng dụng đặt homestay Flutter sử dụng Supabase và Riverpod MVVM.
+
+## Luồng hủy và hoàn tiền demo
+
+Các nút xác nhận của Customer, Host và Admin đang dùng state Riverpod trong bộ nhớ, không yêu cầu migration Supabase. Trạng thái chỉ tồn tại trong phiên ứng dụng hiện tại và không đồng bộ giữa các thiết bị.
 
 ## Getting Started
 

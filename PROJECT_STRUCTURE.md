@@ -52,6 +52,8 @@ lib/
 │   │   ├── models/
 │   │   ├── viewmodels/
 │   │   └── views/
+│   ├── payments/
+│   │   └── models/
 │   └── common/
 │       ├── models/
 │       ├── viewmodels/
@@ -250,3 +252,16 @@ Các màn hình đã nhận dependency qua Riverpod repository và không còn g
 5. Admin, Notification và các màn Common.
 
 `services/api_service.dart` đã được xóa sau khi toàn bộ lời gọi dữ liệu được chuyển sang repository.
+
+## 9. Luồng xác nhận hủy và hoàn tiền demo
+
+Luồng xác nhận hiện được quản lý bằng `CancellationViewModel` và state Riverpod trong bộ nhớ:
+
+1. Customer gửi và xác nhận yêu cầu hủy.
+2. Host xác nhận đã nhận yêu cầu.
+3. Admin xác nhận yêu cầu và đánh dấu đã hoàn tiền bên ngoài hệ thống.
+4. Customer xác nhận đã nhận tiền hoàn.
+5. Admin gửi thông báo cho Host.
+6. Host xác nhận hủy cuối cùng và giao diện đánh dấu phòng có thể mở lại.
+
+Mức hoàn 100%, 70%, 30% hoặc 0% được tính bởi `RefundPolicy`. Luồng demo này không tạo bảng, không chạy migration và không cập nhật trạng thái hoàn tiền lên Supabase. State mất khi ứng dụng khởi động lại và không đồng bộ giữa nhiều thiết bị.

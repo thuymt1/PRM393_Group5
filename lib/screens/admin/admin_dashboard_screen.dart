@@ -5,6 +5,7 @@ import '../../features/admin/viewmodels/admin_dashboard_view_model.dart';
 import '../../models/host_application_model.dart';
 import '../../models/homestay_model.dart';
 import 'host_application_detail_screen.dart';
+import 'admin_finance_tab.dart';
 
 /// Admin Dashboard - 4 tab chính + Tab Người dùng có sub-tab theo role
 class AdminDashboardScreen extends ConsumerStatefulWidget {
@@ -25,7 +26,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _mainTabController = TabController(length: 4, vsync: this);
+    _mainTabController = TabController(length: 5, vsync: this);
     _mainTabController.addListener(() {
       setState(() => _currentIndex = _mainTabController.index);
     });
@@ -43,8 +44,9 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
-  void _refreshAll() =>
-      ref.read(adminDashboardViewModelProvider.notifier).refresh();
+  void _refreshAll() {
+    ref.read(adminDashboardViewModelProvider.notifier).refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +61,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
           _buildApplicationsTab(),
           _buildHomestaysTab(),
           _buildUsersTab(),
+          const AdminFinanceTab(),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
@@ -119,6 +122,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
       {'icon': Icons.assignment_rounded, 'label': 'Đơn Host'},
       {'icon': Icons.home_work_rounded, 'label': 'Homestay'},
       {'icon': Icons.people_rounded, 'label': 'Người dùng'},
+      {'icon': Icons.currency_exchange, 'label': 'Hủy/hoàn'},
     ];
 
     return Container(
@@ -416,6 +420,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
           subtitle: 'Bật/tắt trạng thái hoạt động',
           color: const Color(0xFF10B981),
           onTap: () => _mainTabController.animateTo(2),
+        ),
+        const SizedBox(height: 8),
+        _quickActionTile(
+          icon: Icons.payments_rounded,
+          title: 'Xử lý hủy và hoàn tiền',
+          subtitle: 'Xác nhận yêu cầu và gửi thông báo cho Host',
+          color: const Color(0xFF3B82F6),
+          onTap: () => _mainTabController.animateTo(4),
         ),
       ],
     );

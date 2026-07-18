@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/repository_providers.dart';
+import '../../features/customer/viewmodels/cancellation_view_model.dart';
 
 class HostBookingRequestsScreen extends ConsumerStatefulWidget {
   const HostBookingRequestsScreen({super.key});
@@ -35,6 +36,7 @@ class _HostBookingRequestsScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(cancellationViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(
         0xFFFDFAE7,
@@ -165,6 +167,9 @@ class _HostBookingRequestsScreenState
     bool isCancelPending = data['status'] == 'cancel_pending';
     bool isRefunded = data['status'] == 'refunded';
     bool isCancelled = data['status'] == 'cancelled';
+    final cancellation = ref
+        .read(cancellationViewModelProvider.notifier)
+        .findByBookingId((data['id'] as num).toInt());
 
     final profiles = data['profiles'] ?? {};
     final homestays = data['homestays'] ?? {};
@@ -335,13 +340,16 @@ class _HostBookingRequestsScreenState
             ),
 
             // Điều kiện Render: Nếu đơn phòng đang ở trạng thái 'Yêu cầu hủy', hiển thị nút hoàn tiền
-            if (isCancelPending) ...[
+            if (cancellation != null) ...[
+              const SizedBox(height: 20),
+              _buildCancellationAction(context, cancellation),
+            ] else if (isCancelPending) ...[
               const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => _confirmRefunded(context, data['id']),
+                      onPressed: null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
                         minimumSize: const Size(0, 48),
@@ -351,7 +359,7 @@ class _HostBookingRequestsScreenState
                         elevation: 0,
                       ),
                       child: const Text(
-                        'Xác nhận đã hoàn tiền',
+                        'Admin đang xử lý hoàn tiền',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -439,6 +447,76 @@ class _HostBookingRequestsScreenState
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCancellationAction(
+    BuildContext context,
+    CancellationWorkflowRequest request,
+  ) {
+    if (!request.hostAcknowledged) {
+      return ElevatedButton.icon(
+        onPressed: () {
+          ref
+              .read(cancellationViewModelProvider.notifier)
+              .hostAcknowledge(request.bookingId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Đã xác nhận nhận yêu cầu hủy.')),
+          );
+        },
+        icon: const Icon(Icons.fact_check_outlined, color: Colors.white),
+        label: const Text(
+          'Xác nhận đã nhận yêu cầu hủy',
+          style: TextStyle(color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.deepOrange,
+          minimumSize: const Size(double.infinity, 48),
+        ),
+      );
+    }
+    if (request.adminNotifiedHost &&
+        request.customerReceived &&
+        !request.hostCompleted) {
+      return ElevatedButton.icon(
+        onPressed: () {
+          ref
+              .read(cancellationViewModelProvider.notifier)
+              .hostCompleteCancellation(request.bookingId);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Đã xác nhận hủy. Lịch phòng được đánh dấu mở lại trong phiên demo.',
+              ),
+            ),
+          );
+        },
+        icon: const Icon(Icons.event_available, color: Colors.white),
+        label: const Text(
+          'Xác nhận hủy và mở lịch phòng',
+          style: TextStyle(color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          minimumSize: const Size(double.infinity, 48),
+        ),
+      );
+    }
+    final message = request.hostCompleted
+        ? 'Đã hoàn tất hủy – có thể cho thuê lại ngày đã hủy.'
+        : request.customerReceived
+        ? 'Khách đã nhận tiền, chờ Admin gửi thông báo xác nhận cuối.'
+        : request.refundSent
+        ? 'Admin đã hoàn tiền, đang chờ Customer xác nhận.'
+        : 'Đã xác nhận yêu cầu, đang chờ Admin xử lý hoàn tiền.';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(message, style: const TextStyle(color: Colors.deepOrange)),
     );
   }
 
@@ -541,75 +619,6 @@ class _HostBookingRequestsScreenState
             ),
             child: const Text(
               'Xác nhận từ chối',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-    );
-  }
-
-  void _confirmRefunded(BuildContext context, int bookingId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          'Xác nhận hoàn tiền',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF6D4C41),
-          ),
-        ),
-        content: const Text(
-          'Bạn xác nhận đã chuyển khoản hoàn tiền thành công cho khách qua ứng dụng ngân hàng khác?',
-          style: TextStyle(fontSize: 13, color: Colors.grey, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Chưa', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ref
-                    .read(bookingRepositoryProvider)
-                    .updateStatus(bookingId, 'refunded');
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Đã xác nhận hoàn tiền!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  _fetchRequests(); // Lấy lại dữ liệu mới
-                }
-              } catch (e) {
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Lỗi: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text(
-              'Đã hoàn tiền',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

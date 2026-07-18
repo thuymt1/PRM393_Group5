@@ -5,6 +5,8 @@ import '../../data/repositories/repository_providers.dart';
 import '../../models/homestay_model.dart';
 import '../../features/customer/viewmodels/customer_home_view_model.dart';
 import '../../features/customer/models/customer_home_state.dart';
+import '../../features/customer/viewmodels/cancellation_view_model.dart';
+import 'cancel_booking_page.dart';
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -131,6 +133,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(cancellationViewModelProvider);
     ref.watch(customerHomeViewModelProvider);
     if (!_initialized) {
       final initialTab = ModalRoute.of(context)?.settings.arguments as int?;
@@ -733,7 +736,13 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                         Color statusColor = Colors.orange;
                         String statusText = 'Đang xử lý';
 
-                        if (booking['status'] == 'confirmed') {
+                        if (booking['status'] == 'payment_pending') {
+                          statusColor = Colors.orange;
+                          statusText = 'Chờ Admin xác minh';
+                        } else if (booking['status'] == 'pending') {
+                          statusColor = Colors.blue;
+                          statusText = 'Chờ Host duyệt';
+                        } else if (booking['status'] == 'confirmed') {
                           statusColor = Colors.green;
                           statusText = 'Đã xác nhận';
                         } else if (booking['status'] == 'cancelled') {
@@ -745,6 +754,19 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                         } else if (booking['status'] == 'refunded') {
                           statusColor = Colors.blue;
                           statusText = 'Đã hoàn tiền';
+                        }
+                        final cancellation = ref
+                            .read(cancellationViewModelProvider.notifier)
+                            .findByBookingId((booking['id'] as num).toInt());
+                        if (cancellation != null) {
+                          statusColor = cancellation.hostCompleted
+                              ? Colors.green
+                              : Colors.deepOrange;
+                          statusText = cancellation.hostCompleted
+                              ? 'Đã xác nhận hủy'
+                              : cancellation.refundSent
+                              ? 'Chờ xác nhận hoàn tiền'
+                              : 'Đang xử lý yêu cầu hủy';
                         }
 
                         final String checkInStr =
@@ -884,20 +906,36 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                             ),
                                           ),
                                           const Spacer(),
-                                          if (booking['status'] == 'confirmed')
+                                          if (booking['status'] ==
+                                                  'confirmed' &&
+                                              cancellation == null)
                                             TextButton(
-                                              onPressed: () {
-                                                ref
-                                                    .read(
-                                                      bookingRepositoryProvider,
-                                                    )
-                                                    .updateStatus(
-                                                      booking['id'],
-                                                      'cancelled',
-                                                    )
-                                                    .then((_) {
-                                                      setState(() {});
-                                                    });
+                                              onPressed: () async {
+                                                final changed =
+                                                    await Navigator.push<bool>(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            CancelBookingPage(
+                                                              booking:
+                                                                  Map<
+                                                                    String,
+                                                                    dynamic
+                                                                  >.from(
+                                                                    booking
+                                                                        as Map,
+                                                                  ),
+                                                            ),
+                                                      ),
+                                                    );
+                                                if (changed == true) {
+                                                  ref
+                                                      .read(
+                                                        customerHomeViewModelProvider
+                                                            .notifier,
+                                                      )
+                                                      .refresh();
+                                                }
                                               },
                                               style: TextButton.styleFrom(
                                                 padding: EdgeInsets.zero,

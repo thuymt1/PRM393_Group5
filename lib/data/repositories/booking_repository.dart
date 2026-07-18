@@ -117,6 +117,8 @@ class SupabaseBookingRepository implements BookingRepository {
         .update({'status': status})
         .eq('id', bookingId)
         .select();
-    if ((rows as List).isEmpty) throw Exception('Không thể cập nhật đơn phòng');
+    if ((rows as List).isEmpty) {
+      throw Exception('Không thể cập nhật đơn phòng');
+    }
   }
 }

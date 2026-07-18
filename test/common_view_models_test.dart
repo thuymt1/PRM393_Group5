@@ -15,6 +15,7 @@ void main() {
           notificationRepositoryProvider.overrideWithValue(
             _FakeNotificationRepository(),
           ),
+          profileRepositoryProvider.overrideWithValue(_FakeProfileRepository()),
         ],
       );
       addTearDown(container.dispose);

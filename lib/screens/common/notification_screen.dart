@@ -99,6 +99,18 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
                             } else if (note['type'] == 'payment_rejected') {
                               icon = Icons.cancel;
                               iconColor = Colors.red;
+                            } else if (note['type'] == 'booking_cancelled') {
+                              icon = Icons.event_busy;
+                              iconColor = Colors.red;
+                            } else if (note['type'] ==
+                                'refund_awaiting_customer') {
+                              icon = Icons.mark_email_unread_outlined;
+                              iconColor = Colors.blue;
+                            } else if (note['type'].toString().startsWith(
+                              'refund_',
+                            )) {
+                              icon = Icons.currency_exchange;
+                              iconColor = Colors.orange;
                             }
 
                             // Tính thời gian giả lập
