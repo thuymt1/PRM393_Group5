@@ -270,6 +270,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'icon': Icons.people_rounded,
         'color': const Color(0xFF3B82F6),
         'bg': const Color(0xFFEFF6FF),
+        'onTap': () => _mainTabController.animateTo(3),
       },
       {
         'label': 'HS Hoạt động',
@@ -277,6 +278,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'icon': Icons.home_work_rounded,
         'color': const Color(0xFF10B981),
         'bg': const Color(0xFFECFDF5),
+        'onTap': () => _mainTabController.animateTo(2),
       },
       {
         'label': 'HS Tắt',
@@ -284,6 +286,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'icon': Icons.home_work_outlined,
         'color': Colors.grey.shade600,
         'bg': Colors.grey.shade100,
+        'onTap': () => _mainTabController.animateTo(2),
       },
       {
         'label': 'Đặt phòng',
@@ -291,6 +294,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'icon': Icons.book_online_rounded,
         'color': const Color(0xFFF59E0B),
         'bg': const Color(0xFFFEF3C7),
+        'onTap': _showBookings,
       },
       {
         'label': 'Đơn chờ duyệt',
@@ -298,6 +302,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'icon': Icons.pending_actions_rounded,
         'color': const Color(0xFFEF4444),
         'bg': const Color(0xFFFEF2F2),
+        'onTap': () { setState(() => _applicationFilter = 'pending'); _mainTabController.animateTo(1); },
       },
       {
         'label': 'Tổng Homestay',
@@ -305,6 +310,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
         'icon': Icons.apartment_rounded,
         'color': const Color(0xFF8B5CF6),
         'bg': const Color(0xFFF5F3FF),
+        'onTap': () => _mainTabController.animateTo(2),
       },
     ];
 
@@ -320,7 +326,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
   }
 
   Widget _buildStatCard(Map<String, dynamic> item) {
-    return Container(
+    return InkWell(
+      onTap: item['onTap'] as VoidCallback?,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -361,7 +370,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
           ),
         ],
       ),
+      ),
     );
+  }
+
+  Future<void> _showBookings() async {
+    final bookings = await _apiService.getAllBookingsAdmin();
+    if (!mounted) return;
+    showModalBottomSheet(context: context, isScrollControlled: true, builder: (_) => SizedBox(height: MediaQuery.sizeOf(context).height * .75, child: Column(children: [const Padding(padding: EdgeInsets.all(18), child: Text('Tất cả đặt phòng', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))), Expanded(child: ListView.separated(padding: const EdgeInsets.all(16), itemCount: bookings.length, separatorBuilder: (_, __) => const Divider(), itemBuilder: (_, i) { final b = bookings[i]; return ListTile(title: Text(b['homestays']?['name'] ?? 'Homestay'), subtitle: Text('${b['check_in']} → ${b['check_out']}\nTrạng thái: ${b['status']}'), trailing: Text('${b['total_price'] ?? 0}đ')); }))])));
   }
 
   Widget _buildQuickActions() {

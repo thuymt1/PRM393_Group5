@@ -29,6 +29,9 @@ import 'screens/host/homestay_status_screen.dart';
 import 'screens/host/add_homestay_basic_info_screen.dart';
 import 'screens/host/add_homestay_location_screen.dart';
 import 'screens/host/add_homestay_price_rules_screen.dart';
+import 'screens/host/host_homestay_detail_screen.dart';
+import 'screens/host/host_earnings_screen.dart';
+import 'screens/host/host_reviews_screen.dart';
 
 // Author screens
 import 'screens/author/author_dashboard_screen.dart';
@@ -111,6 +114,9 @@ class MyApp extends StatelessWidget {
         '/host-booking-requests': (context) =>
             const HostBookingRequestsScreen(),
         '/host-booking-detail': (context) => const HostBookingDetailScreen(),
+        '/host-homestay-detail': (context) => const HostHomestayDetailScreen(),
+        '/host-earnings': (context) => const HostEarningsScreen(),
+        '/host-reviews': (context) => const HostReviewsScreen(),
         '/homestay-list': (context) => const HomestayListScreen(),
         '/homestay-status': (context) => const HomestayStatusScreen(),
         '/add-homestay-basic-info': (context) =>

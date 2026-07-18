@@ -789,18 +789,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       imageUrl = homestay['homestay_images'][0]['url'];
                     }
                     Color statusColor = Colors.orange;
-                    String statusText = 'Đang xử lý';
+                    final rawStatus = booking['status'] as String? ?? 'pending';
+                    String statusText = rawStatus == 'pending' ? 'Đang đi' : 'Đã hoàn thành';
 
-                    if (booking['status'] == 'confirmed') {
+                    if (rawStatus == 'confirmed') {
                       statusColor = Colors.green;
-                      statusText = 'Đã xác nhận';
-                    } else if (booking['status'] == 'cancelled') {
+                      statusText = 'Đã hoàn thành';
+                    } else if (rawStatus == 'cancelled') {
                       statusColor = Colors.red;
                       statusText = 'Đã hủy';
-                    } else if (booking['status'] == 'cancel_pending') {
+                    } else if (rawStatus == 'cancel_pending') {
                       statusColor = Colors.deepOrange;
                       statusText = 'Chờ hoàn tiền';
-                    } else if (booking['status'] == 'refunded') {
+                    } else if (rawStatus == 'refunded') {
                       statusColor = Colors.blue;
                       statusText = 'Đã hoàn tiền';
                     }

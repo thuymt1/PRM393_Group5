@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../../models/homestay_model.dart';
 
-class MyBookingsScreen extends StatelessWidget {
+class MyBookingsScreen extends StatefulWidget {
   final bool embedded;
   const MyBookingsScreen({super.key, this.embedded = false});
+
+  @override
+  State<MyBookingsScreen> createState() => _MyBookingsScreenState();
+}
+
+class _MyBookingsScreenState extends State<MyBookingsScreen> {
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +65,7 @@ class MyBookingsScreen extends StatelessWidget {
             ), // Danh sách chuyến đi đã thực hiện hủy bỏ đơn
           ],
         ),
-        bottomNavigationBar: embedded ? null : _buildBottomNavBar(),
+        bottomNavigationBar: widget.embedded ? null : _buildBottomNavBar(),
       ),
     );
   }
@@ -76,12 +81,12 @@ class MyBookingsScreen extends StatelessWidget {
         final bookings = (snapshot.data ?? [])
             .where((b) {
               final status = b['status'] as String? ?? 'pending';
-              return category == 'cancelled'
+              return category == 'pending'
+                  ? {'pending', 'cancel_pending', 'refunded'}.contains(status)
+                  : category == 'cancelled'
                   ? {
                       'cancelled',
                       'rejected',
-                      'cancel_pending',
-                      'refunded',
                     }.contains(status)
                   : status == category;
             })
@@ -97,6 +102,10 @@ class MyBookingsScreen extends StatelessWidget {
                     ? 'Đang xác nhận'
                     : b['status'] == 'confirmed'
                     ? 'Đã xác nhận'
+                    : b['status'] == 'cancel_pending'
+                    ? 'Đang chờ hoàn tiền'
+                    : b['status'] == 'refunded'
+                    ? 'Đang chờ xác nhận'
                     : 'Đã hủy',
                 'raw_status': b['status'],
                 'can_review':
@@ -229,21 +238,23 @@ class MyBookingsScreen extends StatelessWidget {
         ],
       ),
       child: InkWell(
-        onTap: () {
-          final home = Map<String, dynamic>.from(booking['homestays'] ?? {});
-          home['id'] = booking['homestay_id'];
-          home['homestay_images'] ??= [];
-          final ratings = (home['reviews'] as List? ?? [])
-              .map((r) => (r['rating'] as num).toDouble())
-              .toList();
-          home['rating'] = ratings.isEmpty
-              ? 0.0
-              : ratings.reduce((a, b) => a + b) / ratings.length;
-          Navigator.pushNamed(
+        onTap: () async {
+          final detailBooking = Map<String, dynamic>.from(booking)
+            ..['status'] = booking['raw_status'] ?? booking['status'];
+          final changed = await Navigator.pushNamed(
             context,
-            '/homestay-detail',
-            arguments: Homestay.fromJson(home),
+            '/customer-booking-detail',
+            arguments: detailBooking,
           );
+          if (changed == true && mounted) {
+            final wasRefundFlow = {'cancel_pending', 'refunded'}.contains(booking['raw_status']);
+            setState(() {});
+            if (wasRefundFlow) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) DefaultTabController.of(context).animateTo(2);
+              });
+            }
+          }
         },
         borderRadius: BorderRadius.circular(
           24,

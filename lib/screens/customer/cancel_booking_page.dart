@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 
 class CancelBookingPage extends StatefulWidget {
@@ -31,6 +33,15 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
   late double totalPrice;
   late double refundPercent;
   late double refundAmount;
+  Uint8List? _qrBytes;
+  String? _qrFileName;
+
+  Future<void> _pickQr() async {
+    final image = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    setState(() { _qrBytes = bytes; _qrFileName = image.name; });
+  }
 
   @override
   void initState() {
@@ -49,12 +60,10 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
     differenceDays = checkInDate.difference(today).inDays;
     totalPrice = (widget.booking['total_price'] ?? 0.0).toDouble();
     
-    if (differenceDays >= 7) {
+    if (differenceDays >= 1) {
       refundPercent = 1.0;
-    } else if (differenceDays >= 3) {
-      refundPercent = 0.7;
     } else {
-      refundPercent = 0.0;
+      refundPercent = 0.5;
     }
     refundAmount = totalPrice * refundPercent;
   }
@@ -112,6 +121,15 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
             ),
             const SizedBox(height: 20),
             _buildReasonList(), // Khối danh sách các tùy chọn lý do dạng Radio nút bấm tròn
+
+            if (refundAmount > 0) ...[
+              const SizedBox(height: 24),
+              const Text('Mã QR nhận tiền hoàn', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41))),
+              const SizedBox(height: 8),
+              const Text('Tải ảnh QR ngân hàng để chủ nhà chuyển khoản hoàn tiền.', style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const SizedBox(height: 12),
+              InkWell(onTap: _pickQr, child: Container(width: double.infinity, height: 180, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE07A5F))), child: _qrBytes == null ? const Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.qr_code_2, size: 48), Text('Chọn ảnh mã QR')]) : ClipRRect(borderRadius: BorderRadius.circular(13), child: Image.memory(_qrBytes!, fit: BoxFit.contain)))),
+            ],
 
             // Điều kiện Render: Nếu chọn lý do "Khác", tự động hiển thị thêm ô nhập liệu đa dòng chi tiết
             if (_selectedReason == 'Khác') ...[
@@ -195,11 +213,11 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
   Widget _buildRefundPolicyNotice() {
     String policyText = '';
     if (refundPercent == 1.0) {
-      policyText = 'Bạn đang hủy phòng trước 7 ngày. Bạn sẽ được hoàn trả 100% số tiền đã thanh toán (${formatPrice(refundAmount)}đ). Chủ nhà sẽ liên hệ để hoàn khoản tiền này.';
-    } else if (refundPercent == 0.7) {
-      policyText = 'Bạn đang hủy phòng trước 3 ngày. Bạn sẽ được hoàn trả 70% số tiền đã thanh toán (${formatPrice(refundAmount)}đ). Chủ nhà sẽ liên hệ để hoàn khoản tiền này.';
+      policyText = 'Bạn đang hủy phòng trước ít nhất 1 ngày. Bạn sẽ được hoàn trả 100% số tiền đã thanh toán (${formatPrice(refundAmount)}đ). Chủ nhà sẽ liên hệ để hoàn khoản tiền này.';
+    } else if (refundPercent == 0.5) {
+      policyText = 'Bạn đang hủy phòng trong vòng 1 ngày. Bạn sẽ được hoàn trả 50% số tiền đã thanh toán (${formatPrice(refundAmount)}đ). Chủ nhà sẽ liên hệ để hoàn khoản tiền này.';
     } else {
-      policyText = 'Bạn đang hủy phòng sát ngày (dưới 3 ngày). Rất tiếc, bạn sẽ không được hoàn lại tiền thanh toán theo chính sách của chúng tôi.';
+      policyText = 'Bạn đang hủy phòng trong vòng 1 ngày. Bạn sẽ được hoàn trả 50% số tiền đã thanh toán (${formatPrice(refundAmount)}đ).';
     }
 
     return Container(
@@ -308,7 +326,7 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
       children: [
         // Nút bấm lớn màu nâu xác nhận hành động gỡ và hủy phòng (Vô hiệu hóa tạm thời nếu chưa tích chọn lý do)
         ElevatedButton(
-          onPressed: _selectedReason == null || _isLoading ? null : () {
+          onPressed: _selectedReason == null || _isLoading || (refundAmount > 0 && _qrBytes == null) ? null : () {
             _askConfirmCancelDialog();
           },
           style: ElevatedButton.styleFrom(
@@ -376,9 +394,20 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
     setState(() => _isLoading = true);
     try {
       final api = ApiService();
-      // Nếu được hoàn tiền thì chuyển sang cancel_pending để chủ nhà duyệt trả tiền. Nếu không (0đ) thì hủy luôn thành cancelled.
       String nextStatus = refundAmount > 0 ? 'cancel_pending' : 'cancelled';
-      await api.updateBookingStatus(widget.booking['id'], nextStatus);
+      if (refundAmount > 0) {
+        final reason = _selectedReason == 'Khác' ? _otherReasonController.text.trim() : _selectedReason!;
+        String? qrUrl;
+        try {
+          qrUrl = await api.uploadUserAttachment(_qrBytes!, _qrFileName ?? 'refund_qr.jpg');
+        } catch (_) {
+          // Không để lỗi Storage làm chặn việc hủy booking; Host vẫn thấy yêu cầu để xử lý.
+          qrUrl = null;
+        }
+        await api.submitCancellationRequest(bookingId: widget.booking['id'], reason: reason, qrImageUrl: qrUrl);
+      } else {
+        await api.updateBookingStatus(widget.booking['id'], nextStatus);
+      }
       if (mounted) {
         _showSuccessDialog(nextStatus);
       }
@@ -431,7 +460,10 @@ class _CancelBookingPageState extends State<CancelBookingPage> {
             const SizedBox(height: 32),
             // Nút bấm lớn giúp điều hướng khách gỡ bỏ hoàn toàn ngăn xếp màn hình để về thẳng trang chủ ứng dụng
             ElevatedButton(
-              onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst), // Gỡ bỏ toàn bộ ngăn xếp đưa ứng dụng về trang màn hình chính tiên phong
+              onPressed: () {
+                Navigator.pop(context); // đóng hộp thoại
+                Navigator.pop(this.context, true); // báo màn trước tải lại booking
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF6D4C41),
                 minimumSize: const Size(double.infinity, 50), // Chiều rộng full khối, độ cao nút chuẩn 50 đơn vị

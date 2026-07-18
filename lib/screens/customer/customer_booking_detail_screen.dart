@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
+import '../../models/homestay_model.dart';
 import 'cancel_booking_page.dart';
 
 class CustomerBookingDetailScreen extends StatelessWidget {
@@ -30,15 +31,24 @@ class CustomerBookingDetailScreen extends StatelessWidget {
       imageUrl = homestay['homestay_images'][0]['url'];
     }
 
+    final rawStatus = booking['raw_status'] ?? booking['booking_status'] ?? booking['status'];
+    final isCancellationRequested = booking['cancellation_reason'] != null || booking['cancellation_requested_at'] != null || rawStatus == 'Đã hủy';
     Color statusColor = Colors.orange;
-    String statusText = 'Đang xử lý';
-    if (booking['status'] == 'confirmed') {
+    String statusText = isCancellationRequested ? 'Đã hủy' : 'Đang đi';
+    if (isCancellationRequested) statusColor = Colors.red;
+    if (rawStatus == 'confirmed' || rawStatus == 'Đã xác nhận') {
       statusColor = Colors.green;
-      statusText = 'Đã xác nhận';
-    } else if (booking['status'] == 'cancelled') {
+      statusText = 'Đã hoàn thành';
+    } else if (rawStatus == 'cancel_pending' || rawStatus == 'Đang chờ hoàn tiền') {
+      statusColor = Colors.deepOrange;
+      statusText = 'Đang chờ hoàn tiền';
+    } else if (rawStatus == 'refunded' || rawStatus == 'Đã xử lý hoàn tiền') {
+      statusColor = Colors.blue;
+      statusText = 'Đang chờ xác nhận';
+    } else if (rawStatus == 'cancelled' || rawStatus == 'Đã hủy') {
       statusColor = Colors.red;
       statusText = 'Đã hủy';
-    } else if (booking['status'] == 'rejected') {
+    } else if (rawStatus == 'rejected' || rawStatus == 'Bị từ chối') {
       statusColor = Colors.red;
       statusText = 'Bị từ chối';
     }
@@ -250,12 +260,19 @@ class CustomerBookingDetailScreen extends StatelessWidget {
                     totalPriceStr,
                     isTotal: true,
                   ),
+                  if ({'cancel_pending', 'refunded', 'cancelled'}.contains(booking['status'])) ...[
+                    const SizedBox(height: 12),
+                    _buildPaymentRow(
+                      'Tổng tiền đã hoàn',
+                      _refundAmountText(booking, checkIn, totalPrice),
+                      isTotal: true,
+                    ),
+                  ],
 
                   const SizedBox(height: 40),
 
                   // Hành động của khách hàng
-                  if (booking['status'] == 'pending' ||
-                      booking['status'] == 'confirmed')
+                  if ((rawStatus == 'pending' || rawStatus == 'Đang xác nhận' || rawStatus == 'Đang đi') && !isCancellationRequested)
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -278,7 +295,7 @@ class CustomerBookingDetailScreen extends StatelessWidget {
                       ),
                     ),
 
-                  if (booking['status'] == 'refunded')
+                  if (rawStatus == 'refunded' || rawStatus == 'cancel_pending')
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -301,6 +318,20 @@ class CustomerBookingDetailScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                  if ({'confirmed', 'cancelled', 'rejected', 'Đã xác nhận', 'Đã hủy', 'Bị từ chối'}.contains(rawStatus))
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          final homeData = Map<String, dynamic>.from(homestay ?? {});
+                          homeData['id'] ??= booking['homestay_id'];
+                          homeData['homestay_images'] ??= [];
+                          Navigator.pushNamed(context, '/booking-form', arguments: Homestay.fromJson(homeData));
+                        },
+                        style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6D4C41), padding: const EdgeInsets.symmetric(vertical: 16)),
+                        child: const Text('Đặt lại', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -308,6 +339,14 @@ class CustomerBookingDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _refundAmountText(Map<String, dynamic> booking, DateTime checkIn, double total) {
+    final requestedAt = DateTime.tryParse(booking['cancellation_requested_at'] ?? '') ?? DateTime.now();
+    final days = DateTime(checkIn.year, checkIn.month, checkIn.day)
+        .difference(DateTime(requestedAt.year, requestedAt.month, requestedAt.day)).inDays;
+    final amount = total * (days >= 1 ? 1.0 : 0.5);
+    return '${amount.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}đ';
   }
 
   void _requestCancel(

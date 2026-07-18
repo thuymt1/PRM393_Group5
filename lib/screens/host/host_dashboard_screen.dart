@@ -80,8 +80,19 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
           return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
         }
 
-        final bookings = snapshot.data?[0] as List<dynamic>? ?? [];
-        final homestays = snapshot.data?[1] as List<Homestay>? ?? [];
+        final rawBookings = snapshot.data?[0] as List<dynamic>? ?? [];
+        final rawHomestays = snapshot.data?[1] as List<Homestay>? ?? [];
+        // Đếm theo ID thật, tránh trường hợp truy vấn/join trả về bản ghi lặp.
+        final bookingsById = <dynamic, dynamic>{};
+        for (final booking in rawBookings) {
+          if (booking['id'] != null) bookingsById[booking['id']] = booking;
+        }
+        final bookings = bookingsById.values.toList();
+        final homestaysById = <int, Homestay>{};
+        for (final homestay in rawHomestays) {
+          homestaysById[homestay.id] = homestay;
+        }
+        final homestays = homestaysById.values.toList();
 
         // Tính toán doanh thu thật từ các booking đã xác nhận (status == 'confirmed')
         double monthlyEarnings = 0.0;
@@ -109,9 +120,9 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader('Host Dashboard'),
+                _buildHeader('Trang chủ'),
                 const SizedBox(height: 16),
-                _buildEarningsCard(formattedEarnings),
+                InkWell(onTap: () => Navigator.pushNamed(context, '/host-earnings'), child: _buildEarningsCard(formattedEarnings)),
                 const SizedBox(height: 24),
                 _buildStatsGrid(completedBookings, homestays.length),
                 const SizedBox(height: 32),
@@ -125,7 +136,14 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                 const SizedBox(height: 12),
                 homestays.isEmpty
                     ? _buildEmptyState('Chưa đăng tin homestay nào.')
-                    : _buildMyHomestayCard(homestays.first),
+                    : Column(
+                        children: homestays
+                            .map((homestay) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 16),
+                                  child: _buildMyHomestayCard(homestay),
+                                ))
+                            .toList(),
+                      ),
                 const SizedBox(height: 60),
               ],
             ),
@@ -231,16 +249,17 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
       mainAxisSpacing: 16,
       childAspectRatio: 1.4,
       children: [
-        _statItem('Số homestay', '$homestaysCount', Icons.home_work_outlined),
-        _statItem('Đơn đã duyệt', '$confirmedBookings', Icons.check_circle_outline),
-        _statItem('Đánh giá', '4.8 ★', Icons.star_outline),
-        _statItem('Phản hồi', '100%', Icons.chat_bubble_outline),
+        _statItem('Số homestay', '$homestaysCount', Icons.home_work_outlined, () => _onTabTapped(2)),
+        _statItem('Đơn đã duyệt', '$confirmedBookings', Icons.check_circle_outline, () => _onTabTapped(1)),
       ],
     );
   }
 
-  Widget _statItem(String label, String val, IconData icon) {
-    return Container(
+  Widget _statItem(String label, String val, IconData icon, VoidCallback? onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -265,7 +284,26 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
           ),
         ],
       ),
+      ),
     );
+  }
+
+  Widget _buildReviewsSection(List<dynamic> reviews) {
+    final latest = reviews.take(2).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        const Text('Đánh giá gần đây', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41))),
+        TextButton(onPressed: reviews.isEmpty ? null : () => Navigator.pushNamed(context, '/host-reviews', arguments: reviews), child: const Text('Xem thêm đánh giá')),
+      ]),
+      if (latest.isEmpty) _buildEmptyState('Chưa có đánh giá nào.') else ...latest.map(_buildReviewCard),
+    ]);
+  }
+
+  Widget _buildReviewCard(dynamic review) {
+    final profile = review['profiles'];
+    final name = profile?['full_name'] ?? 'Khách hàng';
+    final rating = (review['rating'] as num?)?.toDouble() ?? 0;
+    return Container(margin: const EdgeInsets.only(bottom: 10), padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.bold)), const SizedBox(height: 5), Row(children: List.generate(5, (i) => Icon(i < rating.round() ? Icons.star : Icons.star_border, size: 18, color: Colors.amber))), const SizedBox(height: 5), Text(review['comment'] ?? 'Không có nội dung', style: const TextStyle(color: Colors.grey))]));
   }
 
   Widget _buildSectionHeader(String title, VoidCallback onTap) {
@@ -370,10 +408,12 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  booking['status'] == 'confirmed' 
-                      ? 'Đã duyệt' 
-                      : (booking['status'] == 'cancelled' 
-                          ? 'Đã hủy' 
+                  booking['status'] == 'confirmed' ||
+                          booking['status'] == 'cancelled' ||
+                          booking['status'] == 'rejected'
+                      ? 'Yêu cầu đã được thực hiện'
+                      : (booking['status'] == 'pending'
+                          ? 'Đang chờ phê duyệt'
                           : (booking['status'] == 'cancel_pending' 
                               ? 'Yêu cầu hủy' 
                               : (booking['status'] == 'refunded' ? 'Chờ khách xác nhận' : 'Đang xử lý'))),
@@ -446,7 +486,17 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
         ? homestay.images.first 
         : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
 
-    return Container(
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () async {
+        final changed = await Navigator.pushNamed(
+          context,
+          '/host-homestay-detail',
+          arguments: homestay,
+        );
+        if (changed == true && mounted) setState(() {});
+      },
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -496,6 +546,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -766,7 +817,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
       currentIndex: _currentIndex,
       onTap: _onTabTapped,
       items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'Dashboard'),
+        BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Trang chủ'),
         BottomNavigationBarItem(icon: Icon(Icons.calendar_today_outlined), activeIcon: Icon(Icons.calendar_today), label: 'Yêu cầu duyệt'),
         BottomNavigationBarItem(icon: Icon(Icons.home_work_outlined), activeIcon: Icon(Icons.home_work), label: 'Nhà của tôi'),
         BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'Menu'),

@@ -243,6 +243,40 @@ class ApiService {
     }
   }
 
+  Future<void> updateHomestay(int homestayId, Map<String, dynamic> data) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập');
+
+    final response = await _supabase
+        .from('homestays')
+        .update(data)
+        .eq('id', homestayId)
+        .eq('host_id', user.id)
+        .select('id');
+    if ((response as List).isEmpty) {
+      throw Exception('Không tìm thấy homestay hoặc bạn không có quyền chỉnh sửa');
+    }
+  }
+
+  Future<void> deleteHomestay(int homestayId) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('Chưa đăng nhập');
+    await _supabase.from('homestays').delete().eq('id', homestayId).eq('host_id', user.id);
+  }
+
+  Future<List<dynamic>> getHostReviews() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+    try {
+      return await _supabase.from('reviews').select('''
+        *, homestays!inner(name, host_id), profiles(full_name, avatar_url)
+      ''').eq('homestays.host_id', user.id).order('created_at', ascending: false);
+    } catch (e) {
+      print('Error fetching host reviews: $e');
+      return [];
+    }
+  }
+
   // Hàm upload ảnh lên Supabase Storage (Hỗ trợ cả Web & Mobile)
   Future<String> uploadHomestayImage(
     Uint8List fileBytes,
@@ -435,11 +469,11 @@ class ApiService {
           .order('created_at', ascending: false);
 
       final bookings = List<Map<String, dynamic>>.from(bookingsResponse);
-      for (var booking in bookings) {
+      await Future.wait(bookings.map((booking) async {
         if (booking['customer_id'] != null) {
           booking['profiles'] = await getProfileById(booking['customer_id']);
         }
-      }
+      }));
       return bookings;
     } catch (e) {
       print('Error fetching host booking requests: $e');
@@ -468,28 +502,32 @@ class ApiService {
     required String reason,
     String? qrImageUrl,
   }) async {
-    await _supabase
-        .from('bookings')
-        .update({
-          'status': 'cancel_pending',
-          'cancellation_reason': reason,
-          'refund_qr_url': qrImageUrl,
-          'cancellation_requested_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', bookingId);
+    try {
+      await _supabase.from('bookings').update({
+        'status': 'cancel_pending',
+        'cancellation_reason': reason,
+        'refund_qr_url': qrImageUrl,
+        'cancellation_requested_at': DateTime.now().toIso8601String(),
+      }).eq('id', bookingId);
+    } on PostgrestException catch (e) {
+      // Cho phép hủy vẫn thành công khi database chưa chạy migration bổ sung cột hoàn tiền.
+      if (e.code != 'PGRST204' && !e.message.contains('cancellation_reason')) rethrow;
+      await _supabase.from('bookings').update({'status': 'cancel_pending'}).eq('id', bookingId);
+    }
   }
 
   /// Upload ảnh bằng chứng/QR vào bucket riêng. Bucket phải được tạo trong Storage.
   Future<String> uploadUserAttachment(Uint8List bytes, String fileName) async {
     final path = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
-    await _supabase.storage
-        .from('user-attachments')
-        .uploadBinary(
-          path,
-          bytes,
-          fileOptions: const FileOptions(upsert: false),
-        );
-    return _supabase.storage.from('user-attachments').getPublicUrl(path);
+    try {
+      await _supabase.storage.from('user-attachments').uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: false));
+      return _supabase.storage.from('user-attachments').getPublicUrl(path);
+    } catch (_) {
+      // Bucket user-attachments có thể chưa được tạo; bucket homestays đã có sẵn trong app.
+      final fallbackPath = 'refund_qr/$path';
+      await _supabase.storage.from('homestays').uploadBinary(fallbackPath, bytes, fileOptions: const FileOptions(upsert: false));
+      return _supabase.storage.from('homestays').getPublicUrl(fallbackPath);
+    }
   }
 
   Future<void> createReview({
@@ -942,5 +980,9 @@ class ApiService {
         'pending_applications': 0,
       };
     }
+  }
+
+  Future<List<dynamic>> getAllBookingsAdmin() async {
+    return await _supabase.from('bookings').select('*, homestays(name)').order('created_at', ascending: false);
   }
 }

@@ -13,6 +13,14 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
   final ApiService _apiService = ApiService();
   late Map<String, dynamic> _booking;
   bool _isLoading = false;
+  bool _cancellationAccepted = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -43,6 +51,7 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
         centerTitle: true, // Căn giữa tiêu đề của AppBar
       ),
       body: SingleChildScrollView(
+        controller: _scrollController,
         padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng nội dung body
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,6 +65,10 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
             _buildPaymentSummarySection(), // Thẻ tóm tắt chi tiết hóa đơn chi phí doanh thu thu nhập
             const SizedBox(height: 32),
             _buildMessageFromGuest(), // Khối hiển thị thông điệp, lời nhắn gửi từ vị khách đặt phòng
+            if (_booking['status'] == 'cancel_pending' && _cancellationAccepted) ...[
+              const SizedBox(height: 24),
+              _buildCancellationInfo(),
+            ],
             const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh BottomSheet
           ],
         ),
@@ -66,20 +79,36 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
 
   // Khối giao diện hiển thị thanh biểu ngữ thông báo trạng thái chờ xử lý (Status Banner)
   Widget _buildStatusBanner() {
+    final status = _booking['status'] as String? ?? 'pending';
+    final isPending = status == 'pending';
+    final isCancelPending = status == 'cancel_pending';
+    final color = isPending
+        ? Colors.orange
+        : (isCancelPending ? Colors.deepOrange : Colors.green);
+    final backgroundColor = isPending
+        ? Colors.orange.shade50
+        : (isCancelPending ? Colors.deepOrange.shade50 : Colors.green.shade50);
+    final message = isPending
+        ? 'Yêu cầu đang chờ bạn phê duyệt'
+        : (isCancelPending
+            ? 'Yêu cầu hủy đang chờ bạn xử lý'
+            : 'Yêu cầu đã được thực hiện');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50, // Nền màu cam nhạt tạo tín hiệu lưu ý kiểm duyệt
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.orange.shade100), // Đường viền sắc cam nhạt
+        border: Border.all(color: color.withOpacity(0.25)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.pending_actions, color: Colors.orange), // Icon biểu tượng chờ duyệt
-          SizedBox(width: 12),
-          Text(
-            'Yêu cầu đang chờ bạn phê duyệt',
-            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 14),
+          Icon(isPending || isCancelPending ? Icons.pending_actions : Icons.check_circle_outline, color: color),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ),
         ],
       ),
@@ -221,6 +250,17 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
     );
   }
 
+  Widget _buildCancellationInfo() {
+    final qr = _booking['refund_qr_url'] as String?;
+    return _buildSectionCard('Thông tin hoàn tiền', Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Lý do: ${_booking['cancellation_reason'] ?? 'Không có'}'),
+      const SizedBox(height: 12),
+      const Text('Mã QR nhận tiền của khách:', style: TextStyle(fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      if (qr != null && qr.isNotEmpty) ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(qr, height: 260, width: double.infinity, fit: BoxFit.contain)) else const Text('Khách chưa cung cấp mã QR.', style: TextStyle(color: Colors.red)),
+    ]));
+  }
+
   // Hàm thiết kế dùng chung cấu trúc một khối thẻ Card nền trắng bo góc mềm mại có đổ bóng mờ nhẹ
   Widget _buildSectionCard(String title, Widget content) {
     return Column(
@@ -276,7 +316,7 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
 
   // Thanh phím đôi tác vụ ("Từ chối" / "Phê duyệt") cố định dưới chân mép đáy màn hình thông qua cơ chế BottomSheet
   Widget _buildActionButtons(BuildContext context) {
-    if (_booking['status'] != 'pending' && _booking['status'] != 'cancel_pending') {
+    if (_booking['status'] != 'pending' && _booking['status'] != 'cancel_pending' && _booking['status'] != 'cancel_accepted') {
       String statusStr = _booking['status'];
       if (statusStr == 'confirmed') statusStr = 'Đã duyệt';
       if (statusStr == 'cancelled') statusStr = 'Đã hủy';
@@ -295,14 +335,25 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5))],
         ),
         child: ElevatedButton(
-          onPressed: () => _updateBookingStatus('refunded'),
+          onPressed: () {
+            if (_cancellationAccepted) {
+              _updateBookingStatus('refunded');
+            } else {
+              setState(() => _cancellationAccepted = true);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_scrollController.hasClients) {
+                  _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
+                }
+              });
+            }
+          },
           style: ElevatedButton.styleFrom(
             backgroundColor: Colors.blue,
             minimumSize: const Size(double.infinity, 56),
             elevation: 0,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
-          child: const Text('Xác nhận đã hoàn tiền', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text(_cancellationAccepted ? 'Xác nhận đã hoàn tiền' : 'Chấp nhận hủy', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       );
     }
@@ -367,11 +418,11 @@ class _HostBookingDetailScreenState extends State<HostBookingDetailScreen> {
       await _apiService.updateBookingStatus(_booking['id'], newStatus);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã cập nhật trạng thái đơn!')));
-        Navigator.pop(context, true); // Trả về true để Refresh
+        Navigator.pop(context, true); // Trả về danh sách yêu cầu và Refresh
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: \$e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     } finally {
       if (mounted) {

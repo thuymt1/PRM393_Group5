@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../models/homestay_model.dart';
+import 'cancel_booking_page.dart';
 
 /// Màn hình hiển thị thông tin chi tiết của một căn Homestay cụ thể
 class HomestayDetailPage extends StatefulWidget {
@@ -18,12 +19,21 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
   bool _isFavoriteLoading = true;
   String _hostName = 'Chủ nhà';
   String? _hostAvatar;
+  String? _bookingStatus;
+  Map<String, dynamic>? _booking;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initialized) {
-      _homestay = ModalRoute.of(context)!.settings.arguments as Homestay;
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        _homestay = args['homestay'] as Homestay;
+        _bookingStatus = args['booking_status'] as String?;
+        _booking = args['booking'] as Map<String, dynamic>?;
+      } else {
+        _homestay = args as Homestay;
+      }
       _hostName = _homestay.hostName;
       _hostAvatar = _homestay.hostAvatar;
       _checkIfFavorite();
@@ -582,6 +592,7 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
 
   // Thanh điều khiển chứa thông tin chi phí và nút hành động lớn "Đặt ngay" cố định phía đáy màn hình
   Widget _buildBottomBookingBar(BuildContext context, Homestay homestay) {
+    final cancellationRequested = _booking?['cancellation_reason'] != null || _booking?['cancellation_requested_at'] != null;
     final String formattedPrice = homestay.pricePerNight
         .toInt()
         .toString()
@@ -634,7 +645,24 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             ],
           ),
           // Nút bấm lớn kích hoạt tiến trình book/đặt chỗ homestay nhanh
-          ElevatedButton(
+          if (_bookingStatus == 'pending' && _booking != null && !cancellationRequested)
+            OutlinedButton(
+              onPressed: () async {
+                final changed = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => CancelBookingPage(booking: _booking!)),
+                );
+                if (changed == true && context.mounted) Navigator.pop(context, true);
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                minimumSize: const Size(160, 56),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text('Yêu cầu hủy chuyến', style: TextStyle(fontWeight: FontWeight.bold)),
+            )
+          else if (_bookingStatus != 'cancel_pending') ElevatedButton(
             onPressed: () {
               Navigator.pushNamed(
                 context,
@@ -656,8 +684,8 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
               elevation:
                   0, // Triệt tiêu đổ bóng mặc định để nút phẳng mịn màng tiệp vào nền BottomSheet
             ),
-            child: const Text(
-              'Đặt ngay',
+            child: Text(
+              _bookingStatus == null ? 'Đặt ngay' : 'Đặt lại',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,

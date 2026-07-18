@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 
-// Màn hình cho phép người dùng lựa chọn vai trò (Khách hàng / Chủ nhà / Tác giả)
+// Màn hình cho phép người dùng lựa chọn vai trò (Khách hàng / Chủ nhà)
 class ChooseRoleScreen extends StatefulWidget {
   const ChooseRoleScreen({super.key});
 
@@ -68,14 +68,6 @@ class _ChooseRoleScreenState extends State<ChooseRoleScreen> {
                     'Chủ nhà',
                     'Gửi đơn đăng ký và chờ Admin phê duyệt để bắt đầu quản lý homestay.',
                     () => _goToHostRegistration(),
-                  ),
-                  const SizedBox(height: 16),
-                  _roleCard(
-                    context,
-                    Icons.edit_note_outlined,
-                    'Người viết bài',
-                    'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
-                    () => _selectRole('author', '/author-dashboard'),
                   ),
                   const SizedBox(height: 24),
                   _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò

@@ -13,6 +13,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final ApiService _apiService = ApiService();
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  String _filter = 'all';
 
   @override
   void initState() {
@@ -70,7 +71,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
           ? const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
           : Column(
               children: [
-                _buildFilterTabs(), // Khối thanh danh mục bộ lọc nhanh dạng hàng ngang (Tất cả, Giao dịch...)
                 Expanded(
                   child: _notifications.isEmpty
                       ? const Center(child: Text('Chưa có thông báo nào.', style: TextStyle(color: Colors.grey)))
@@ -134,10 +134,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
-            _filterChip('Tất cả', true), // Thẻ mặc định giả định đang đứng hoạt động tích cực
-            _filterChip('Giao dịch', false),
-            _filterChip('Đặt phòng', false),
-            _filterChip('Khuyến mãi', false),
+            _filterChip('Tất cả', 'all'),
+            _filterChip('Đặt phòng', 'booking'),
+            _filterChip('Giao dịch', 'transaction'),
           ],
         ),
       ),
@@ -145,8 +144,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   // Hàm thiết kế dùng chung cấu trúc nhãn viên thuốc lựa chọn tiêu chí phân loại nhanh (Chip)
-  Widget _filterChip(String label, bool isSelected) {
-    return Container(
+  List<Map<String, dynamic>> get _filteredNotifications => _notifications.where((note) {
+    if (_filter == 'all') return true;
+    final type = (note['type'] ?? '').toString();
+    if (_filter == 'transaction') return type.startsWith('payment_') || type.contains('transaction');
+    return !type.startsWith('payment_') && !type.contains('transaction');
+  }).toList();
+
+  Widget _filterChip(String label, String filter) {
+    final isSelected = _filter == filter;
+    return GestureDetector(
+      onTap: () => setState(() => _filter = filter),
+      child: Container(
       margin: const EdgeInsets.only(right: 12), // Khoảng cách hở đệm giữa các viên thuốc kề nhau
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -164,6 +173,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
           fontSize: 13,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
+      ),
       ),
     );
   }
