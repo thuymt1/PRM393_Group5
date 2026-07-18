@@ -720,10 +720,18 @@ class ApiService {
 
     // Cập nhật role người dùng tương ứng
     final newRole = status == 'approved' ? 'host' : 'customer';
-    await _supabase
+    final profileUpdate = await _supabase
         .from('profiles')
         .update({'role': newRole})
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
+
+    if (profileUpdate.isEmpty) {
+      throw Exception(
+        'Đã cập nhật trạng thái đơn nhưng không thể thay đổi vai trò người dùng. '
+        'Lỗi này thường do chính sách RLS trên bảng "profiles" chặn Admin cập nhật dữ liệu của người khác.',
+      );
+    }
   }
 
   // 27. [ADMIN] Lấy tất cả người dùng
