@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../features/payments/models/refund_policy.dart';
 
 class CancelBookingPage extends ConsumerStatefulWidget {
@@ -58,8 +58,6 @@ class _CancelBookingPageState extends ConsumerState<CancelBookingPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(cancellationViewModelProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -325,10 +323,13 @@ class _CancelBookingPageState extends ConsumerState<CancelBookingPage> {
     if (confirmed != true || !mounted) return;
 
     try {
-      final refund = ref
-          .read(cancellationViewModelProvider.notifier)
-          .requestCancellation(booking: widget.booking, reason: _reason);
-      if (mounted) _showSuccess(refund);
+      final nextStatus = _quote.requiresTransfer
+          ? 'cancel_pending'
+          : 'cancelled';
+      await ref
+          .read(bookingRepositoryProvider)
+          .updateStatus((widget.booking['id'] as num).toInt(), nextStatus);
+      if (mounted) _showSuccess(_quote);
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -337,7 +338,7 @@ class _CancelBookingPageState extends ConsumerState<CancelBookingPage> {
     }
   }
 
-  void _showSuccess(CancellationWorkflowRequest refund) {
+  void _showSuccess(RefundQuote refund) {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -345,12 +346,11 @@ class _CancelBookingPageState extends ConsumerState<CancelBookingPage> {
         icon: const Icon(Icons.check_circle, color: Colors.green, size: 52),
         title: const Text('Đã hủy đặt phòng'),
         content: Text(
-          refund.refundAmount > 0
-              ? 'Yêu cầu đã được gửi cho Host và Admin. '
-                    'Admin sẽ xử lý hoàn ${_formatMoney(refund.refundAmount)}đ. '
-                    'Sau khi Admin báo đã chuyển, bạn cần xác nhận đã nhận tiền.'
-              : 'Yêu cầu đã được gửi cho Host và Admin. '
-                    'Theo chính sách hiện tại, đơn này không có khoản hoàn tiền.',
+          refund.amount > 0
+              ? 'Yêu cầu đã được gửi cho Admin. '
+                    'Admin sẽ xử lý hoàn ${_formatMoney(refund.amount)}đ. '
+              : 'Đơn đã được hủy. Theo chính sách hiện tại, '
+                    'đơn này không có khoản hoàn tiền.',
         ),
         actions: [
           ElevatedButton(

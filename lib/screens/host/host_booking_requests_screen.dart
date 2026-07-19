@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/repository_providers.dart';
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
 
 class HostBookingRequestsScreen extends ConsumerStatefulWidget {
   const HostBookingRequestsScreen({super.key});
@@ -16,6 +15,7 @@ class _HostBookingRequestsScreenState
     extends ConsumerState<HostBookingRequestsScreen> {
   List<dynamic> _requests = [];
   bool _isLoading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -24,11 +24,21 @@ class _HostBookingRequestsScreenState
   }
 
   Future<void> _fetchRequests() async {
-    setState(() => _isLoading = true);
-    final data = await ref.read(bookingRepositoryProvider).getHostRequests();
-    if (mounted) {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+    try {
+      final data = await ref.read(bookingRepositoryProvider).getHostRequests();
+      if (!mounted) return;
       setState(() {
         _requests = data;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error.toString();
         _isLoading = false;
       });
     }
@@ -36,7 +46,6 @@ class _HostBookingRequestsScreenState
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(cancellationViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(
         0xFFFDFAE7,
@@ -76,6 +85,19 @@ class _HostBookingRequestsScreenState
       body: _isLoading
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+            )
+          : _loadError != null
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Không thể tải yêu cầu: $_loadError'),
+                  TextButton(
+                    onPressed: _fetchRequests,
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
             )
           : Column(
               children: [
@@ -167,9 +189,6 @@ class _HostBookingRequestsScreenState
     bool isCancelPending = data['status'] == 'cancel_pending';
     bool isRefunded = data['status'] == 'refunded';
     bool isCancelled = data['status'] == 'cancelled';
-    final cancellation = ref
-        .read(cancellationViewModelProvider.notifier)
-        .findByBookingId((data['id'] as num).toInt());
 
     final profiles = data['profiles'] ?? {};
     final homestays = data['homestays'] ?? {};
@@ -211,7 +230,7 @@ class _HostBookingRequestsScreenState
       statusBg = Colors.deepOrange.shade50;
       statusFg = Colors.deepOrange;
     } else if (isRefunded) {
-      statusText = 'Chờ khách xác nhận';
+      statusText = 'Đã hoàn/hủy';
       statusBg = Colors.blue.shade50;
       statusFg = Colors.blue;
     } else if (isCancelled) {
@@ -340,10 +359,7 @@ class _HostBookingRequestsScreenState
             ),
 
             // Điều kiện Render: Nếu đơn phòng đang ở trạng thái 'Yêu cầu hủy', hiển thị nút hoàn tiền
-            if (cancellation != null) ...[
-              const SizedBox(height: 20),
-              _buildCancellationAction(context, cancellation),
-            ] else if (isCancelPending) ...[
+            if (isCancelPending) ...[
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -447,76 +463,6 @@ class _HostBookingRequestsScreenState
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildCancellationAction(
-    BuildContext context,
-    CancellationWorkflowRequest request,
-  ) {
-    if (!request.hostAcknowledged) {
-      return ElevatedButton.icon(
-        onPressed: () {
-          ref
-              .read(cancellationViewModelProvider.notifier)
-              .hostAcknowledge(request.bookingId);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã xác nhận nhận yêu cầu hủy.')),
-          );
-        },
-        icon: const Icon(Icons.fact_check_outlined, color: Colors.white),
-        label: const Text(
-          'Xác nhận đã nhận yêu cầu hủy',
-          style: TextStyle(color: Colors.white),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepOrange,
-          minimumSize: const Size(double.infinity, 48),
-        ),
-      );
-    }
-    if (request.adminNotifiedHost &&
-        request.customerReceived &&
-        !request.hostCompleted) {
-      return ElevatedButton.icon(
-        onPressed: () {
-          ref
-              .read(cancellationViewModelProvider.notifier)
-              .hostCompleteCancellation(request.bookingId);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Đã xác nhận hủy. Lịch phòng được đánh dấu mở lại trong phiên demo.',
-              ),
-            ),
-          );
-        },
-        icon: const Icon(Icons.event_available, color: Colors.white),
-        label: const Text(
-          'Xác nhận hủy và mở lịch phòng',
-          style: TextStyle(color: Colors.white),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-          minimumSize: const Size(double.infinity, 48),
-        ),
-      );
-    }
-    final message = request.hostCompleted
-        ? 'Đã hoàn tất hủy – có thể cho thuê lại ngày đã hủy.'
-        : request.customerReceived
-        ? 'Khách đã nhận tiền, chờ Admin gửi thông báo xác nhận cuối.'
-        : request.refundSent
-        ? 'Admin đã hoàn tiền, đang chờ Customer xác nhận.'
-        : 'Đã xác nhận yêu cầu, đang chờ Admin xử lý hoàn tiền.';
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(message, style: const TextStyle(color: Colors.deepOrange)),
     );
   }
 

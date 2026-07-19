@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
 import 'cancel_booking_page.dart';
 
 class CustomerBookingDetailScreen extends ConsumerWidget {
@@ -13,14 +12,6 @@ class CustomerBookingDetailScreen extends ConsumerWidget {
     final booking =
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final homestay = booking['homestays'];
-    final requests = ref.watch(cancellationViewModelProvider);
-    CancellationWorkflowRequest? refund;
-    for (final request in requests) {
-      if (request.bookingId == (booking['id'] as num).toInt()) {
-        refund = request;
-        break;
-      }
-    }
 
     final checkIn = DateTime.parse(booking['check_in']);
     final checkOut = DateTime.parse(booking['check_out']);
@@ -46,7 +37,7 @@ class CustomerBookingDetailScreen extends ConsumerWidget {
       statusText = 'Chờ Admin xác minh thanh toán';
     } else if (booking['status'] == 'pending') {
       statusColor = Colors.blue;
-      statusText = 'Chờ Host duyệt phòng';
+      statusText = 'Chờ xác nhận đặt phòng';
     } else if (booking['status'] == 'confirmed') {
       statusColor = Colors.green;
       statusText = 'Đã xác nhận';
@@ -56,6 +47,12 @@ class CustomerBookingDetailScreen extends ConsumerWidget {
     } else if (booking['status'] == 'rejected') {
       statusColor = Colors.red;
       statusText = 'Bị từ chối';
+    } else if (booking['status'] == 'cancel_pending') {
+      statusColor = Colors.deepOrange;
+      statusText = 'Chờ Admin xử lý hủy';
+    } else if (booking['status'] == 'refunded') {
+      statusColor = Colors.indigo;
+      statusText = 'Đã hoàn/hủy';
     }
 
     final dateFormat = DateFormat('dd/MM/yyyy');
@@ -244,9 +241,8 @@ class CustomerBookingDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 40),
 
                   // Hành động của khách hàng
-                  if (refund == null &&
-                      (booking['status'] == 'pending' ||
-                          booking['status'] == 'confirmed'))
+                  if (booking['status'] == 'pending' ||
+                      booking['status'] == 'confirmed')
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton(
@@ -268,34 +264,6 @@ class CustomerBookingDetailScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-
-                  if (refund != null) ...[
-                    const SizedBox(height: 16),
-                    _buildRefundStatus(refund),
-                  ],
-                  if (refund != null &&
-                      refund.refundSent &&
-                      !refund.customerReceived) ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => _confirmRefundReceived(
-                          context,
-                          ref,
-                          refund!.bookingId,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Text(
-                          'Xác nhận đã nhận tiền hoàn',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -320,90 +288,6 @@ class CustomerBookingDetailScreen extends ConsumerWidget {
         Navigator.pop(context, true); // Quay về MyBookings và refresh
       }
     }
-  }
-
-  void _confirmRefundReceived(
-    BuildContext context,
-    WidgetRef ref,
-    int bookingId,
-  ) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Xác nhận nhận tiền'),
-        content: const Text(
-          'Bạn xác nhận đã nhận đủ tiền hoàn do Admin chuyển bên ngoài hệ thống?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Quay lại'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref
-                  .read(cancellationViewModelProvider.notifier)
-                  .customerConfirmReceived(bookingId);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Đã xác nhận nhận đủ tiền hoàn.'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text(
-              'Xác nhận đã nhận',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRefundStatus(CancellationWorkflowRequest refund) {
-    final label = refund.hostCompleted
-        ? 'Đã hoàn tất hủy – Host có thể mở lịch phòng'
-        : refund.adminNotifiedHost
-        ? 'Đã nhận tiền – chờ Host xác nhận hủy cuối cùng'
-        : refund.customerReceived
-        ? 'Đã nhận tiền – chờ Admin thông báo cho Host'
-        : refund.refundSent
-        ? 'Admin đã hoàn tiền – chờ bạn xác nhận'
-        : refund.adminApproved
-        ? 'Admin đã duyệt – đang chờ hoàn tiền'
-        : 'Đang chờ Admin xác nhận yêu cầu hủy';
-    final color = refund.hostCompleted
-        ? Colors.green
-        : refund.refundSent
-        ? Colors.blue
-        : Colors.orange;
-    final amountText = refund.refundAmount.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (match) => '${match[1]}.',
-    );
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: .3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text('Mức hoàn: ${refund.refundPercent}% – $amountTextđ'),
-        ],
-      ),
-    );
   }
 
   Widget _buildDateInfo(String title, String date, {bool isEnd = false}) {

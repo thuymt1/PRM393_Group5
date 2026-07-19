@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/repository_providers.dart';
@@ -20,6 +22,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     with TickerProviderStateMixin {
   int _currentIndex = 0;
   late TabController _mainTabController;
+  Timer? _bookingRefreshTimer;
 
   String _applicationFilter = 'pending';
 
@@ -29,11 +32,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     _mainTabController = TabController(length: 5, vsync: this);
     _mainTabController.addListener(() {
       setState(() => _currentIndex = _mainTabController.index);
+      if (_mainTabController.index == 4) {
+        ref.read(adminDashboardViewModelProvider.notifier).refreshBookings();
+      }
+    });
+    _bookingRefreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      ref.read(adminDashboardViewModelProvider.notifier).refreshBookings();
     });
   }
 
   @override
   void dispose() {
+    _bookingRefreshTimer?.cancel();
     _mainTabController.dispose();
     super.dispose();
   }
@@ -61,7 +71,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
           _buildApplicationsTab(),
           _buildHomestaysTab(),
           _buildUsersTab(),
-          const AdminFinanceTab(),
+          _buildOrdersTab(),
         ],
       ),
       bottomNavigationBar: _buildBottomNav(),
@@ -122,7 +132,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
       {'icon': Icons.assignment_rounded, 'label': 'Đơn Host'},
       {'icon': Icons.home_work_rounded, 'label': 'Homestay'},
       {'icon': Icons.people_rounded, 'label': 'Người dùng'},
-      {'icon': Icons.currency_exchange, 'label': 'Hủy/hoàn'},
+      {'icon': Icons.receipt_long_rounded, 'label': 'Đơn/Hủy'},
     ];
 
     return Container(
@@ -802,6 +812,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
                   ref.read(adminDashboardViewModelProvider.notifier).refresh(),
             );
           },
+        );
+  }
+
+  Widget _buildOrdersTab() {
+    return ref
+        .watch(adminDashboardViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+          ),
+          error: (error, _) => Center(child: Text('Lỗi tải đơn: $error')),
+          data: (dashboard) => AdminFinanceTab(bookings: dashboard.bookings),
         );
   }
 

@@ -5,7 +5,6 @@ import '../../data/repositories/repository_providers.dart';
 import '../../models/homestay_model.dart';
 import '../../features/customer/viewmodels/customer_home_view_model.dart';
 import '../../features/customer/models/customer_home_state.dart';
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
 import 'cancel_booking_page.dart';
 
 class CustomerHomeScreen extends ConsumerStatefulWidget {
@@ -133,7 +132,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(cancellationViewModelProvider);
     ref.watch(customerHomeViewModelProvider);
     if (!_initialized) {
       final initialTab = ModalRoute.of(context)?.settings.arguments as int?;
@@ -741,7 +739,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                           statusText = 'Chờ Admin xác minh';
                         } else if (booking['status'] == 'pending') {
                           statusColor = Colors.blue;
-                          statusText = 'Chờ Host duyệt';
+                          statusText = 'Chờ xác nhận';
                         } else if (booking['status'] == 'confirmed') {
                           statusColor = Colors.green;
                           statusText = 'Đã xác nhận';
@@ -755,20 +753,6 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                           statusColor = Colors.blue;
                           statusText = 'Đã hoàn tiền';
                         }
-                        final cancellation = ref
-                            .read(cancellationViewModelProvider.notifier)
-                            .findByBookingId((booking['id'] as num).toInt());
-                        if (cancellation != null) {
-                          statusColor = cancellation.hostCompleted
-                              ? Colors.green
-                              : Colors.deepOrange;
-                          statusText = cancellation.hostCompleted
-                              ? 'Đã xác nhận hủy'
-                              : cancellation.refundSent
-                              ? 'Chờ xác nhận hoàn tiền'
-                              : 'Đang xử lý yêu cầu hủy';
-                        }
-
                         final String checkInStr =
                             '${checkIn.day}/${checkIn.month}/${checkIn.year}';
                         final String checkOutStr =
@@ -788,14 +772,19 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                             ],
                           ),
                           child: InkWell(
-                            onTap: () {
-                              Navigator.pushNamed(
+                            onTap: () async {
+                              final changed = await Navigator.pushNamed(
                                 context,
                                 '/customer-booking-detail',
                                 arguments: booking,
-                              ).then((_) {
-                                setState(() {});
-                              });
+                              );
+                              if (changed == true) {
+                                await ref
+                                    .read(
+                                      customerHomeViewModelProvider.notifier,
+                                    )
+                                    .refresh();
+                              }
                             },
                             borderRadius: BorderRadius.circular(24),
                             child: Column(
@@ -906,9 +895,7 @@ class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
                                             ),
                                           ),
                                           const Spacer(),
-                                          if (booking['status'] ==
-                                                  'confirmed' &&
-                                              cancellation == null)
+                                          if (booking['status'] == 'confirmed')
                                             TextButton(
                                               onPressed: () async {
                                                 final changed =

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/repository_providers.dart';
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
 
 class HostBookingDetailScreen extends ConsumerStatefulWidget {
   const HostBookingDetailScreen({super.key});
@@ -358,24 +357,12 @@ class _HostBookingDetailScreenState
 
   // Thanh phím đôi tác vụ ("Từ chối" / "Phê duyệt") cố định dưới chân mép đáy màn hình thông qua cơ chế BottomSheet
   Widget _buildActionButtons(BuildContext context) {
-    final requests = ref.watch(cancellationViewModelProvider);
-    CancellationWorkflowRequest? cancellation;
-    for (final request in requests) {
-      if (request.bookingId == (_booking['id'] as num).toInt()) {
-        cancellation = request;
-        break;
-      }
-    }
-    if (cancellation != null) {
-      return _buildDemoCancellationActions(context, cancellation);
-    }
-
     if (_booking['status'] != 'pending' &&
         _booking['status'] != 'cancel_pending') {
       String statusStr = _booking['status'];
       if (statusStr == 'confirmed') statusStr = 'Đã duyệt';
       if (statusStr == 'cancelled') statusStr = 'Đã hủy';
-      if (statusStr == 'refunded') statusStr = 'Đã báo hoàn tiền (chờ khách)';
+      if (statusStr == 'refunded') statusStr = 'Đã hoàn/hủy';
       return Container(
         padding: const EdgeInsets.all(24),
         child: Text(
@@ -497,48 +484,6 @@ class _HostBookingDetailScreenState
     );
   }
 
-  Widget _buildDemoCancellationActions(
-    BuildContext context,
-    CancellationWorkflowRequest request,
-  ) {
-    VoidCallback? action;
-    String label;
-    Color color;
-    if (!request.hostAcknowledged) {
-      label = 'Xác nhận đã nhận yêu cầu hủy';
-      color = Colors.deepOrange;
-      action = () => ref
-          .read(cancellationViewModelProvider.notifier)
-          .hostAcknowledge(request.bookingId);
-    } else if (request.adminNotifiedHost &&
-        request.customerReceived &&
-        !request.hostCompleted) {
-      label = 'Xác nhận hủy và mở lịch phòng';
-      color = Colors.green;
-      action = () => ref
-          .read(cancellationViewModelProvider.notifier)
-          .hostCompleteCancellation(request.bookingId);
-    } else {
-      label = request.hostCompleted
-          ? 'Đã hoàn tất – lịch phòng được mở trong phiên demo'
-          : 'Đang chờ các bước xác nhận còn lại';
-      color = request.hostCompleted ? Colors.green : Colors.orange;
-    }
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      color: Colors.white,
-      child: ElevatedButton(
-        onPressed: action,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          disabledBackgroundColor: color.withValues(alpha: .3),
-          minimumSize: const Size(double.infinity, 56),
-        ),
-        child: Text(label, style: const TextStyle(color: Colors.white)),
-      ),
-    );
-  }
-
   Future<void> _updateBookingStatus(String newStatus) async {
     setState(() {
       _isLoading = true;
@@ -557,7 +502,7 @@ class _HostBookingDetailScreenState
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Lỗi: \$e')));
+        ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     } finally {
       if (mounted) {

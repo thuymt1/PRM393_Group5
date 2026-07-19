@@ -88,6 +88,8 @@ class _FakeBookingRepository implements BookingRepository {
   @override
   Future<List<dynamic>> getHostRequests() async => [];
   @override
+  Future<List<dynamic>> getAdminRequests() async => [];
+  @override
   Future<List<dynamic>> getMine() async => [];
   @override
   Future<void> updateStatus(int bookingId, String status) async {}

@@ -15,11 +15,13 @@ abstract interface class BookingRepository {
   });
   Future<List<dynamic>> getMine();
   Future<List<dynamic>> getHostRequests();
+  Future<List<dynamic>> getAdminRequests();
   Future<void> updateStatus(int bookingId, String status);
 }
 
 class SupabaseBookingRepository implements BookingRepository {
   const SupabaseBookingRepository(this._client);
+
   final SupabaseClient _client;
 
   @override
@@ -32,7 +34,7 @@ class SupabaseBookingRepository implements BookingRepository {
         .from('bookings')
         .select('id')
         .eq('homestay_id', homestayId)
-        .not('status', 'in', '(cancelled,rejected,cancel_pending,refunded)')
+        .not('status', 'in', '(cancelled,rejected,refunded)')
         .lt('check_in', checkOut)
         .gt('check_out', checkIn);
     return (rows as List).isEmpty;
@@ -44,7 +46,7 @@ class SupabaseBookingRepository implements BookingRepository {
         .from('bookings')
         .select('check_in, check_out')
         .eq('homestay_id', homestayId)
-        .not('status', 'in', '(cancelled,rejected,cancel_pending,refunded)');
+        .not('status', 'in', '(cancelled,rejected,refunded)');
     return (rows as List)
         .map(
           (row) => {
@@ -101,13 +103,30 @@ class SupabaseBookingRepository implements BookingRepository {
         .from('homestays')
         .select('id')
         .eq('host_id', user.id);
-    final ids = (homes as List).map((row) => row['id'] as int).toList();
+    final ids = (homes as List)
+        .map((row) => int.tryParse(row['id'].toString()))
+        .whereType<int>()
+        .toList();
     if (ids.isEmpty) return [];
-    return _client
+
+    final rows = await _client
         .from('bookings')
-        .select('*, homestays(*, homestay_images(url)), profiles(*)')
+        .select('*, homestays(*, homestay_images(url))')
         .inFilter('homestay_id', ids)
+        .neq('status', 'payment_pending')
         .order('created_at', ascending: false);
+    return _attachCustomerProfiles(rows as List);
+  }
+
+  @override
+  Future<List<dynamic>> getAdminRequests() async {
+    final user = _client.auth.currentUser;
+    if (user == null) return [];
+    final rows = await _client
+        .from('bookings')
+        .select('*, homestays(*, homestay_images(url))')
+        .order('created_at', ascending: false);
+    return _attachCustomerProfiles(rows as List);
   }
 
   @override
@@ -118,7 +137,34 @@ class SupabaseBookingRepository implements BookingRepository {
         .eq('id', bookingId)
         .select();
     if ((rows as List).isEmpty) {
-      throw Exception('Không thể cập nhật đơn phòng');
+      throw Exception(
+        'Không thể cập nhật đơn. Hãy kiểm tra quyền RLS của tài khoản.',
+      );
     }
+  }
+
+  Future<List<dynamic>> _attachCustomerProfiles(List<dynamic> rawRows) async {
+    final bookings = rawRows
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
+    final customerIds = bookings
+        .map((booking) => booking['customer_id']?.toString())
+        .whereType<String>()
+        .toSet()
+        .toList();
+    if (customerIds.isEmpty) return bookings;
+
+    final profileRows = await _client
+        .from('profiles')
+        .select('id, full_name, email, avatar_url')
+        .inFilter('id', customerIds);
+    final profilesById = <String, Map<String, dynamic>>{
+      for (final row in profileRows as List)
+        row['id'].toString(): Map<String, dynamic>.from(row as Map),
+    };
+    for (final booking in bookings) {
+      booking['profiles'] = profilesById[booking['customer_id']?.toString()];
+    }
+    return bookings;
   }
 }

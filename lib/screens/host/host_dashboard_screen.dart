@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/repository_providers.dart';
 import '../../models/homestay_model.dart';
 import '../../features/host/viewmodels/host_dashboard_view_model.dart';
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
 
 // Màn hình bảng điều khiển chính dành cho luồng giao diện Chủ nhà (Host Dashboard)
 class HostDashboardScreen extends ConsumerStatefulWidget {
@@ -24,9 +23,12 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
     });
   }
 
+  Future<void> _refreshDashboard() async {
+    await ref.read(hostDashboardViewModelProvider.notifier).refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
-    ref.watch(cancellationViewModelProvider);
     // 4 tab tương ứng cho Host: Bảng điều khiển, Yêu cầu đặt phòng, Nhà của tôi, Hồ sơ
     final List<Widget> tabs = [
       _buildDashboardTab(),
@@ -110,11 +112,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
                 );
 
             return RefreshIndicator(
-              onRefresh: () async {
-                await ref
-                    .read(hostDashboardViewModelProvider.notifier)
-                    .refresh();
-              },
+              onRefresh: _refreshDashboard,
               color: const Color(0xFFE07A5F),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -354,9 +352,6 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
     final checkIn = DateTime.parse(booking['check_in']);
     final checkOut = DateTime.parse(booking['check_out']);
     final int nights = checkOut.difference(checkIn).inDays;
-    final cancellation = ref
-        .read(cancellationViewModelProvider.notifier)
-        .findByBookingId((booking['id'] as num).toInt());
 
     return InkWell(
       onTap: () async {
@@ -366,7 +361,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
           arguments: booking,
         );
         if (result == true) {
-          setState(() {}); // Làm mới màn hình khi quay lại nếu có thay đổi
+          await _refreshDashboard();
         }
       },
       child: Container(
@@ -438,7 +433,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
                               : (booking['status'] == 'cancel_pending'
                                     ? 'Yêu cầu hủy'
                                     : (booking['status'] == 'refunded'
-                                          ? 'Chờ khách xác nhận'
+                                          ? 'Đã hoàn/hủy'
                                           : 'Đang xử lý'))),
                     style: TextStyle(
                       color: booking['status'] == 'confirmed'
@@ -457,16 +452,13 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
                 ),
               ],
             ),
-            if (cancellation != null) ...[
-              const SizedBox(height: 12),
-              _buildDemoCancellationButton(cancellation),
-            ] else if (booking['status'] == 'pending') ...[
+            if (booking['status'] == 'pending') ...[
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   OutlinedButton(
-                    onPressed: () => _updateStatus(booking['id'], 'cancelled'),
+                    onPressed: () => _updateStatus(booking['id'], 'rejected'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
@@ -502,61 +494,11 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
     );
   }
 
-  Widget _buildDemoCancellationButton(CancellationWorkflowRequest request) {
-    if (!request.hostAcknowledged) {
-      return ElevatedButton(
-        onPressed: () {
-          ref
-              .read(cancellationViewModelProvider.notifier)
-              .hostAcknowledge(request.bookingId);
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.deepOrange,
-          minimumSize: const Size(double.infinity, 44),
-        ),
-        child: const Text(
-          'Xác nhận đã nhận yêu cầu hủy',
-          style: TextStyle(color: Colors.white),
-        ),
-      );
-    }
-    if (request.adminNotifiedHost &&
-        request.customerReceived &&
-        !request.hostCompleted) {
-      return ElevatedButton(
-        onPressed: () {
-          ref
-              .read(cancellationViewModelProvider.notifier)
-              .hostCompleteCancellation(request.bookingId);
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green,
-          minimumSize: const Size(double.infinity, 44),
-        ),
-        child: const Text(
-          'Xác nhận hủy và mở lịch phòng',
-          style: TextStyle(color: Colors.white),
-        ),
-      );
-    }
-    return Text(
-      request.hostCompleted
-          ? 'Đã xác nhận hủy – có thể cho thuê lại ngày đã hủy.'
-          : request.customerReceived
-          ? 'Chờ Admin gửi thông báo xác nhận hủy.'
-          : 'Đang chờ Admin hoàn tiền và Customer xác nhận.',
-      style: TextStyle(
-        color: request.hostCompleted ? Colors.green : Colors.orange,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-
   void _updateStatus(int bookingId, String status) async {
     setState(() => _isLoading = true);
     try {
       await ref.read(bookingRepositoryProvider).updateStatus(bookingId, status);
-      setState(() {});
+      await _refreshDashboard();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -669,11 +611,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
                 centerTitle: true,
               ),
               body: RefreshIndicator(
-                onRefresh: () async {
-                  await ref
-                      .read(hostDashboardViewModelProvider.notifier)
-                      .refresh();
-                },
+                onRefresh: _refreshDashboard,
                 color: const Color(0xFFE07A5F),
                 child: bookings.isEmpty
                     ? Center(
@@ -738,11 +676,7 @@ class _HostDashboardScreenState extends ConsumerState<HostDashboardScreen> {
                 centerTitle: true,
               ),
               body: RefreshIndicator(
-                onRefresh: () async {
-                  await ref
-                      .read(hostDashboardViewModelProvider.notifier)
-                      .refresh();
-                },
+                onRefresh: _refreshDashboard,
                 color: const Color(0xFFE07A5F),
                 child: homestays.isEmpty
                     ? Center(

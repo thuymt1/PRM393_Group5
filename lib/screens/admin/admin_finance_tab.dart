@@ -1,53 +1,322 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/customer/viewmodels/cancellation_view_model.dart';
+import '../../data/repositories/repository_providers.dart';
+import '../../features/admin/viewmodels/admin_dashboard_view_model.dart';
 
-class AdminFinanceTab extends ConsumerWidget {
-  const AdminFinanceTab({super.key});
+class AdminFinanceTab extends StatelessWidget {
+  const AdminFinanceTab({super.key, required this.bookings});
+
+  final List<dynamic> bookings;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCancellation = bookings.any(
+      (item) => const {
+        'cancel_pending',
+        'refunded',
+        'cancelled',
+      }.contains((item as Map)['status']),
+    );
+    return DefaultTabController(
+      key: ValueKey(hasCancellation),
+      length: 2,
+      initialIndex: hasCancellation ? 1 : 0,
+      child: Column(
+        children: [
+          Material(
+            color: Colors.white,
+            child: TabBar(
+              labelColor: const Color(0xFFE07A5F),
+              unselectedLabelColor: Colors.grey.shade500,
+              indicatorColor: const Color(0xFFE07A5F),
+              tabs: const [
+                Tab(text: 'Đơn đặt phòng'),
+                Tab(text: 'Hủy / hoàn tiền'),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _BookingsList(bookings: bookings),
+                _CancellationsList(bookings: bookings),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingsList extends ConsumerWidget {
+  const _BookingsList({required this.bookings});
+
+  final List<dynamic> bookings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final requests = ref.watch(cancellationViewModelProvider);
-    if (requests.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    return _RefreshableBookingList(
+      bookings: bookings,
+      emptyIcon: Icons.book_online_outlined,
+      emptyMessage: 'Chưa có đơn đặt phòng nào.',
+      itemBuilder: (booking) => _BookingCard(booking: booking),
+    );
+  }
+}
+
+class _CancellationsList extends ConsumerWidget {
+  const _CancellationsList({required this.bookings});
+
+  final List<dynamic> bookings;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cancellations = bookings
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .where(
+          (booking) => const {
+            'cancel_pending',
+            'refunded',
+            'cancelled',
+          }.contains(booking['status']),
+        )
+        .toList();
+
+    return _RefreshableBookingList(
+      bookings: cancellations,
+      emptyIcon: Icons.currency_exchange,
+      emptyMessage: 'Chưa có yêu cầu hủy và hoàn tiền.',
+      itemBuilder: (booking) => _CancellationCard(booking: booking),
+    );
+  }
+}
+
+class _RefreshableBookingList extends ConsumerWidget {
+  const _RefreshableBookingList({
+    required this.bookings,
+    required this.emptyIcon,
+    required this.emptyMessage,
+    required this.itemBuilder,
+  });
+
+  final List<dynamic> bookings;
+  final IconData emptyIcon;
+  final String emptyMessage;
+  final Widget Function(Map<String, dynamic>) itemBuilder;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Future<void> refresh() =>
+        ref.read(adminDashboardViewModelProvider.notifier).refresh();
+
+    if (bookings.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: refresh,
+        child: ListView(
           children: [
-            Icon(Icons.currency_exchange, size: 64, color: Colors.grey),
-            SizedBox(height: 12),
-            Text(
-              'Chưa có yêu cầu hủy và hoàn tiền trong phiên này.',
-              style: TextStyle(color: Colors.grey),
-            ),
+            const SizedBox(height: 180),
+            Icon(emptyIcon, size: 64, color: Colors.grey),
+            const SizedBox(height: 12),
+            Center(child: Text(emptyMessage)),
           ],
         ),
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: requests.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) =>
-          _CancellationCard(request: requests[index]),
+    return RefreshIndicator(
+      onRefresh: refresh,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: bookings.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (context, index) =>
+            itemBuilder(Map<String, dynamic>.from(bookings[index] as Map)),
+      ),
     );
   }
 }
 
-class _CancellationCard extends ConsumerWidget {
-  const _CancellationCard({required this.request});
+class _BookingCard extends ConsumerStatefulWidget {
+  const _BookingCard({required this.booking});
 
-  final CancellationWorkflowRequest request;
+  final Map<String, dynamic> booking;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final booking = request.booking;
-    final homestay = booking['homestays'] as Map?;
-    final amount = request.refundAmount.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (match) => '${match[1]}.',
+  ConsumerState<_BookingCard> createState() => _BookingCardState();
+}
+
+class _BookingCardState extends ConsumerState<_BookingCard> {
+  bool _updating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final booking = widget.booking;
+    final status = booking['status']?.toString() ?? 'unknown';
+    final canReview = status == 'payment_pending' || status == 'pending';
+    final approvedStatus = status == 'payment_pending'
+        ? 'pending'
+        : 'confirmed';
+
+    return _BookingInfoCard(
+      booking: booking,
+      footer: canReview
+          ? Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _updating
+                        ? null
+                        : () => _updateStatus('rejected'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                    child: const Text('Từ chối'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _updating
+                        ? null
+                        : () => _updateStatus(approvedStatus),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6D4C41),
+                    ),
+                    child: _updating
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Xác nhận đơn',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                  ),
+                ),
+              ],
+            )
+          : null,
     );
+  }
+
+  Future<void> _updateStatus(String status) async {
+    setState(() => _updating = true);
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .updateStatus((widget.booking['id'] as num).toInt(), status);
+      await ref.read(adminDashboardViewModelProvider.notifier).refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            status == 'rejected'
+                ? 'Đã từ chối đơn đặt phòng.'
+                : 'Đã xác nhận đơn đặt phòng.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể cập nhật đơn: $error')));
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+}
+
+class _CancellationCard extends ConsumerStatefulWidget {
+  const _CancellationCard({required this.booking});
+
+  final Map<String, dynamic> booking;
+
+  @override
+  ConsumerState<_CancellationCard> createState() => _CancellationCardState();
+}
+
+class _CancellationCardState extends ConsumerState<_CancellationCard> {
+  bool _updating = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPending = widget.booking['status'] == 'cancel_pending';
+    return _BookingInfoCard(
+      booking: widget.booking,
+      footer: isPending
+          ? SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _updating ? null : _confirmCancellation,
+                icon: const Icon(Icons.currency_exchange, color: Colors.white),
+                label: Text(
+                  _updating ? 'Đang xử lý...' : 'Xác nhận đã hoàn/hủy',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Future<void> _confirmCancellation() async {
+    setState(() => _updating = true);
+    try {
+      await ref
+          .read(bookingRepositoryProvider)
+          .updateStatus((widget.booking['id'] as num).toInt(), 'refunded');
+      await ref.read(adminDashboardViewModelProvider.notifier).refresh();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã xác nhận hoàn/hủy đơn.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể xác nhận: $error')));
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+}
+
+class _BookingInfoCard extends StatelessWidget {
+  const _BookingInfoCard({required this.booking, this.footer});
+
+  final Map<String, dynamic> booking;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final homestay = booking['homestays'] as Map?;
+    final customer = booking['profiles'] as Map?;
+    final status = booking['status']?.toString() ?? 'unknown';
+    final (statusLabel, statusColor) = switch (status) {
+      'payment_pending' => ('Chờ Admin xác minh', Colors.orange),
+      'pending' => ('Chờ xác nhận', Colors.blue),
+      'confirmed' => ('Đã xác nhận', Colors.green),
+      'rejected' => ('Đã từ chối', Colors.red),
+      'cancel_pending' => ('Chờ xử lý hủy', Colors.deepOrange),
+      'refunded' => ('Đã hoàn/hủy', Colors.indigo),
+      'cancelled' => ('Đã hủy', Colors.grey),
+      _ => (status, Colors.grey),
+    };
+    final total = ((booking['total_price'] as num?) ?? 0)
+        .toInt()
+        .toString()
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (match) => '${match[1]}.',
+        );
 
     return Card(
       elevation: 0,
@@ -63,157 +332,53 @@ class _CancellationCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     homestay?['name']?.toString() ??
-                        'Booking #${request.bookingId}',
+                        'Booking #${booking['id']}',
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                _StatusChip(request: request),
+                _LabelChip(label: statusLabel, color: statusColor),
               ],
             ),
-            const SizedBox(height: 12),
-            Text('Lý do: ${request.reason}'),
-            Text('Mức hoàn: ${request.refundPercent}%'),
+            const SizedBox(height: 10),
             Text(
-              'Số tiền hoàn: $amountđ',
+              'Khách: ${customer?['full_name'] ?? customer?['email'] ?? 'Không rõ'}',
+            ),
+            Text('Nhận phòng: ${booking['check_in']}'),
+            Text('Trả phòng: ${booking['check_out']}'),
+            Text(
+              'Tổng tiền: $totalđ',
               style: const TextStyle(
                 color: Color(0xFFE07A5F),
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            if (!request.adminApproved)
-              _actionButton(
-                label: 'Xác nhận yêu cầu hủy',
-                icon: Icons.fact_check_outlined,
-                color: const Color(0xFF6D4C41),
-                onPressed: () {
-                  ref
-                      .read(cancellationViewModelProvider.notifier)
-                      .adminApprove(request.bookingId);
-                  _message(context, 'Admin đã xác nhận yêu cầu hủy.');
-                },
-              )
-            else if (!request.refundSent)
-              _actionButton(
-                label: request.refundAmount > 0
-                    ? 'Xác nhận đã hoàn tiền'
-                    : 'Xác nhận không phát sinh hoàn tiền',
-                icon: Icons.payments_outlined,
-                color: Colors.green,
-                onPressed: () {
-                  ref
-                      .read(cancellationViewModelProvider.notifier)
-                      .adminMarkRefundSent(request.bookingId);
-                  _message(context, 'Đã chuyển sang chờ Customer xác nhận.');
-                },
-              )
-            else if (!request.customerReceived)
-              const _WaitingBox(
-                text: 'Đang chờ Customer xác nhận đã nhận tiền hoàn.',
-              )
-            else if (!request.adminNotifiedHost)
-              _actionButton(
-                label: 'Gửi thông báo cho Host xác nhận hủy',
-                icon: Icons.notifications_active_outlined,
-                color: Colors.blue,
-                onPressed: () {
-                  ref
-                      .read(cancellationViewModelProvider.notifier)
-                      .adminNotifyHost(request.bookingId);
-                  _message(context, 'Đã gửi thông báo xác nhận hủy cho Host.');
-                },
-              )
-            else if (!request.hostCompleted)
-              const _WaitingBox(
-                text: 'Đã báo Host. Đang chờ Host xác nhận hủy cuối cùng.',
-              )
-            else
-              const _WaitingBox(
-                text: 'Đã hoàn tất. Host có thể mở lại lịch phòng.',
-                color: Colors.green,
-              ),
+            if (footer != null) ...[const SizedBox(height: 16), footer!],
           ],
         ),
       ),
     );
   }
-
-  Widget _actionButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onPressed,
-  }) => SizedBox(
-    width: double.infinity,
-    child: ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white),
-      label: Text(label, style: const TextStyle(color: Colors.white)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-      ),
-    ),
-  );
-
-  void _message(BuildContext context, String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.request});
+class _LabelChip extends StatelessWidget {
+  const _LabelChip({required this.label, required this.color});
 
-  final CancellationWorkflowRequest request;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = request.hostCompleted
-        ? ('Hoàn tất', Colors.green)
-        : request.adminNotifiedHost
-        ? ('Chờ Host', Colors.blue)
-        : request.customerReceived
-        ? ('Khách đã nhận', Colors.green)
-        : request.refundSent
-        ? ('Chờ Customer', Colors.blue)
-        : request.adminApproved
-        ? ('Chờ hoàn tiền', Colors.orange)
-        : ('Chờ Admin', Colors.orange);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-}
-
-class _WaitingBox extends StatelessWidget {
-  const _WaitingBox({required this.text, this.color = Colors.orange});
-
-  final String text;
+  final String label;
   final Color color;
 
   @override
   Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(12),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .08),
+      color: color.withValues(alpha: .1),
       borderRadius: BorderRadius.circular(12),
     ),
-    child: Text(text, style: TextStyle(color: color)),
+    child: Text(
+      label,
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+    ),
   );
 }

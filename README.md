@@ -2,9 +2,11 @@
 
 Ứng dụng đặt homestay Flutter sử dụng Supabase và Riverpod MVVM.
 
-## Luồng hủy và hoàn tiền demo
+## Luồng đặt phòng, hủy và hoàn tiền
 
-Các nút xác nhận của Customer, Host và Admin đang dùng state Riverpod trong bộ nhớ, không yêu cầu migration Supabase. Trạng thái chỉ tồn tại trong phiên ứng dụng hiện tại và không đồng bộ giữa các thiết bị.
+Ứng dụng dùng trực tiếp cột `bookings.status` hiện có trên Supabase, không yêu cầu migration bổ sung.
+
+Luồng đặt phòng: Customer thanh toán → Admin hoặc Host xác nhận. Luồng hủy: Customer gửi yêu cầu → Admin xác nhận hoàn/hủy.
 
 ## Getting Started
 
