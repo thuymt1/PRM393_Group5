@@ -30,10 +30,11 @@ abstract final class RefundPolicy {
     final days = checkInDate.difference(requestDate).inDays;
 
     final percent = switch (days) {
-      >= 7 => 100,
-      >= 3 => 70,
-      >= 1 => 30,
-      _ => 0,
+      > 10 => 100,  // x > 10: hoàn 100%
+      >= 7 => 70,   // 7 <= x <= 10: hoàn 70%
+      >= 5 => 50,   // 5 <= x < 7: hoàn 50%
+      >= 4 => 30,   // 3 < x < 5 (tức x = 4): hoàn 30%
+      _ => 0,       // x <= 3: không hoàn tiền
     };
 
     return RefundQuote(

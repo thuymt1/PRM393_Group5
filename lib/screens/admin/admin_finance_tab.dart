@@ -11,17 +11,9 @@ class AdminFinanceTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasCancellation = bookings.any(
-      (item) => const {
-        'cancel_pending',
-        'refunded',
-        'cancelled',
-      }.contains((item as Map)['status']),
-    );
     return DefaultTabController(
-      key: ValueKey(hasCancellation),
       length: 2,
-      initialIndex: hasCancellation ? 1 : 0,
+      initialIndex: 0,
       child: Column(
         children: [
           Material(

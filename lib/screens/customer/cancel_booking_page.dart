@@ -227,8 +227,101 @@ class _CancelBookingPageState extends ConsumerState<CancelBookingPage> {
             'Số tiền chính thức được tính lại trên hệ thống khi gửi yêu cầu. Admin chuyển tiền bên ngoài ứng dụng; bạn phải xác nhận sau khi nhận đủ.',
             style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.4),
           ),
+          const SizedBox(height: 16),
+          const Text(
+            'Bảng chính sách hoàn tiền:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF6D4C41),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _policyTable(),
         ],
       ),
+    );
+  }
+
+  Widget _policyTable() {
+    const rows = [
+      ('Trên 10 ngày', '100%'),
+      ('7 – 10 ngày', '70%'),
+      ('5 – 6 ngày', '50%'),
+      ('4 ngày', '30%'),
+      ('Dưới 3 ngày', '0%'),
+    ];
+    return Table(
+      border: TableBorder.all(
+        color: const Color(0xFFE07A5F),
+        width: 0.5,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      columnWidths: const {
+        0: FlexColumnWidth(3),
+        1: FlexColumnWidth(1),
+      },
+      children: [
+        // Header
+        TableRow(
+          decoration: const BoxDecoration(
+            color: Color(0xFFE07A5F),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+          ),
+          children: const [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Text(
+                'Thời gian trước nhận phòng',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: Text(
+                'Hoàn',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        for (final (label, percent) in rows)
+          TableRow(
+            decoration: BoxDecoration(
+              color: _quote.percent.toString() == percent.replaceAll('%', '')
+                  ? const Color(0xFFE07A5F).withValues(alpha: .08)
+                  : Colors.white,
+            ),
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Text(label, style: const TextStyle(fontSize: 11)),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: Text(
+                  percent,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
     );
   }
 
