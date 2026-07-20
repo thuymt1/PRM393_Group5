@@ -27,11 +27,19 @@ class HostDashboardViewModel extends AsyncNotifier<HostDashboardState> {
     await refresh();
   }
 
-  Future<HostDashboardState> _load() async => HostDashboardState(
-    bookings: await ref.read(bookingRepositoryProvider).getHostRequests(),
-    homestays: await ref.read(homestayRepositoryProvider).getMine(),
-    profile: await ref.read(profileRepositoryProvider).getMine(),
-  );
+  Future<HostDashboardState> _load() async {
+    final (bookings, homestays, profile) = await (
+      ref.read(bookingRepositoryProvider).getHostRequests(),
+      ref.read(homestayRepositoryProvider).getMine(),
+      ref.read(profileRepositoryProvider).getMine(),
+    ).wait;
+
+    return HostDashboardState(
+      bookings: bookings,
+      homestays: homestays,
+      profile: profile,
+    );
+  }
 }
 
 final hostDashboardViewModelProvider =

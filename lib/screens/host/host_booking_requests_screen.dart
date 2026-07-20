@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/repository_providers.dart';
 
+enum _RequestSort { newest, oldest, guestName, priceHigh }
+
 class HostBookingRequestsScreen extends ConsumerStatefulWidget {
   const HostBookingRequestsScreen({super.key});
 
@@ -13,14 +15,24 @@ class HostBookingRequestsScreen extends ConsumerStatefulWidget {
 
 class _HostBookingRequestsScreenState
     extends ConsumerState<HostBookingRequestsScreen> {
-  List<dynamic> _requests = [];
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _requests = [];
   bool _isLoading = true;
   String? _loadError;
+  String _query = '';
+  String _statusFilter = 'all';
+  _RequestSort _sort = _RequestSort.newest;
 
   @override
   void initState() {
     super.initState();
     _fetchRequests();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchRequests() async {
@@ -32,7 +44,10 @@ class _HostBookingRequestsScreenState
       final data = await ref.read(bookingRepositoryProvider).getHostRequests();
       if (!mounted) return;
       setState(() {
-        _requests = data;
+        _requests = data
+            .whereType<Map>()
+            .map(Map<String, dynamic>.from)
+            .toList(growable: false);
         _isLoading = false;
       });
     } catch (error) {
@@ -44,8 +59,69 @@ class _HostBookingRequestsScreenState
     }
   }
 
+  List<Map<String, dynamic>> get _visibleRequests {
+    final query = _query.trim().toLowerCase();
+    final filtered = _requests.where((request) {
+      final status = request['status']?.toString() ?? '';
+      final matchesStatus = switch (_statusFilter) {
+        'cancel' => const {
+          'cancel_pending',
+          'cancelled',
+          'refunded',
+        }.contains(status),
+        'all' => true,
+        _ => status == _statusFilter,
+      };
+      if (!matchesStatus) return false;
+      if (query.isEmpty) return true;
+
+      final profile = request['profiles'] is Map
+          ? request['profiles'] as Map
+          : const <String, dynamic>{};
+      final homestay = request['homestays'] is Map
+          ? request['homestays'] as Map
+          : const <String, dynamic>{};
+      return [
+        request['id'],
+        profile['full_name'],
+        profile['email'],
+        homestay['name'],
+        request['check_in'],
+        request['check_out'],
+      ].whereType<Object>().join(' ').toLowerCase().contains(query);
+    }).toList();
+
+    DateTime createdAt(Map<String, dynamic> request) =>
+        DateTime.tryParse(request['created_at']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0);
+    double priceOf(Map<String, dynamic> request) {
+      final value = request['total_price'];
+      return value is num
+          ? value.toDouble()
+          : double.tryParse(value?.toString() ?? '') ?? 0;
+    }
+
+    String guestOf(Map<String, dynamic> request) {
+      final profile = request['profiles'];
+      return profile is Map
+          ? profile['full_name']?.toString().toLowerCase() ?? ''
+          : '';
+    }
+
+    filtered.sort(
+      (left, right) => switch (_sort) {
+        _RequestSort.oldest => createdAt(left).compareTo(createdAt(right)),
+        _RequestSort.guestName => guestOf(left).compareTo(guestOf(right)),
+        _RequestSort.priceHigh => priceOf(right).compareTo(priceOf(left)),
+        _RequestSort.newest => createdAt(right).compareTo(createdAt(left)),
+      },
+    );
+    return filtered;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final visibleRequests = _visibleRequests;
     return Scaffold(
       backgroundColor: const Color(
         0xFFFDFAE7,
@@ -73,12 +149,26 @@ class _HostBookingRequestsScreenState
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.filter_list,
-              color: Color(0xFF6D4C41),
-            ), // Biểu tượng phím lọc nâng cao
-            onPressed: () {},
+          PopupMenuButton<_RequestSort>(
+            initialValue: _sort,
+            tooltip: 'Sắp xếp',
+            icon: const Icon(Icons.swap_vert_rounded, color: Color(0xFF6D4C41)),
+            onSelected: (value) => setState(() => _sort = value),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: _RequestSort.newest,
+                child: Text('Mới nhất'),
+              ),
+              PopupMenuItem(value: _RequestSort.oldest, child: Text('Cũ nhất')),
+              PopupMenuItem(
+                value: _RequestSort.guestName,
+                child: Text('Tên khách A–Z'),
+              ),
+              PopupMenuItem(
+                value: _RequestSort.priceHigh,
+                child: Text('Giá cao nhất'),
+              ),
+            ],
           ),
         ],
       ),
@@ -101,7 +191,21 @@ class _HostBookingRequestsScreenState
             )
           : Column(
               children: [
+                _buildSearchBar(),
                 _buildTabFilter(), // Khối chứa các nhãn phân loại nhanh trạng thái đặt phòng (Tất cả, Chờ duyệt...)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '${visibleRequests.length}/${_requests.length} đơn đặt phòng',
+                      style: const TextStyle(
+                        color: Color(0xFF8C8079),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: _requests.isEmpty
                       ? const Center(
@@ -110,21 +214,91 @@ class _HostBookingRequestsScreenState
                             style: TextStyle(color: Colors.grey),
                           ),
                         )
+                      : visibleRequests.isEmpty
+                      ? _buildFilteredEmptyState()
                       : ListView.builder(
                           padding: const EdgeInsets.all(
                             20,
                           ), // Biên đệm 20 đơn vị xung quanh danh sách cuộn
-                          itemCount: _requests.length,
+                          itemCount: visibleRequests.length,
                           itemBuilder: (context, index) {
                             return _buildRequestCard(
                               context,
-                              _requests[index],
+                              visibleRequests[index],
                             ); // Sinh dựng cấu trúc chi tiết từng thẻ yêu cầu
                           },
                         ),
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _query = value),
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Tìm khách, homestay hoặc mã đơn...',
+          prefixIcon: const Icon(
+            Icons.search_rounded,
+            color: Color(0xFFE07A5F),
+          ),
+          suffixIcon: _searchController.text.isEmpty
+              ? null
+              : IconButton(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _query = '');
+                  },
+                  icon: const Icon(Icons.close_rounded, size: 19),
+                ),
+          filled: true,
+          fillColor: const Color(0xFFFAF6EA),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilteredEmptyState() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
+      children: [
+        const Icon(
+          Icons.manage_search_rounded,
+          size: 58,
+          color: Color(0xFFC8B8AE),
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          'Không tìm thấy đơn phù hợp với điều kiện hiện tại.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF776C66)),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton.icon(
+            onPressed: () {
+              _searchController.clear();
+              setState(() {
+                _query = '';
+                _statusFilter = 'all';
+                _sort = _RequestSort.newest;
+              });
+            },
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: const Text('Xóa bộ lọc'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -139,13 +313,11 @@ class _HostBookingRequestsScreenState
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Row(
           children: [
-            _filterChip(
-              'Tất cả',
-              true,
-            ), // Thẻ mặc định giả định đang được tích chọn kích hoạt hoạt động
-            _filterChip('Chờ duyệt', false),
-            _filterChip('Đã duyệt', false),
-            _filterChip('Đã từ chối', false),
+            _filterChip('Tất cả', 'all'),
+            _filterChip('Chờ duyệt', 'pending'),
+            _filterChip('Đã xác nhận', 'confirmed'),
+            _filterChip('Hủy/hoàn tiền', 'cancel'),
+            _filterChip('Đã từ chối', 'rejected'),
           ],
         ),
       ),
@@ -153,30 +325,36 @@ class _HostBookingRequestsScreenState
   }
 
   // Hàm hỗ trợ thiết kế cấu trúc chi tiết cho từng nhãn viên thuốc phân loại bộ lọc nhanh
-  Widget _filterChip(String label, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.only(
-        right: 12,
-      ), // Khoảng cách hở đệm giữa các nhãn liền kề
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        // Biến đổi màu nền sang sắc cam thương hiệu nếu thẻ đó được kích hoạt chọn
-        color: isSelected ? const Color(0xFFE07A5F) : Colors.white,
-        borderRadius: BorderRadius.circular(
-          20,
-        ), // Tạo kiểu dáng bo tròn viên thuốc mềm mại
-        border: Border.all(
-          color: isSelected ? Colors.transparent : Colors.grey.shade300,
+  Widget _filterChip(String label, String value) {
+    final isSelected = _statusFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = value),
+      child: Container(
+        margin: const EdgeInsets.only(
+          right: 12,
+        ), // Khoảng cách hở đệm giữa các nhãn liền kề
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          // Biến đổi màu nền sang sắc cam thương hiệu nếu thẻ đó được kích hoạt chọn
+          color: isSelected ? const Color(0xFFE07A5F) : Colors.white,
+          borderRadius: BorderRadius.circular(
+            20,
+          ), // Tạo kiểu dáng bo tròn viên thuốc mềm mại
+          border: Border.all(
+            color: isSelected ? Colors.transparent : Colors.grey.shade300,
+          ),
         ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected
-              ? Colors.white
-              : Colors.grey.shade700, // Đổi màu văn bản tương phản với nền thẻ
-          fontSize: 13,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? Colors.white
+                : Colors
+                      .grey
+                      .shade700, // Đổi màu văn bản tương phản với nền thẻ
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ),
     );
@@ -199,19 +377,24 @@ class _HostBookingRequestsScreenState
     final homestayName = homestays['name'] ?? 'Homestay';
 
     // Parse ngày tháng
-    final checkIn = DateTime.parse(data['check_in']);
-    final checkOut = DateTime.parse(data['check_out']);
+    final checkIn =
+        DateTime.tryParse(data['check_in']?.toString() ?? '') ?? DateTime.now();
+    final checkOut =
+        DateTime.tryParse(data['check_out']?.toString() ?? '') ?? checkIn;
     final nights = checkOut.difference(checkIn).inDays;
     final stayDate =
         '${checkIn.day}/${checkIn.month} - ${checkOut.day}/${checkOut.month}, ${checkIn.year}';
     final details = '$nights đêm';
 
-    final priceStr =
-        data['total_price'].toInt().toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        ) +
-        'đ';
+    final rawPrice = data['total_price'];
+    final price = rawPrice is num
+        ? rawPrice.toDouble()
+        : double.tryParse(rawPrice?.toString() ?? '') ?? 0;
+    final formattedPrice = price.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
+    final priceStr = '$formattedPrice đ';
 
     String statusText = 'Đã từ chối';
     Color statusBg = Colors.red.shade50;
@@ -262,8 +445,8 @@ class _HostBookingRequestsScreenState
           ), // Bo góc tròn thẻ hồ sơ 24 đơn vị
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(
-                0.03,
+              color: Colors.black.withValues(
+                alpha: 0.03,
               ), // Đổ bóng mờ mịn siêu nhẹ 3% tạo chiều sâu nổi khối
               blurRadius: 15,
               offset: const Offset(0, 8),
@@ -425,6 +608,7 @@ class _HostBookingRequestsScreenState
                           await ref
                               .read(bookingRepositoryProvider)
                               .updateStatus(data['id'], 'confirmed');
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Đã phê duyệt thành công!'),
@@ -432,6 +616,7 @@ class _HostBookingRequestsScreenState
                           );
                           _fetchRequests(); // Refresh list
                         } catch (e) {
+                          if (!context.mounted) return;
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
@@ -481,10 +666,10 @@ class _HostBookingRequestsScreenState
   }
 
   // Hàm sinh dựng và mở hộp thoại pop-up lấy thông tin lý do từ chối đơn hàng của khách (Alert Dialog)
-  void _showRejectDialog(BuildContext context, int bookingId) {
+  void _showRejectDialog(BuildContext parentContext, int bookingId) {
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: parentContext,
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ), // Thiết lập bo cong góc hộp hội thoại 24 đơn vị
@@ -531,7 +716,7 @@ class _HostBookingRequestsScreenState
         actions: [
           // Nút bấm văn bản thực hiện đóng hủy bỏ tác vụ pop-up
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
           ),
           // Nút bấm lớn màu đỏ xác thực thực thi tác vụ hủy bỏ đơn đặt phòng thực tế
@@ -542,15 +727,19 @@ class _HostBookingRequestsScreenState
                 await ref
                     .read(bookingRepositoryProvider)
                     .updateStatus(bookingId, 'rejected');
+                if (!dialogContext.mounted) return;
                 Navigator.pop(
-                  context,
+                  dialogContext,
                 ); // Đóng cửa sổ pop-up hộp thoại AlertDialog
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Đã từ chối đơn hàng!')),
                 );
                 _fetchRequests(); // Lấy lại dữ liệu mới
               } catch (e) {
-                Navigator.pop(context);
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                if (!mounted) return;
                 ScaffoldMessenger.of(
                   context,
                 ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
