@@ -165,43 +165,20 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ),
       child: Column(
         children: [
-          // Avatar với nút camera
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: const Color(0xFFF7F4E1),
-                backgroundImage: avatarUrl != null
-                    ? NetworkImage(avatarUrl)
-                    : null,
-                child: avatarUrl == null
-                    ? const Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Color(0xFFBDBDBD),
-                      )
-                    : null,
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: _openEditProfile,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE07A5F),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          // Avatar (không có nút camera - upload avatar ở trang Chỉnh sửa hồ sơ)
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: const Color(0xFFF7F4E1),
+            backgroundImage: avatarUrl != null
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: avatarUrl == null
+                ? const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Color(0xFFBDBDBD),
+                  )
+                : null,
           ),
           const SizedBox(height: 16),
           Text(

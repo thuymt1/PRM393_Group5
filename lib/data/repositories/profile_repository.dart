@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract interface class ProfileRepository {
@@ -11,6 +12,7 @@ abstract interface class ProfileRepository {
   Future<Map<String, dynamic>?> getMine();
   Future<void> updateRole(String role);
   Future<void> update({required String fullName, required String phone});
+  Future<String> uploadAvatar({required Uint8List bytes, required String ext});
 }
 
 class SupabaseProfileRepository implements ProfileRepository {
@@ -62,5 +64,37 @@ class SupabaseProfileRepository implements ProfileRepository {
         .from('profiles')
         .update({'full_name': fullName, 'phone': phone})
         .eq('id', user.id);
+  }
+
+  @override
+  Future<String> uploadAvatar({
+    required Uint8List bytes,
+    required String ext,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) throw const AuthException('Chưa đăng nhập');
+
+    final path = 'avatars/${user.id}.$ext';
+    await _client.storage
+        .from('avatars')
+        .uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            contentType: 'image/$ext',
+            upsert: true, // ghi đè ảnh cũ nếu đã tồn tại
+          ),
+        );
+
+    // Lấy public URL của ảnh vừa upload
+    final publicUrl = _client.storage.from('avatars').getPublicUrl(path);
+
+    // Lưu URL vào bảng profiles
+    await _client
+        .from('profiles')
+        .update({'avatar_url': publicUrl})
+        .eq('id', user.id);
+
+    return publicUrl;
   }
 }

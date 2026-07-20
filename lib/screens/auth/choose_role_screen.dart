@@ -61,45 +61,39 @@ class _ChooseRoleScreenState extends ConsumerState<ChooseRoleScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 40.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 40),
-                  _buildLogo(), // Hiển thị biểu tượng Logo dạng vòng tròn đổ bóng
-                  const SizedBox(height: 40),
-                  _buildHeader(), // Hiển thị dòng tiêu đề hỏi vai trò người dùng
-                  const SizedBox(height: 48),
-                  _roleCard(
-                    context,
-                    Icons.person_outline,
-                    'Khách hàng',
-                    'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
-                    _selectCustomer,
-                  ),
-                  const SizedBox(height: 16),
-                  _roleCard(
-                    context,
-                    Icons.home_work_outlined,
-                    'Chủ nhà',
-                    'Gửi đơn đăng ký và chờ Admin phê duyệt để bắt đầu quản lý homestay.',
-                    () => _goToHostRegistration(),
-                  ),
-                  const SizedBox(height: 16),
-                  _roleCard(
-                    context,
-                    Icons.edit_note_outlined,
-                    'Người viết bài',
-                    'Viết và quản lý các bài viết review trải nghiệm homestay hữu ích.',
-                    () => _selectRole('author', '/author-dashboard'),
-                  ),
-                  const Spacer(), // Đẩy phần footer xuống sát mép dưới cùng của màn hình
-                  _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò
-                ],
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 40.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 40),
+                    _buildLogo(), // Hiển thị biểu tượng Logo dạng vòng tròn đổ bóng
+                    const SizedBox(height: 40),
+                    _buildHeader(), // Hiển thị dòng tiêu đề hỏi vai trò người dùng
+                    const SizedBox(height: 48),
+                    _roleCard(
+                      context,
+                      Icons.person_outline,
+                      'Khách hàng',
+                      'Tìm kiếm và đặt phòng homestay mơ ước cho những chuyến đi của bạn.',
+                      _selectCustomer,
+                    ),
+                    const SizedBox(height: 16),
+                    _roleCard(
+                      context,
+                      Icons.home_work_outlined,
+                      'Chủ nhà',
+                      'Gửi đơn đăng ký và chờ Admin phê duyệt để bắt đầu quản lý homestay.',
+                      () => _goToHostRegistration(),
+                    ),
+                    const SizedBox(height: 48),
+                    _buildFooter(), // Hiển thị dòng ghi chú lưu ý đổi vai trò
+                  ],
+                ),
               ),
             ),
             if (_isLoading)

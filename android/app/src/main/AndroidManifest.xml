@@ -1,4 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Quyền chọn ảnh từ thư viện (Android 13+) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <!-- Quyền chọn ảnh từ thư viện (Android < 13) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
+    <!-- Quyền dùng máy ảnh -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="test_screen_project"
         android:name="${applicationName}"

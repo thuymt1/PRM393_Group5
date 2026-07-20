@@ -1,10 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../features/common/viewmodels/edit_profile_view_model.dart';
-import '../../data/repositories/repository_providers.dart';
+import '../../features/common/viewmodels/profile_view_model.dart';
 import '../../utils/validators.dart';
 
-/// Màn hình chỉnh sửa thông tin cá nhân – Họ tên & Số điện thoại
+/// Màn hình chỉnh sửa thông tin cá nhân – Họ tên, Số điện thoại & Avatar
 class EditProfileScreen extends ConsumerStatefulWidget {
   final String currentName;
   final String currentPhone;
@@ -23,6 +25,10 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+
+  XFile? _pickedImage; // ảnh vừa chọn (hiển thị tạm trước khi upload xong)
+  bool _isUploadingAvatar = false;
+
   bool get _isLoading => ref.read(editProfileViewModelProvider).isLoading;
 
   @override
@@ -39,6 +45,105 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     super.dispose();
   }
 
+  // ─── Chọn & Upload Avatar ─────────────────────────────────────────────────
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Chọn ảnh đại diện',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Color(0xFF6D4C41),
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined,
+                  color: Color(0xFFE07A5F)),
+              title: const Text('Thư viện ảnh'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined,
+                  color: Color(0xFFE07A5F)),
+              title: const Text('Máy ảnh'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final XFile? picked = await picker.pickImage(
+      source: source,
+      imageQuality: 80,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+    if (picked == null) return;
+
+    // Hiển thị ảnh tạm ngay lập tức
+    setState(() {
+      _pickedImage = picked;
+      _isUploadingAvatar = true;
+    });
+
+    try {
+      final bytes = await picked.readAsBytes();
+      final ext = picked.name.split('.').last.toLowerCase();
+
+      await ref
+          .read(profileViewModelProvider.notifier)
+          .uploadAvatar(bytes: bytes, ext: ext);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cập nhật ảnh đại diện thành công! ✓'),
+          backgroundColor: Color(0xFF4CAF50),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      // Nếu lỗi thì bỏ ảnh tạm đi
+      setState(() => _pickedImage = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lỗi upload ảnh: ${e.toString()}'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingAvatar = false);
+    }
+  }
+
+  // ─── Lưu thông tin ────────────────────────────────────────────────────────
   Future<void> _handleSave() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -103,7 +208,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         ),
         centerTitle: true,
         actions: [
-          // Nút Lưu trên AppBar
           TextButton(
             onPressed: _isLoading ? null : _handleSave,
             child: const Text(
@@ -117,32 +221,59 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Avatar preview
-              _buildAvatarSection(),
-              const SizedBox(height: 36),
-              // Form fields
-              _buildFormSection(),
-              const SizedBox(height: 40),
-              // Nút Lưu chính
-              _buildSaveButton(),
-              const SizedBox(height: 40),
-            ],
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  _buildAvatarSection(),
+                  const SizedBox(height: 36),
+                  _buildFormSection(),
+                  const SizedBox(height: 40),
+                  _buildSaveButton(),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
           ),
-        ),
+          // Loading overlay khi đang upload avatar
+          if (_isUploadingAvatar)
+            Container(
+              color: Colors.black26,
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Color(0xFFE07A5F)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Đang tải ảnh lên...',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
   // ─── Avatar section ───────────────────────────────────────────────────────
   Widget _buildAvatarSection() {
-    final user = ref.read(authRepositoryProvider).currentUser;
-    final avatarUrl = user?.userMetadata?['avatar_url'] as String?;
+    // Ưu tiên: ảnh vừa chọn → avatar_url từ profile → null
+    final profileData = ref.watch(profileViewModelProvider).value;
+    final networkAvatarUrl = profileData?['avatar_url'] as String?;
+
+    ImageProvider? imageProvider;
+    if (_pickedImage != null) {
+      imageProvider = FileImage(File(_pickedImage!.path));
+    } else if (networkAvatarUrl != null && networkAvatarUrl.isNotEmpty) {
+      imageProvider = NetworkImage(networkAvatarUrl);
+    }
 
     return Center(
       child: Stack(
@@ -150,24 +281,30 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           CircleAvatar(
             radius: 56,
             backgroundColor: const Color(0xFFF7F4E1),
-            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl == null
+            backgroundImage: imageProvider,
+            child: imageProvider == null
                 ? const Icon(Icons.person, size: 56, color: Color(0xFFBDBDBD))
                 : null,
           ),
           Positioned(
             bottom: 2,
             right: 2,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE07A5F),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: Colors.white,
-                size: 16,
+            child: GestureDetector(
+              onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _isUploadingAvatar
+                      ? Colors.grey
+                      : const Color(0xFFE07A5F),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
@@ -220,7 +357,6 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
             validator: Validators.validatePhone,
           ),
           const SizedBox(height: 16),
-          // Ghi chú email chỉ đọc
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
