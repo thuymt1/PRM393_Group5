@@ -1,6 +1,12 @@
-# test_screen_project
+# Hearth & Horizon
 
-A new Flutter project.
+Ứng dụng đặt homestay Flutter sử dụng Supabase và Riverpod MVVM.
+
+## Luồng đặt phòng, hủy và hoàn tiền
+
+Ứng dụng dùng trực tiếp cột `bookings.status` hiện có trên Supabase, không yêu cầu migration bổ sung.
+
+Luồng đặt phòng: Customer thanh toán → Admin hoặc Host xác nhận. Luồng hủy: Customer gửi yêu cầu → Admin xác nhận hoàn/hủy.
 
 ## Getting Started
 

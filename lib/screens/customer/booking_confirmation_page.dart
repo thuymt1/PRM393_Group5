@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../models/homestay_model.dart';
 
-class BookingConfirmationPage extends StatelessWidget {
+class BookingConfirmationPage extends ConsumerWidget {
   const BookingConfirmationPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Nhận thông tin đặt phòng truyền từ màn hình trước
-    final Map<String, dynamic> args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    final Map<String, dynamic> args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final Homestay homestay = args['homestay'] as Homestay;
     final DateTime checkIn = args['checkIn'] as DateTime;
     final DateTime checkOut = args['checkOut'] as DateTime;
@@ -16,24 +18,40 @@ class BookingConfirmationPage extends StatelessWidget {
     final double totalPrice = args['totalPrice'] as double;
 
     // Lấy thông tin user hiện tại từ Supabase Auth làm thông tin hiển thị cơ bản
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     final String email = user?.email ?? 'alexandria.b@homestay.com';
     final String fullName = email.split('@').first;
 
     final int nights = checkOut.difference(checkIn).inDays;
     final String checkInStr = '${checkIn.day}/${checkIn.month}/${checkIn.year}';
-    final String checkOutStr = '${checkOut.day}/${checkOut.month}/${checkOut.year}';
+    final String checkOutStr =
+        '${checkOut.day}/${checkOut.month}/${checkOut.year}';
 
-    final String roomPriceStr = (homestay.pricePerNight * nights).toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
-    final String totalPriceStr = totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    final String roomPriceStr = (homestay.pricePerNight * nights)
+        .toInt()
+        .toString()
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
+    final String totalPriceStr = totalPrice.toInt().toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       appBar: AppBar(
-        backgroundColor: Colors.white, // Nền trắng giúp phần thanh công cụ phía trên hiển thị tách biệt rõ ràng
+        backgroundColor: Colors
+            .white, // Nền trắng giúp phần thanh công cụ phía trên hiển thị tách biệt rõ ràng
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại trang trước đó
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color(0xFF6D4C41),
+          ), // Nút quay lại trang trước đó
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -42,13 +60,16 @@ class BookingConfirmationPage extends StatelessWidget {
             color: Color(0xFF6D4C41),
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
           ),
         ),
         centerTitle: true, // Căn giữa tiêu đề của AppBar
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng nội dung
+        padding: const EdgeInsets.all(
+          24,
+        ), // Tạo biên đệm 24 đơn vị bao quanh vùng nội dung
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -84,7 +105,10 @@ class BookingConfirmationPage extends StatelessWidget {
               icon: Icons.card_travel_outlined,
               children: [
                 _buildInfoRow('Homestay', homestay.name),
-                _buildInfoRow('Thời gian', '$checkInStr - $checkOutStr ($nights đêm)'),
+                _buildInfoRow(
+                  'Thời gian',
+                  '$checkInStr - $checkOutStr ($nights đêm)',
+                ),
                 _buildInfoRow('Số khách', '$guests người'),
               ],
             ),
@@ -96,16 +120,22 @@ class BookingConfirmationPage extends StatelessWidget {
               children: [
                 _buildInfoRow('Giá phòng ($nights đêm)', '${roomPriceStr}đ'),
                 _buildInfoRow('Phí dịch vụ', '50.000đ'),
-                const Divider(height: 32), // Đường gạch ngang phân chia phần tính tổng tiền
+                const Divider(
+                  height: 32,
+                ), // Đường gạch ngang phân chia phần tính tổng tiền
                 _buildInfoRow(
                   'Tổng cộng',
                   '${totalPriceStr}đ',
-                  isPrimary: true, // Kích hoạt làm nổi bật sắc cam cho thông số tổng tiền
+                  isPrimary:
+                      true, // Kích hoạt làm nổi bật sắc cam cho thông số tổng tiền
                 ),
               ],
             ),
             const SizedBox(height: 40),
-            _buildActionButtons(context, args), // Khối chứa nút xác nhận thanh toán hoặc quay lại chỉnh sửa
+            _buildActionButtons(
+              context,
+              args,
+            ), // Khối chứa nút xác nhận thanh toán hoặc quay lại chỉnh sửa
             const SizedBox(height: 40),
           ],
         ),
@@ -118,10 +148,10 @@ class BookingConfirmationPage extends StatelessWidget {
     return Row(
       children: [
         _buildStepCircle('1', 'Thông tin', true), // Bước 1 đã hoàn tất
-        _buildStepLine(true),                      // Đoạn nối sang bước 2 sáng đèn
-        _buildStepCircle('2', 'Xác nhận', true),  // Bước 2 hiện tại đang đứng
-        _buildStepLine(false),                     // Đoạn nối sang bước 3 hiển thị xám mờ
-        _buildStepCircle('3', 'Thanh toán', false),// Bước 3 chưa kích hoạt
+        _buildStepLine(true), // Đoạn nối sang bước 2 sáng đèn
+        _buildStepCircle('2', 'Xác nhận', true), // Bước 2 hiện tại đang đứng
+        _buildStepLine(false), // Đoạn nối sang bước 3 hiển thị xám mờ
+        _buildStepCircle('3', 'Thanh toán', false), // Bước 3 chưa kích hoạt
       ],
     );
   }
@@ -141,7 +171,11 @@ class BookingConfirmationPage extends StatelessWidget {
           child: Center(
             child: Text(
               num,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ),
         ),
@@ -163,7 +197,9 @@ class BookingConfirmationPage extends StatelessWidget {
     return Expanded(
       child: Container(
         height: 2,
-        margin: const EdgeInsets.only(bottom: 22), // Căn lề đệm đẩy thanh lên ngang tầm giữa của vòng tròn
+        margin: const EdgeInsets.only(
+          bottom: 22,
+        ), // Căn lề đệm đẩy thanh lên ngang tầm giữa của vòng tròn
         color: isActive ? const Color(0xFFE07A5F) : Colors.grey.shade300,
       ),
     );
@@ -202,7 +238,9 @@ class BookingConfirmationPage extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03), // Hiệu ứng đổ bóng mờ siêu nhẹ tạo chiều sâu nổi khối
+                color: Colors.black.withOpacity(
+                  0.03,
+                ), // Hiệu ứng đổ bóng mờ siêu nhẹ tạo chiều sâu nổi khối
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -221,16 +259,19 @@ class BookingConfirmationPage extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey, fontSize: 14),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
           Text(
             value,
             style: TextStyle(
               fontWeight: isPrimary ? FontWeight.bold : FontWeight.w600,
-              color: isPrimary ? const Color(0xFFE07A5F) : const Color(0xFF424242), // Điểm sắc cam nếu là thông số tổng kết tiền
-              fontSize: isPrimary ? 18 : 14, // Tăng kích thước phông chữ cho phần tổng tiền
+              color: isPrimary
+                  ? const Color(0xFFE07A5F)
+                  : const Color(
+                      0xFF424242,
+                    ), // Điểm sắc cam nếu là thông số tổng kết tiền
+              fontSize: isPrimary
+                  ? 18
+                  : 14, // Tăng kích thước phông chữ cho phần tổng tiền
             ),
           ),
         ],
@@ -248,27 +289,41 @@ class BookingConfirmationPage extends StatelessWidget {
             Navigator.pushNamed(context, '/payment', arguments: args);
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6D4C41), // Màu sắc nâu đậm chủ đạo hệ thống
-            minimumSize: const Size(double.infinity, 56), // Kéo dãn full chiều rộng hàng ngang, chiều cao ô nút là 56
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Bo tròn góc nút 16 đơn vị
+            backgroundColor: const Color(
+              0xFF6D4C41,
+            ), // Màu sắc nâu đậm chủ đạo hệ thống
+            minimumSize: const Size(
+              double.infinity,
+              56,
+            ), // Kéo dãn full chiều rộng hàng ngang, chiều cao ô nút là 56
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ), // Bo tròn góc nút 16 đơn vị
             elevation: 2,
             shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
           ),
           child: const Text(
             'Xác nhận & Thanh toán',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
         ),
         const SizedBox(height: 16),
         // Link văn bản hỗ trợ khách quay ngược lại để sửa đổi các thông tin lưu trú chưa chuẩn xác
         TextButton(
-          onPressed: () => Navigator.pop(context), // Trở lại màn hình trước để thay đổi thông tin
+          onPressed: () => Navigator.pop(
+            context,
+          ), // Trở lại màn hình trước để thay đổi thông tin
           child: const Text(
             'Thay đổi thông tin',
             style: TextStyle(
               color: Color(0xFFE07A5F),
               fontWeight: FontWeight.bold,
-              decoration: TextDecoration.underline, // Tạo hiệu ứng gạch chân định dạng liên kết
+              decoration: TextDecoration
+                  .underline, // Tạo hiệu ứng gạch chân định dạng liên kết
             ),
           ),
         ),

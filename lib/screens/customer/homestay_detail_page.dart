@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../models/homestay_model.dart';
 
 /// Màn hình hiển thị thông tin chi tiết của một căn Homestay cụ thể
-class HomestayDetailPage extends StatefulWidget {
+class HomestayDetailPage extends ConsumerStatefulWidget {
   const HomestayDetailPage({super.key});
 
   @override
-  State<HomestayDetailPage> createState() => _HomestayDetailPageState();
+  ConsumerState<HomestayDetailPage> createState() => _HomestayDetailPageState();
 }
 
-class _HomestayDetailPageState extends State<HomestayDetailPage> {
-  final ApiService _apiService = ApiService();
+class _HomestayDetailPageState extends ConsumerState<HomestayDetailPage> {
   bool _initialized = false;
   late Homestay _homestay;
   bool _isFavorite = false;
@@ -34,7 +34,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
 
   Future<void> _fetchHostProfile() async {
     if (_homestay.hostId.isNotEmpty) {
-      final profile = await _apiService.getProfileById(_homestay.hostId);
+      final profile = await ref
+          .read(profileRepositoryProvider)
+          .getById(_homestay.hostId);
       if (profile != null && mounted) {
         setState(() {
           _hostName = profile['full_name'] ?? _hostName;
@@ -46,7 +48,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
 
   Future<void> _checkIfFavorite() async {
     try {
-      final favIds = await _apiService.getMyFavoriteHomestayIds();
+      final favIds = await ref
+          .read(homestayRepositoryProvider)
+          .getFavoriteIds();
       if (mounted) {
         setState(() {
           _isFavorite = favIds.contains(_homestay.id);
@@ -69,9 +73,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
 
     try {
       if (originalState) {
-        await _apiService.removeFavorite(_homestay.id);
+        await ref.read(homestayRepositoryProvider).removeFavorite(_homestay.id);
       } else {
-        await _apiService.addFavorite(_homestay.id);
+        await ref.read(homestayRepositoryProvider).addFavorite(_homestay.id);
       }
     } catch (e) {
       if (mounted) {
@@ -92,11 +96,15 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       body: CustomScrollView(
         // Sử dụng CustomScrollView kết hợp các Slivers để tạo hiệu ứng cuộn AppBar mượt mà
         slivers: [
-          _buildSliverAppBar(context), // Thanh AppBar chứa hình ảnh nền có thể thu phóng và ghim cố định
+          _buildSliverAppBar(
+            context,
+          ), // Thanh AppBar chứa hình ảnh nền có thể thu phóng và ghim cố định
           SliverToBoxAdapter(
             // Chuyển đổi khối Widget thông thường thành cấu trúc tương thích với Slivers
             child: Padding(
@@ -104,31 +112,42 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeaderSection(_homestay), // Khối tên nhà, chi phí thuê, địa chỉ và số sao đánh giá
+                  _buildHeaderSection(
+                    _homestay,
+                  ), // Khối tên nhà, chi phí thuê, địa chỉ và số sao đánh giá
                   const SizedBox(height: 24),
                   _buildHostSection(), // Khối thông tin chi tiết và nút liên hệ với chủ nhà (Host)
                   const SizedBox(height: 24),
-                  _buildIntroductionSection(_homestay), // Khối văn bản mô tả giới thiệu chi tiết về homestay
-                  const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh đặt phòng
+                  _buildIntroductionSection(
+                    _homestay,
+                  ), // Khối văn bản mô tả giới thiệu chi tiết về homestay
+                  const SizedBox(
+                    height: 100,
+                  ), // Khoảng trống đệm an toàn cuối dòng tránh bị che bởi thanh đặt phòng
                 ],
               ),
             ),
           ),
         ],
       ),
-      bottomSheet: _buildBottomBookingBar(context, _homestay), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
+      bottomSheet: _buildBottomBookingBar(
+        context,
+        _homestay,
+      ), // Thanh đặt phòng kèm chi phí tổng ghim cố định ở đáy màn hình
     );
   }
 
   // Khối thiết kế thanh cuộn đầu trang linh hoạt (SliverAppBar) tích hợp ảnh nền
   Widget _buildSliverAppBar(BuildContext context) {
-    final String imageUrl = _homestay.images.isNotEmpty 
-        ? _homestay.images.first 
+    final String imageUrl = _homestay.images.isNotEmpty
+        ? _homestay.images.first
         : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
 
     return SliverAppBar(
-      expandedHeight: 320, // Chiều cao tối đa khi thanh ứng dụng mở rộng hoàn toàn
-      pinned: true, // Ghim thanh AppBar lại thành một thanh Menu cố định khi người dùng cuộn xuống dưới
+      expandedHeight:
+          320, // Chiều cao tối đa khi thanh ứng dụng mở rộng hoàn toàn
+      pinned:
+          true, // Ghim thanh AppBar lại thành một thanh Menu cố định khi người dùng cuộn xuống dưới
       backgroundColor: const Color(0xFFFDFAE7),
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
@@ -136,7 +155,8 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
           children: [
             Image.network(
               imageUrl,
-              fit: BoxFit.cover, // Cắt và kéo dãn ảnh phủ kín khung không gian AppBar
+              fit: BoxFit
+                  .cover, // Cắt và kéo dãn ảnh phủ kín khung không gian AppBar
             ),
             // Lớp phủ màu chuyển sắc (Gradient) giúp làm dịu và tăng độ contrast rõ nét cho các nút bấm
             const DecoratedBox(
@@ -180,7 +200,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
               _isFavoriteLoading
                   ? Icons.favorite_border
                   : (_isFavorite ? Icons.favorite : Icons.favorite_border),
-              color: _isFavorite && !_isFavoriteLoading ? Colors.red : const Color(0xFF6D4C41),
+              color: _isFavorite && !_isFavoriteLoading
+                  ? Colors.red
+                  : const Color(0xFF6D4C41),
             ),
             onPressed: _isFavoriteLoading ? null : _toggleFavorite,
           ),
@@ -192,10 +214,13 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
 
   // Khối giao diện hiển thị tên biệt thự, giá tiền/đêm và số lượt bình luận đánh giá
   Widget _buildHeaderSection(Homestay homestay) {
-    final String formattedPrice = homestay.pricePerNight.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    );
+    final String formattedPrice = homestay.pricePerNight
+        .toInt()
+        .toString()
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -224,10 +249,15 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFE07A5F), // Sắc cam cam làm nổi bật thông tin giá thuê phòng
+                    color: Color(
+                      0xFFE07A5F,
+                    ), // Sắc cam cam làm nổi bật thông tin giá thuê phòng
                   ),
                 ),
-                const Text('/ đêm', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                const Text(
+                  '/ đêm',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
               ],
             ),
           ],
@@ -235,7 +265,11 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
         const SizedBox(height: 12),
         Row(
           children: [
-            const Icon(Icons.location_on_outlined, size: 16, color: Color(0xFFE07A5F)), // Biểu tượng ghim vị trí địa lý
+            const Icon(
+              Icons.location_on_outlined,
+              size: 16,
+              color: Color(0xFFE07A5F),
+            ), // Biểu tượng ghim vị trí địa lý
             const SizedBox(width: 4),
             Text(
               '${homestay.address}, ${homestay.city}',
@@ -252,13 +286,23 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min, // Giới hạn chiều rộng co khít theo khối text bên trong
+            mainAxisSize: MainAxisSize
+                .min, // Giới hạn chiều rộng co khít theo khối text bên trong
             children: [
-              const Icon(Icons.star, color: Colors.amber, size: 18), // Biểu tượng ngôi sao vàng
+              const Icon(
+                Icons.star,
+                color: Colors.amber,
+                size: 18,
+              ), // Biểu tượng ngôi sao vàng
               const SizedBox(width: 4),
               Text(
-                homestay.rating > 0 ? homestay.rating.toStringAsFixed(1) : 'Chưa có',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                homestay.rating > 0
+                    ? homestay.rating.toStringAsFixed(1)
+                    : 'Chưa có',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
               const Text(
                 ' đánh giá',
@@ -280,7 +324,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03), // Đổ bóng mờ nhẹ tạo chiều sâu nổi khối
+            color: Colors.black.withOpacity(
+              0.03,
+            ), // Đổ bóng mờ nhẹ tạo chiều sâu nổi khối
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -290,7 +336,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
         children: [
           CircleAvatar(
             radius: 24, // Ảnh đại diện hình tròn của chủ nhà
-            backgroundImage: NetworkImage(_hostAvatar ?? 'https://i.pravatar.cc/150?u=host_alex'),
+            backgroundImage: NetworkImage(
+              _hostAvatar ?? 'https://i.pravatar.cc/150?u=host_alex',
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -299,7 +347,11 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
               children: [
                 Text(
                   _hostName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF424242)),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF424242),
+                  ),
                 ),
                 const Text(
                   'Chủ nhà siêu cấp • Tham gia 2021',
@@ -315,8 +367,12 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF6D4C41), // Màu chữ nâu đậm
-              side: const BorderSide(color: Color(0xFF6D4C41)), // Màu đường viền bao quanh nút bấm
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              side: const BorderSide(
+                color: Color(0xFF6D4C41),
+              ), // Màu đường viền bao quanh nút bấm
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Nhắn tin'),
           ),
@@ -341,7 +397,11 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
         const SizedBox(height: 12),
         Text(
           homestay.description,
-          style: const TextStyle(color: Color(0xFF424242), height: 1.6, fontSize: 14), // Tăng height lên 1.6 giúp giãn cách dòng văn bản thông thoáng dễ đọc
+          style: const TextStyle(
+            color: Color(0xFF424242),
+            height: 1.6,
+            fontSize: 14,
+          ), // Tăng height lên 1.6 giúp giãn cách dòng văn bản thông thoáng dễ đọc
         ),
       ],
     );
@@ -382,13 +442,21 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
                 border: Border.all(color: Colors.grey.shade100),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min, // Thu hẹp độ rộng vừa khít với icon và nhãn chữ đi kèm
+                mainAxisSize: MainAxisSize
+                    .min, // Thu hẹp độ rộng vừa khít với icon và nhãn chữ đi kèm
                 children: [
-                  Icon(item['icon'] as IconData, size: 18, color: const Color(0xFFE07A5F)), // Icon cam thương hiệu đại diện tiện ích
+                  Icon(
+                    item['icon'] as IconData,
+                    size: 18,
+                    color: const Color(0xFFE07A5F),
+                  ), // Icon cam thương hiệu đại diện tiện ích
                   const SizedBox(width: 8),
                   Text(
                     item['label'] as String,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -422,7 +490,9 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             decoration: const BoxDecoration(
               color: Color(0xFFF7F4E1),
               image: DecorationImage(
-                image: NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000&auto=format&fit=crop'), // Sử dụng ảnh sơ đồ vệ tinh bản đồ giả định
+                image: NetworkImage(
+                  'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1000&auto=format&fit=crop',
+                ), // Sử dụng ảnh sơ đồ vệ tinh bản đồ giả định
                 fit: BoxFit.cover,
               ),
             ),
@@ -430,8 +500,15 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             child: Center(
               child: Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: const Icon(Icons.location_on, color: Color(0xFFE07A5F), size: 30),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_on,
+                  color: Color(0xFFE07A5F),
+                  size: 30,
+                ),
               ),
             ),
           ),
@@ -442,23 +519,35 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
 
   // Thanh điều khiển chứa thông tin chi phí và nút hành động lớn "Đặt ngay" cố định phía đáy màn hình
   Widget _buildBottomBookingBar(BuildContext context, Homestay homestay) {
-    final String formattedPrice = homestay.pricePerNight.toInt().toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
-    );
+    final String formattedPrice = homestay.pricePerNight
+        .toInt()
+        .toString()
+        .replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        );
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32), // Đệm thêm khoảng cách đáy 32 đơn vị bảo toàn phần tai thỏ / thanh vuốt hệ thống (Navigation Bar)
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        32,
+      ), // Đệm thêm khoảng cách đáy 32 đơn vị bảo toàn phần tai thỏ / thanh vuốt hệ thống (Navigation Bar)
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Tạo bóng mờ ngược lên trên phân định ranh giới rõ ràng với body
+            color: Colors.black.withOpacity(
+              0.05,
+            ), // Tạo bóng mờ ngược lên trên phân định ranh giới rõ ràng với body
             blurRadius: 10,
             offset: const Offset(0, -5),
-          )
+          ),
         ],
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)), // Tạo độ bo cong mượt ở hai góc trên
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(24),
+        ), // Tạo độ bo cong mượt ở hai góc trên
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -467,7 +556,10 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Giá dự tính', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const Text(
+                'Giá dự tính',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
               Text(
                 '${formattedPrice}đ',
                 style: const TextStyle(
@@ -481,13 +573,25 @@ class _HomestayDetailPageState extends State<HomestayDetailPage> {
           // Nút bấm lớn kích hoạt tiến trình book/đặt chỗ homestay nhanh
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamed(context, '/booking-form', arguments: homestay);
+              Navigator.pushNamed(
+                context,
+                '/booking-form',
+                arguments: homestay,
+              );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống
-              minimumSize: const Size(160, 56), // Đảm bảo phím bấm có độ rộng ngang tối thiểu 160 và cao 56 đơn vị
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 0, // Triệt tiêu đổ bóng mặc định để nút phẳng mịn màng tiệp vào nền BottomSheet
+              backgroundColor: const Color(
+                0xFF6D4C41,
+              ), // Sắc nâu đậm chủ đạo hệ thống
+              minimumSize: const Size(
+                160,
+                56,
+              ), // Đảm bảo phím bấm có độ rộng ngang tối thiểu 160 và cao 56 đơn vị
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation:
+                  0, // Triệt tiêu đổ bóng mặc định để nút phẳng mịn màng tiệp vào nền BottomSheet
             ),
             child: const Text(
               'Đặt ngay',

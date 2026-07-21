@@ -33,20 +33,28 @@ class _FilterScreenState extends State<FilterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       appBar: AppBar(
-        backgroundColor: Colors.white, // Màu nền trắng làm nổi bật thanh công cụ cấu hình
+        backgroundColor:
+            Colors.white, // Màu nền trắng làm nổi bật thanh công cụ cấu hình
         elevation: 0, // Loại bỏ bóng đổ của thanh AppBar
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFF6D4C41)), // Icon dấu X đóng màn hình bộ lọc
-          onPressed: () => Navigator.pop(context), // Thoát quay lại màn hình trước đó
+          icon: const Icon(
+            Icons.close,
+            color: Color(0xFF6D4C41),
+          ), // Icon dấu X đóng màn hình bộ lọc
+          onPressed: () =>
+              Navigator.pop(context), // Thoát quay lại màn hình trước đó
         ),
         title: const Text(
           'Bộ lọc',
           style: TextStyle(
             color: Color(0xFF6D4C41),
             fontWeight: FontWeight.bold,
-            fontFamily: 'BeVietnamPro', // Cần khai báo cấu hình font tương ứng trong pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Cần khai báo cấu hình font tương ứng trong pubspec.yaml
           ),
         ),
         centerTitle: true,
@@ -63,20 +71,27 @@ class _FilterScreenState extends State<FilterScreen> {
             },
             child: const Text(
               'Xóa tất cả',
-              style: TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Color(0xFFE07A5F),
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh toàn bộ nội dung bộ lọc
+        padding: const EdgeInsets.all(
+          24,
+        ), // Tạo biên đệm 24 đơn vị bao quanh toàn bộ nội dung bộ lọc
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionTitle('Loại chỗ ở'),
             const SizedBox(height: 16),
             _buildStayTypeSelector(), // Khối nút lựa chọn nhanh mô hình chỗ ở (ChoiceChip)
-            const Divider(height: 48), // Đường vạch kẻ phân tách ranh giới các phân mục lọc
+            const Divider(
+              height: 48,
+            ), // Đường vạch kẻ phân tách ranh giới các phân mục lọc
             _buildSectionTitle('Khoảng giá (mỗi đêm)'),
             const SizedBox(height: 8),
             _buildPriceRangeSelector(), // Khối kéo thanh trượt khoảng giá tiền RangeSlider
@@ -88,11 +103,14 @@ class _FilterScreenState extends State<FilterScreen> {
             _buildSectionTitle('Đánh giá tối thiểu'),
             const SizedBox(height: 16),
             _buildRatingSelector(), // Khối nút bấm chọn mức xếp hạng sao ngôi sao (1đ -> 5đ)
-            const SizedBox(height: 100), // Khoảng trống đệm an toàn cuối dòng tránh bị che khuất bởi BottomSheet
+            const SizedBox(
+              height: 100,
+            ), // Khoảng trống đệm an toàn cuối dòng tránh bị che khuất bởi BottomSheet
           ],
         ),
       ),
-      bottomSheet: _buildApplyButton(), // Nút bấm "Áp dụng bộ lọc" cố định dưới chân màn hình
+      bottomSheet:
+          _buildApplyButton(), // Nút bấm "Áp dụng bộ lọc" cố định dưới chân màn hình
     );
   }
 
@@ -112,15 +130,21 @@ class _FilterScreenState extends State<FilterScreen> {
   Widget _buildStayTypeSelector() {
     final types = ['Toàn bộ nhà', 'Phòng riêng', 'Khách sạn'];
     return Wrap(
-      spacing: 12, // Khoảng cách hở giữa các mảnh thẻ kề cạnh nhau trên cùng một hàng
+      spacing:
+          12, // Khoảng cách hở giữa các mảnh thẻ kề cạnh nhau trên cùng một hàng
       runSpacing: 8, // Khoảng cách hở giữa các hàng khi bị xuống dòng
       children: types.map((type) {
-        bool isSelected = _selectedStayType == type; // Kiểm tra trạng thái hiện tại của thẻ
+        bool isSelected =
+            _selectedStayType == type; // Kiểm tra trạng thái hiện tại của thẻ
         return ChoiceChip(
           label: Text(type),
           selected: isSelected,
-          onSelected: (val) => setState(() => _selectedStayType = type), // Đổi trạng thái mô hình được chọn
-          selectedColor: const Color(0xFFE07A5F), // Sắc cam cam thương hiệu nổi bật khi click kích hoạt
+          onSelected: (val) => setState(
+            () => _selectedStayType = type,
+          ), // Đổi trạng thái mô hình được chọn
+          selectedColor: const Color(
+            0xFFE07A5F,
+          ), // Sắc cam cam thương hiệu nổi bật khi click kích hoạt
           backgroundColor: Colors.white,
           labelStyle: TextStyle(
             color: isSelected ? Colors.white : const Color(0xFF6D4C41),
@@ -128,7 +152,9 @@ class _FilterScreenState extends State<FilterScreen> {
           ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: isSelected ? Colors.transparent : Colors.grey.shade300),
+            side: BorderSide(
+              color: isSelected ? Colors.transparent : Colors.grey.shade300,
+            ),
           ),
         );
       }).toList(),
@@ -143,21 +169,37 @@ class _FilterScreenState extends State<FilterScreen> {
           values: _priceRange,
           min: 0,
           max: 10000000, // Định mức trượt tối đa lên tới 10 triệu đồng
-          divisions: 20, // Chia thanh trượt thành 20 mốc ngắt quãng đều nhau để dễ điều chỉnh dữ liệu
-          activeColor: const Color(0xFFE07A5F), // Tông màu cho dải khoảng giá được chọn
-          inactiveColor: Colors.grey.shade300, // Tông màu cho dải còn lại bên ngoài
+          divisions:
+              20, // Chia thanh trượt thành 20 mốc ngắt quãng đều nhau để dễ điều chỉnh dữ liệu
+          activeColor: const Color(
+            0xFFE07A5F,
+          ), // Tông màu cho dải khoảng giá được chọn
+          inactiveColor:
+              Colors.grey.shade300, // Tông màu cho dải còn lại bên ngoài
           labels: RangeLabels(
             '${_priceRange.start.round()}đ', // Nhãn bóng khí hiển thị số tiền mốc đầu khi kéo trượt
             '${_priceRange.end.round()}đ', // Nhãn bóng khí hiển thị số tiền mốc cuối khi kéo trượt
           ),
-          onChanged: (val) => setState(() => _priceRange = val), // Làm mới trạng thái thông số khoảng giá
+          onChanged: (val) => setState(
+            () => _priceRange = val,
+          ), // Làm mới trạng thái thông số khoảng giá
         ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _priceInputBox('Tối thiểu', '${_priceRange.start.round()}đ'), // Ô hiển thị mức sàn số tiền
-            const Icon(Icons.horizontal_rule, size: 16, color: Colors.grey), // Dấu gạch nối giữa hai ô
-            _priceInputBox('Tối đa', '${_priceRange.end.round()}đ'), // Ô hiển thị mức trần số tiền
+            _priceInputBox(
+              'Tối thiểu',
+              '${_priceRange.start.round()}đ',
+            ), // Ô hiển thị mức sàn số tiền
+            const Icon(
+              Icons.horizontal_rule,
+              size: 16,
+              color: Colors.grey,
+            ), // Dấu gạch nối giữa hai ô
+            _priceInputBox(
+              'Tối đa',
+              '${_priceRange.end.round()}đ',
+            ), // Ô hiển thị mức trần số tiền
           ],
         ),
       ],
@@ -167,7 +209,9 @@ class _FilterScreenState extends State<FilterScreen> {
   // Hàm hỗ trợ thiết kế hộp tĩnh hiển thị thông số mức giá tiền cụ thể
   Widget _priceInputBox(String label, String value) {
     return Container(
-      width: MediaQuery.of(context).size.width * 0.38, // Thiết lập chiều rộng co giãn theo tỷ lệ 38% màn hình thiết bị
+      width:
+          MediaQuery.of(context).size.width *
+          0.38, // Thiết lập chiều rộng co giãn theo tỷ lệ 38% màn hình thiết bị
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -178,7 +222,10 @@ class _FilterScreenState extends State<FilterScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
         ],
       ),
     );
@@ -187,10 +234,13 @@ class _FilterScreenState extends State<FilterScreen> {
   // Khối lưới hiển thị danh mục các icon tiện nghi phòng ốc hỗ trợ chọn lựa đồng thời đa danh mục
   Widget _buildAmenitiesGrid() {
     return GridView.builder(
-      shrinkWrap: true, // Cho phép GridView tự thu hẹp vừa khít không gian các phần tử con
-      physics: const NeverScrollableScrollPhysics(), // Chuyển giao quyền cuộn màn hình cho SingleChildScrollView cha bên ngoài
+      shrinkWrap:
+          true, // Cho phép GridView tự thu hẹp vừa khít không gian các phần tử con
+      physics:
+          const NeverScrollableScrollPhysics(), // Chuyển giao quyền cuộn màn hình cho SingleChildScrollView cha bên ngoài
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, // Thiết lập phân chia dạng lưới gồm 3 cột hàng dọc đều đặn
+        crossAxisCount:
+            3, // Thiết lập phân chia dạng lưới gồm 3 cột hàng dọc đều đặn
         crossAxisSpacing: 12, // Khoảng hở cột
         mainAxisSpacing: 12, // Khoảng hở dòng
         childAspectRatio: 1, // Tỷ lệ vuông tỷ lệ 1:1 cho từng ô tiện nghi
@@ -198,15 +248,21 @@ class _FilterScreenState extends State<FilterScreen> {
       itemCount: _amenities.length,
       itemBuilder: (context, index) {
         final amenity = _amenities[index];
-        bool isSelected = _selectedAmenities.contains(amenity['label']); // Kiểm tra xem tiện nghi này đã được chọn chưa
+        bool isSelected = _selectedAmenities.contains(
+          amenity['label'],
+        ); // Kiểm tra xem tiện nghi này đã được chọn chưa
 
         return GestureDetector(
           onTap: () {
             setState(() {
               if (isSelected) {
-                _selectedAmenities.remove(amenity['label']); // Loại bỏ khỏi mảng nếu nhấn lại vào thẻ đang chọn
+                _selectedAmenities.remove(
+                  amenity['label'],
+                ); // Loại bỏ khỏi mảng nếu nhấn lại vào thẻ đang chọn
               } else {
-                _selectedAmenities.add(amenity['label']); // Bổ sung thêm vào danh sách nếu chọn mới
+                _selectedAmenities.add(
+                  amenity['label'],
+                ); // Bổ sung thêm vào danh sách nếu chọn mới
               }
             });
           },
@@ -216,7 +272,9 @@ class _FilterScreenState extends State<FilterScreen> {
               color: isSelected ? const Color(0xFFF7F4E1) : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected ? const Color(0xFFE07A5F) : Colors.grey.shade200, // Tô viền cam nổi bật
+                color: isSelected
+                    ? const Color(0xFFE07A5F)
+                    : Colors.grey.shade200, // Tô viền cam nổi bật
                 width: 1.5,
               ),
             ),
@@ -225,15 +283,23 @@ class _FilterScreenState extends State<FilterScreen> {
               children: [
                 Icon(
                   amenity['icon'] as IconData,
-                  color: isSelected ? const Color(0xFFE07A5F) : const Color(0xFF6D4C41), // Thay đổi sắc màu Icon tương ứng
+                  color: isSelected
+                      ? const Color(0xFFE07A5F)
+                      : const Color(
+                          0xFF6D4C41,
+                        ), // Thay đổi sắc màu Icon tương ứng
                 ),
                 const SizedBox(height: 8),
                 Text(
                   amenity['label'] as String,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? const Color(0xFFE07A5F) : Colors.grey.shade700,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                    color: isSelected
+                        ? const Color(0xFFE07A5F)
+                        : Colors.grey.shade700,
                   ),
                 ),
               ],
@@ -253,26 +319,36 @@ class _FilterScreenState extends State<FilterScreen> {
         bool isSelected = _selectedRating == rating;
 
         return GestureDetector(
-          onTap: () => setState(() => _selectedRating = rating), // Lưu mức sao lựa chọn vào State
+          onTap: () => setState(
+            () => _selectedRating = rating,
+          ), // Lưu mức sao lựa chọn vào State
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               // Đổi hẳn màu nền sang sắc nâu đậm khi nhãn sao này được nhấn kích hoạt
               color: isSelected ? const Color(0xFF6D4C41) : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade300),
+              border: Border.all(
+                color: isSelected ? Colors.transparent : Colors.grey.shade300,
+              ),
             ),
             child: Row(
               children: [
                 Text(
                   '$rating',
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black, // Đổi màu chữ tương phản theo nền hộp
+                    color: isSelected
+                        ? Colors.white
+                        : Colors.black, // Đổi màu chữ tương phản theo nền hộp
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.star, color: isSelected ? Colors.amber : Colors.grey, size: 14), // Ngôi sao vàng sáng rực khi chọn
+                Icon(
+                  Icons.star,
+                  color: isSelected ? Colors.amber : Colors.grey,
+                  size: 14,
+                ), // Ngôi sao vàng sáng rực khi chọn
               ],
             ),
           ),
@@ -289,7 +365,9 @@ class _FilterScreenState extends State<FilterScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Tạo viền bóng đổ ngược lên phía trên tạo chiều sâu tách biệt với body
+            color: Colors.black.withOpacity(
+              0.05,
+            ), // Tạo viền bóng đổ ngược lên phía trên tạo chiều sâu tách biệt với body
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -301,21 +379,36 @@ class _FilterScreenState extends State<FilterScreen> {
             // In kết quả kiểm tra trạng thái bộ lọc cấu hình được chọn ra màn hình Log Console
             print("--- Cấu hình bộ lọc được áp dụng ---");
             print("Loại chỗ ở: $_selectedStayType");
-            print("Giá từ: ${_priceRange.start.round()}đđ đến ${_priceRange.end.round()}đđ");
+            print(
+              "Giá từ: ${_priceRange.start.round()}đđ đến ${_priceRange.end.round()}đđ",
+            );
             print("Danh sách tiện nghi: $_selectedAmenities");
             print("Mức đánh giá tối thiểu: $_selectedRating sao");
 
-            Navigator.pop(context); // Quay ngược lại màn hình kết quả tìm kiếm danh sách
+            Navigator.pop(
+              context,
+            ); // Quay ngược lại màn hình kết quả tìm kiếm danh sách
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6D4C41), // Đặt màu nâu chủ đạo hệ thống cho nút nhấn
-            minimumSize: const Size(double.infinity, 56), // Co giãn full chiều rộng ngang hàng, chiều cao hộp nút là 56 đơn vị
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // Bo tròn góc nút bấm
+            backgroundColor: const Color(
+              0xFF6D4C41,
+            ), // Đặt màu nâu chủ đạo hệ thống cho nút nhấn
+            minimumSize: const Size(
+              double.infinity,
+              56,
+            ), // Co giãn full chiều rộng ngang hàng, chiều cao hộp nút là 56 đơn vị
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ), // Bo tròn góc nút bấm
             elevation: 2,
           ),
           child: const Text(
             'Áp dụng bộ lọc',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
           ),
         ),
       ),

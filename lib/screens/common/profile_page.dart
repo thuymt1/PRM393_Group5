@@ -1,43 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
+import '../../features/common/viewmodels/profile_view_model.dart';
 import 'edit_profile_screen.dart';
 
 /// Màn hình Hồ sơ cá nhân – tải dữ liệu thực từ Supabase và hỗ trợ chỉnh sửa
-class ProfilePage extends StatefulWidget {
+class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  State<ProfilePage> createState() => _ProfilePageState();
+  ConsumerState<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
-  final ApiService _apiService = ApiService();
-  Map<String, dynamic>? _profile;
-  bool _isLoadingProfile = true;
+class _ProfilePageState extends ConsumerState<ProfilePage> {
+  Map<String, dynamic>? get _profile =>
+      ref.read(profileViewModelProvider).value;
+  bool get _isLoadingProfile => ref.read(profileViewModelProvider).isLoading;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-  }
-
-  Future<void> _loadProfile() async {
-    setState(() => _isLoadingProfile = true);
-    try {
-      final profile = await _apiService.getMyProfile();
-      if (mounted) {
-        setState(() {
-          _profile = profile;
-          _isLoadingProfile = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingProfile = false);
-      }
-    }
-  }
+  Future<void> _loadProfile() =>
+      ref.read(profileViewModelProvider.notifier).refresh();
 
   Future<void> _handleLogout() async {
     // Hiện dialog xác nhận trước khi đăng xuất
@@ -47,7 +28,10 @@ class _ProfilePageState extends State<ProfilePage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text(
           'Đăng xuất',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF6D4C41),
+          ),
         ),
         content: const Text('Bạn có chắc muốn đăng xuất khỏi tài khoản?'),
         actions: [
@@ -59,16 +43,21 @@ class _ProfilePageState extends State<ProfilePage> {
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6D4C41),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Đăng xuất', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Đăng xuất',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      await Supabase.instance.client.auth.signOut();
+      await ref.read(authRepositoryProvider).signOut();
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
@@ -81,10 +70,8 @@ class _ProfilePageState extends State<ProfilePage> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EditProfileScreen(
-          currentName: name,
-          currentPhone: phone,
-        ),
+        builder: (_) =>
+            EditProfileScreen(currentName: name, currentPhone: phone),
       ),
     );
 
@@ -96,6 +83,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(profileViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       appBar: AppBar(
@@ -141,14 +129,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ─── Header: Avatar + Tên + Role ─────────────────────────────────────────
   Widget _buildProfileHeader() {
-    final currentUser = Supabase.instance.client.auth.currentUser;
-    
+    final currentUser = ref.read(authRepositoryProvider).currentUser;
+
     final String rawName = _profile?['full_name'] ?? '';
-    final String name = rawName.isEmpty ? (currentUser?.email?.split('@').first ?? 'Người dùng') : rawName;
-    
+    final String name = rawName.isEmpty
+        ? (currentUser?.email?.split('@').first ?? 'Người dùng')
+        : rawName;
+
     final String rawEmail = _profile?['email'] ?? '';
-    final String email = rawEmail.isEmpty ? (currentUser?.email ?? 'Chưa cập nhật email') : rawEmail;
-    
+    final String email = rawEmail.isEmpty
+        ? (currentUser?.email ?? 'Chưa cập nhật email')
+        : rawEmail;
+
     final avatarUrl = _profile?['avatar_url'] as String?;
     final role = _profile?['role'] as String?;
 
@@ -173,33 +165,20 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
       child: Column(
         children: [
-          // Avatar với nút camera
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 60,
-                backgroundColor: const Color(0xFFF7F4E1),
-                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                child: avatarUrl == null
-                    ? const Icon(Icons.person, size: 60, color: Color(0xFFBDBDBD))
-                    : null,
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: _openEditProfile,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE07A5F),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
-                  ),
-                ),
-              ),
-            ],
+          // Avatar (không có nút camera - upload avatar ở trang Chỉnh sửa hồ sơ)
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: const Color(0xFFF7F4E1),
+            backgroundImage: avatarUrl != null
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: avatarUrl == null
+                ? const Icon(
+                    Icons.person,
+                    size: 60,
+                    color: Color(0xFFBDBDBD),
+                  )
+                : null,
           ),
           const SizedBox(height: 16),
           Text(
@@ -211,10 +190,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            email,
-            style: const TextStyle(color: Colors.grey, fontSize: 14),
-          ),
+          Text(email, style: const TextStyle(color: Colors.grey, fontSize: 14)),
           const SizedBox(height: 12),
           // Role badge
           Container(
@@ -246,13 +222,15 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // ─── Thông tin liên hệ ────────────────────────────────────────────────────
   Widget _buildInfoCard() {
-    final currentUser = Supabase.instance.client.auth.currentUser;
+    final currentUser = ref.read(authRepositoryProvider).currentUser;
 
     final String rawPhone = _profile?['phone'] ?? '';
     final String phone = rawPhone.isEmpty ? 'Chưa cập nhật SĐT' : rawPhone;
-    
+
     final String rawEmail = _profile?['email'] ?? '';
-    final String email = rawEmail.isEmpty ? (currentUser?.email ?? 'Chưa cập nhật email') : rawEmail;
+    final String email = rawEmail.isEmpty
+        ? (currentUser?.email ?? 'Chưa cập nhật email')
+        : rawEmail;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -260,10 +238,7 @@ class _ProfilePageState extends State<ProfilePage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
         ],
       ),
       child: Column(
@@ -284,7 +259,10 @@ class _ProfilePageState extends State<ProfilePage> {
               GestureDetector(
                 onTap: _openEditProfile,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE07A5F).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
@@ -292,7 +270,11 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.edit_outlined, size: 14, color: Color(0xFFE07A5F)),
+                      Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: Color(0xFFE07A5F),
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'Chỉnh sửa',
@@ -332,9 +314,19 @@ class _ProfilePageState extends State<ProfilePage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
             const SizedBox(height: 2),
-            Text(val, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF424242))),
+            Text(
+              val,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFF424242),
+              ),
+            ),
           ],
         ),
       ],
@@ -348,7 +340,11 @@ class _ProfilePageState extends State<ProfilePage> {
       children: [
         const Text(
           'Cài đặt tài khoản',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF6D4C41),
+          ),
         ),
         const SizedBox(height: 16),
         Container(
@@ -356,10 +352,7 @@ class _ProfilePageState extends State<ProfilePage> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-              ),
+              BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
             ],
           ),
           child: Column(
@@ -434,7 +427,11 @@ class _ProfilePageState extends State<ProfilePage> {
       icon: const Icon(Icons.logout, color: Colors.white, size: 20),
       label: const Text(
         'Đăng xuất',
-        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
       ),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF6D4C41),
@@ -455,8 +452,14 @@ class _ProfilePageState extends State<ProfilePage> {
       currentIndex: 3,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Khám phá'),
-        BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Yêu thích'),
-        BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Đặt chỗ'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.favorite_border),
+          label: 'Yêu thích',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.receipt_long),
+          label: 'Đặt chỗ',
+        ),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Hồ sơ'),
       ],
     );

@@ -4,29 +4,53 @@ class AddHomestayLocationScreen extends StatefulWidget {
   const AddHomestayLocationScreen({super.key});
 
   @override
-  State<AddHomestayLocationScreen> createState() => _AddHomestayLocationScreenState();
+  State<AddHomestayLocationScreen> createState() =>
+      _AddHomestayLocationScreenState();
 }
 
 class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   // Bộ điều khiển dữ liệu nhập vào cho các ô địa chỉ, thành phố và quận huyện
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _districtController = TextEditingController();
-  
+
   // Danh sách các thành phố phổ biến hỗ trợ tìm kiếm
-  final List<String> _cities = ['Đà Lạt', 'Đà Nẵng', 'Hà Nội', 'Phú Quốc', 'Nha Trang', 'Hội An'];
+  final List<String> _cities = [
+    'Đà Lạt',
+    'Đà Nẵng',
+    'Hà Nội',
+    'Phú Quốc',
+    'Nha Trang',
+    'Hội An',
+  ];
   String? _selectedCity;
 
   @override
+  void dispose() {
+    _addressController.dispose();
+    _districtController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
+    final Map<String, dynamic> args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
+        {};
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Sắc nền nhẹ (Surface color từ design system)
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Sắc nền nhẹ (Surface color từ design system)
       appBar: AppBar(
-        backgroundColor: Colors.white, // Màu nền trắng làm nổi bật thanh công cụ phía trên
+        backgroundColor:
+            Colors.white, // Màu nền trắng làm nổi bật thanh công cụ phía trên
         elevation: 0, // Loại bỏ hiệu ứng bóng đổ của thanh AppBar
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)), // Nút quay lại bước trước đó
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Color(0xFF6D4C41),
+          ), // Nút quay lại bước trước đó
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -35,7 +59,8 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
             color: Color(0xFF6D4C41),
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            fontFamily: 'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
+            fontFamily:
+                'BeVietnamPro', // Đảm bảo khai báo font tương ứng trong pubspec.yaml
           ),
         ),
       ),
@@ -44,47 +69,77 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
           _buildProgressBar(), // Thanh trạng thái tiến độ trực quan đạt sát dưới AppBar
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24), // Tạo biên đệm 24 đơn vị bao quanh vùng nhập liệu
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Vị trí homestay',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF6D4C41),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Vị trí homestay',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF6D4C41),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Địa chỉ chính xác giúp khách hàng dễ dàng tìm thấy bạn.',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                          const SizedBox(height: 32),
+                          // Dropdown chọn Thành phố
+                          _buildCityDropdown(),
+                          const SizedBox(height: 12),
+                          _buildPopularCities(),
+                          const SizedBox(height: 24),
+                          // Trường nhập địa chỉ cụ thể (Số nhà, tên đường...)
+                          _buildInputField(
+                            label:
+                                'Địa chỉ chi tiết (Số nhà, tên đường, ngõ...)',
+                            hint: 'VD: 123 Đường Trần Phú',
+                            controller: _addressController,
+                            icon: Icons.location_on_outlined,
+                            validator: (value) {
+                              final text = value?.trim() ?? '';
+                              if (text.isEmpty) return 'Vui lòng nhập địa chỉ';
+                              if (text.length < 5) {
+                                return 'Địa chỉ chưa đủ chi tiết';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+                          // Trường nhập Quận / Huyện
+                          _buildInputField(
+                            label: 'Quận / Huyện / Phường / Xã',
+                            hint: 'VD: Phường 4',
+                            controller: _districtController,
+                            icon: Icons.map_outlined,
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? 'Vui lòng nhập quận, huyện hoặc phường'
+                                : null,
+                          ),
+                          const SizedBox(height: 24),
+                          _buildAddressPreview(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Địa chỉ chính xác giúp khách hàng dễ dàng tìm thấy bạn.',
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                  const SizedBox(height: 32),
-                  // Dropdown chọn Thành phố
-                  _buildCityDropdown(),
-                  const SizedBox(height: 24),
-                  // Trường nhập địa chỉ cụ thể (Số nhà, tên đường...)
-                  _buildInputField(
-                    label: 'Địa chỉ chi tiết (Số nhà, tên đường, ngõ...)',
-                    hint: 'VD: 123 Đường Trần Phú',
-                    controller: _addressController,
-                    icon: Icons.location_on_outlined,
-                  ),
-                  const SizedBox(height: 24),
-                  // Trường nhập Quận / Huyện
-                  _buildInputField(
-                    label: 'Quận / Huyện / Phường / Xã',
-                    hint: 'VD: Phường 4',
-                    controller: _districtController,
-                    icon: Icons.map_outlined,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-          _buildBottomActions(args), // Thanh điều phối hành động quay lại hoặc tiếp tục dưới đáy màn hình
+          _buildBottomActions(
+            args,
+          ), // Thanh điều phối hành động quay lại hoặc tiếp tục dưới đáy màn hình
         ],
       ),
     );
@@ -93,9 +148,11 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
   // Thanh hiển thị tiến trình hoàn thiện hồ sơ (Linear Progress Indicator)
   Widget _buildProgressBar() {
     return LinearProgressIndicator(
-      value: 0.50, // Thể hiện đang hoàn thành 50% chặng đường (Bước 2 của 4 bước)
+      value: 2 / 3,
       backgroundColor: Colors.grey.shade200,
-      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE07A5F)), // Sắc cam thương hiệu biểu thị tiến độ
+      valueColor: const AlwaysStoppedAnimation<Color>(
+        Color(0xFFE07A5F),
+      ), // Sắc cam thương hiệu biểu thị tiến độ
       minHeight: 6, // Độ dày của thanh tiến trình
     );
   }
@@ -106,6 +163,7 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
     required String hint,
     required TextEditingController controller,
     required IconData icon,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,27 +180,42 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16), // Bo tròn góc hộp 16 đơn vị
+            borderRadius: BorderRadius.circular(
+              16,
+            ), // Bo tròn góc hộp 16 đơn vị
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
+                color: Colors.black.withValues(
+                  alpha: 0.03,
+                ), // Đổ bóng siêu nhẹ tạo cảm giác nổi tinh tế
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-          child: TextField(
+          child: TextFormField(
             controller: controller,
+            validator: validator,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            onChanged: (_) => setState(() {}),
             style: const TextStyle(fontSize: 15),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-              prefixIcon: Icon(icon, color: const Color(0xFFE07A5F), size: 22), // Biểu tượng đặc trưng đặt đầu ô
+              prefixIcon: Icon(
+                icon,
+                color: const Color(0xFFE07A5F),
+                size: 22,
+              ), // Biểu tượng đặc trưng đặt đầu ô
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none, // Ẩn đường viền mặc định để dùng thiết kế đổ bóng của Container
+                borderSide: BorderSide
+                    .none, // Ẩn đường viền mặc định để dùng thiết kế đổ bóng của Container
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 18,
+              ),
             ),
           ),
         ),
@@ -170,24 +243,35 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: DropdownButtonFormField<String>(
-            value: _selectedCity,
+            key: ValueKey(_selectedCity),
+            initialValue: _selectedCity,
             icon: const Icon(Icons.expand_more, color: Color(0xFFE07A5F)),
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.location_city_outlined, color: Color(0xFFE07A5F), size: 22),
+              prefixIcon: const Icon(
+                Icons.location_city_outlined,
+                color: Color(0xFFE07A5F),
+                size: 22,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 18,
+              ),
             ),
-            hint: Text('Chọn thành phố / tỉnh', style: TextStyle(color: Colors.grey.shade400, fontSize: 14)),
+            hint: Text(
+              'Chọn thành phố / tỉnh',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            ),
             items: _cities.map((city) {
               return DropdownMenuItem(
                 value: city,
@@ -199,26 +283,113 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
                 _selectedCity = val;
               });
             },
+            validator: (value) =>
+                value == null ? 'Vui lòng chọn thành phố hoặc tỉnh' : null,
           ),
         ),
       ],
     );
   }
 
+  Widget _buildPopularCities() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _cities.take(4).map((city) {
+        final selected = city == _selectedCity;
+        return ChoiceChip(
+          label: Text(city),
+          selected: selected,
+          onSelected: (_) => setState(() => _selectedCity = city),
+          showCheckmark: false,
+          selectedColor: const Color(0xFFF1DDD4),
+          backgroundColor: Colors.white,
+          side: BorderSide(
+            color: selected ? const Color(0xFFE07A5F) : const Color(0xFFE7DDD3),
+          ),
+          labelStyle: TextStyle(
+            color: selected ? const Color(0xFF6D4C41) : const Color(0xFF776C66),
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+          ),
+        );
+      }).toList(),
+    );
+  }
 
+  Widget _buildAddressPreview() {
+    final parts = [
+      _addressController.text.trim(),
+      _districtController.text.trim(),
+      _selectedCity,
+    ].whereType<String>().where((part) => part.isNotEmpty).toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5EDE6),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE6D7CC)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.pin_drop_outlined,
+            color: Color(0xFFE07A5F),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Địa chỉ sẽ hiển thị',
+                  style: TextStyle(
+                    color: Color(0xFF6D4C41),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  parts.isEmpty
+                      ? 'Nhập thông tin phía trên để xem trước địa chỉ.'
+                      : parts.join(', '),
+                  style: const TextStyle(
+                    color: Color(0xFF776C66),
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Thanh điều khiển chức năng đặt cố định ở phần đáy màn hình (Bottom Bar Actions)
   Widget _buildBottomActions(Map<String, dynamic> args) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ hệ thống
+      padding: const EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        32,
+      ), // Chừa biên đệm dưới 32 đơn vị bảo toàn phần tai thỏ hệ thống
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới rõ ràng với body
+            color: Colors.black.withValues(
+              alpha: 0.05,
+            ), // Đổ bóng mờ nhẹ ngược lên trên nhằm phân ranh giới rõ ràng với body
             blurRadius: 10,
             offset: const Offset(0, -5),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -238,12 +409,7 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
               final address = _addressController.text.trim();
               final district = _districtController.text.trim();
 
-              if (address.isEmpty || district.isEmpty || _selectedCity == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin địa điểm')),
-                );
-                return;
-              }
+              if (!(_formKey.currentState?.validate() ?? false)) return;
 
               Navigator.pushNamed(
                 context,
@@ -256,10 +422,18 @@ class _AddHomestayLocationScreenState extends State<AddHomestayLocationScreen> {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6D4C41), // Sắc nâu đậm chủ đạo hệ thống
-              minimumSize: const Size(140, 56), // Độ rộng tối thiểu 140 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
+              backgroundColor: const Color(
+                0xFF6D4C41,
+              ), // Sắc nâu đậm chủ đạo hệ thống
+              minimumSize: const Size(
+                140,
+                56,
+              ), // Độ rộng tối thiểu 140 đơn vị và chiều cao nút bấm chuẩn là 56 đơn vị
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation:
+                  0, // Loại bỏ hiệu ứng bóng đổ phẳng mịn màng tiệp vào nền trắng của Bottom Bar
             ),
             child: const Text(
               'Tiếp theo',

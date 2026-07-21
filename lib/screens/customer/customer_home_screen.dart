@@ -1,41 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import '../../services/api_service.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../models/homestay_model.dart';
+import '../../features/customer/viewmodels/customer_home_view_model.dart';
+import '../../features/customer/models/customer_home_state.dart';
+import 'cancel_booking_page.dart';
 
-class CustomerHomeScreen extends StatefulWidget {
+class CustomerHomeScreen extends ConsumerStatefulWidget {
   const CustomerHomeScreen({super.key});
 
   @override
-  State<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
+  ConsumerState<CustomerHomeScreen> createState() => _CustomerHomeScreenState();
 }
 
-class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
+class _CustomerHomeScreenState extends ConsumerState<CustomerHomeScreen> {
   int _currentIndex = 0;
-  final ApiService _apiService = ApiService();
   bool _initialized = false;
-  
-  // Lưu danh sách ID các homestay yêu thích (favorites) để quản lý tương tác trong phiên
-  final Set<int> _favoriteHomestayIds = {};
 
-  // --- Phân trang & Tìm kiếm ---
-  final List<Homestay> _homestays = [];
-  bool _isLoadingHomestays = false;
-  bool _hasMoreHomestays = true;
-  int _currentPage = 0;
-  final int _pageSize = 10;
+  CustomerHomeState get _homeState =>
+      ref.read(customerHomeViewModelProvider).value ??
+      const CustomerHomeState();
+  Set<int> get _favoriteHomestayIds => _homeState.favoriteIds;
+  List<Homestay> get _homestays => _homeState.homestays;
+  bool get _isLoadingHomestays =>
+      ref.read(customerHomeViewModelProvider).isLoading ||
+      _homeState.isLoadingMore;
+  bool get _hasMoreHomestays => _homeState.hasMore;
+  String get _searchQuery => _homeState.searchQuery;
+  String get _selectedCategory => _homeState.category;
   final ScrollController _exploreScrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
-  String _searchQuery = '';
-  String _selectedCategory = 'Tất cả';
 
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
-    _loadHomestays();
     _exploreScrollController.addListener(_onScroll);
   }
 
@@ -48,106 +48,57 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   void _onScroll() {
-    if (_exploreScrollController.position.pixels >= 
+    if (_exploreScrollController.position.pixels >=
         _exploreScrollController.position.maxScrollExtent - 200) {
       _loadMoreHomestays();
     }
   }
 
   Future<void> _loadHomestays({bool reset = false}) async {
-    if (_isLoadingHomestays) return;
     if (reset) {
-      _currentPage = 0;
-      _homestays.clear();
-      _hasMoreHomestays = true;
-    }
-    setState(() => _isLoadingHomestays = true);
-    try {
-      final results = await _apiService.getHomestays(
-        page: _currentPage,
-        pageSize: _pageSize,
-        searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
-        category: _selectedCategory == 'Tất cả' ? null : _selectedCategory,
-      );
-      if (mounted) {
-        setState(() {
-          _homestays.addAll(results);
-          _hasMoreHomestays = results.length >= _pageSize;
-          _isLoadingHomestays = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingHomestays = false);
+      await ref.read(customerHomeViewModelProvider.notifier).refresh();
+    } else {
+      await ref.read(customerHomeViewModelProvider.notifier).loadMore();
     }
   }
 
   void _loadMoreHomestays() {
     if (!_hasMoreHomestays || _isLoadingHomestays) return;
-    _currentPage++;
     _loadHomestays();
   }
 
   void _onSearchChanged(String value) {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      setState(() => _searchQuery = value);
-      _loadHomestays(reset: true);
+      ref
+          .read(customerHomeViewModelProvider.notifier)
+          .applyFilter(search: value);
     });
   }
 
   void _onCategoryChanged(String category) {
-    setState(() => _selectedCategory = category);
-    _loadHomestays(reset: true);
+    ref
+        .read(customerHomeViewModelProvider.notifier)
+        .applyFilter(category: category);
   }
 
   void _onLocationChipTapped(String location) {
     _searchController.text = location;
-    _searchQuery = location;
-    _loadHomestays(reset: true);
+    ref
+        .read(customerHomeViewModelProvider.notifier)
+        .applyFilter(search: location);
   }
 
-  Future<void> _loadFavorites() async {
-    try {
-      final favIds = await _apiService.getMyFavoriteHomestayIds();
-      if (mounted) {
-        setState(() {
-          _favoriteHomestayIds.clear();
-          _favoriteHomestayIds.addAll(favIds);
-        });
-      }
-    } catch (e) {
-      print('Error loading favorites: $e');
-    }
-  }
+  Future<void> _loadFavorites() =>
+      ref.read(customerHomeViewModelProvider.notifier).refresh();
 
   Future<void> _toggleFavorite(Homestay homestay) async {
-    final isFav = _favoriteHomestayIds.contains(homestay.id);
-    
-    // 1. Cập nhật giao diện ngay lập tức (Optimistic UI)
-    setState(() {
-      if (isFav) {
-        _favoriteHomestayIds.remove(homestay.id);
-      } else {
-        _favoriteHomestayIds.add(homestay.id);
-      }
-    });
-
     try {
-      if (isFav) {
-        await _apiService.removeFavorite(homestay.id);
-      } else {
-        await _apiService.addFavorite(homestay.id);
-      }
+      await ref
+          .read(customerHomeViewModelProvider.notifier)
+          .toggleFavorite(homestay);
     } catch (e) {
-      // 2. Nếu lỗi, hoàn tác trạng thái
       if (mounted) {
-        setState(() {
-          if (isFav) {
-            _favoriteHomestayIds.add(homestay.id);
-          } else {
-            _favoriteHomestayIds.remove(homestay.id);
-          }
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Lỗi cập nhật yêu thích: ${e.toString()}'),
@@ -181,6 +132,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(customerHomeViewModelProvider);
     if (!_initialized) {
       final initialTab = ModalRoute.of(context)?.settings.arguments as int?;
       if (initialTab != null) {
@@ -198,10 +150,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFAE7), // Surface color từ design system
-      body: SafeArea(
-        child: tabs[_currentIndex],
-      ),
+      backgroundColor: const Color(
+        0xFFFDFAE7,
+      ), // Surface color từ design system
+      body: SafeArea(child: tabs[_currentIndex]),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
@@ -209,8 +161,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   Widget _buildExploreTab() {
     return RefreshIndicator(
       onRefresh: () async {
-        await _loadHomestays(reset: true);
-        await _loadFavorites();
+        await ref.read(customerHomeViewModelProvider.notifier).refresh();
       },
       color: const Color(0xFFE07A5F),
       child: CustomScrollView(
@@ -223,13 +174,20 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
           SliverToBoxAdapter(child: _buildCategoryFilter()),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 10.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
                     'Homestay nổi bật',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF6D4C41)),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF6D4C41),
+                    ),
                   ),
                   Text(
                     '${_homestays.length} kết quả',
@@ -255,22 +213,21 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    if (index < _homestays.length) {
-                      return _buildHomestayCard(_homestays[index]);
-                    }
-                    return null;
-                  },
-                  childCount: _homestays.length,
-                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (index < _homestays.length) {
+                    return _buildHomestayCard(_homestays[index]);
+                  }
+                  return null;
+                }, childCount: _homestays.length),
               ),
             ),
           if (_isLoadingHomestays)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(24.0),
-                child: Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F))),
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+                ),
               ),
             ),
           if (!_hasMoreHomestays && _homestays.isNotEmpty)
@@ -278,7 +235,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
               child: Padding(
                 padding: EdgeInsets.all(24.0),
                 child: Center(
-                  child: Text('Đã hiển thị tất cả kết quả', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  child: Text(
+                    'Đã hiển thị tất cả kết quả',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
                 ),
               ),
             ),
@@ -289,7 +249,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildWelcomeHeader() {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     final String displayName = user?.email?.split('@').first ?? 'Alexandria';
 
     return Padding(
@@ -360,7 +320,14 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
   }
 
   Widget _buildLocationChips() {
-    final locations = ['Đà Lạt', 'Đà Nẵng', 'Hà Nội', 'Phú Quốc', 'Nha Trang', 'Hội An'];
+    final locations = [
+      'Đà Lạt',
+      'Đà Nẵng',
+      'Hà Nội',
+      'Phú Quốc',
+      'Nha Trang',
+      'Hội An',
+    ];
     return SizedBox(
       height: 48,
       child: ListView.builder(
@@ -386,11 +353,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                 size: 16,
                 color: isActive ? Colors.white : const Color(0xFFE07A5F),
               ),
-              backgroundColor: isActive ? const Color(0xFFE07A5F) : const Color(0xFFF7F4E1),
+              backgroundColor: isActive
+                  ? const Color(0xFFE07A5F)
+                  : const Color(0xFFF7F4E1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isActive ? const Color(0xFFE07A5F) : Colors.transparent,
+                  color: isActive
+                      ? const Color(0xFFE07A5F)
+                      : Colors.transparent,
                 ),
               ),
               onPressed: () {
@@ -436,13 +407,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFFE07A5F).withOpacity(0.1) : const Color(0xFFF7F4E1),
+                      color: isSelected
+                          ? const Color(0xFFE07A5F).withOpacity(0.1)
+                          : const Color(0xFFF7F4E1),
                       borderRadius: BorderRadius.circular(16),
-                      border: isSelected ? Border.all(color: const Color(0xFFE07A5F)) : null,
+                      border: isSelected
+                          ? Border.all(color: const Color(0xFFE07A5F))
+                          : null,
                     ),
                     child: Icon(
                       categories[index]['icon'] as IconData,
-                      color: isSelected ? const Color(0xFFE07A5F) : const Color(0xFF6D4C41),
+                      color: isSelected
+                          ? const Color(0xFFE07A5F)
+                          : const Color(0xFF6D4C41),
                       size: 20,
                     ),
                   ),
@@ -451,8 +428,12 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     label,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? const Color(0xFFE07A5F) : Colors.grey.shade700,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? const Color(0xFFE07A5F)
+                          : Colors.grey.shade700,
                     ),
                   ),
                 ],
@@ -468,8 +449,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Widget _buildHomestayCard(Homestay homestay) {
     final isFav = _favoriteHomestayIds.contains(homestay.id);
-    final String imageUrl = homestay.images.isNotEmpty 
-        ? homestay.images.first 
+    final String imageUrl = homestay.images.isNotEmpty
+        ? homestay.images.first
         : 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000';
 
     return Container(
@@ -487,7 +468,11 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       ),
       child: InkWell(
         onTap: () {
-          Navigator.pushNamed(context, '/homestay-detail', arguments: homestay).then((_) {
+          Navigator.pushNamed(
+            context,
+            '/homestay-detail',
+            arguments: homestay,
+          ).then((_) {
             _loadFavorites();
           });
         },
@@ -495,7 +480,9 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         child: Column(
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
               child: Stack(
                 children: [
                   Image.network(
@@ -522,7 +509,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     bottom: 16,
                     left: 16,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
@@ -533,7 +523,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           SizedBox(width: 4),
                           Text(
                             '4.8',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -553,19 +546,30 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                       children: [
                         Text(
                           homestay.name,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF424242),
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
+                            const Icon(
+                              Icons.location_on_outlined,
+                              size: 14,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
                                 '${homestay.address}, ${homestay.city}',
-                                style: const TextStyle(color: Colors.grey, fontSize: 13),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 13,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -580,14 +584,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                     TextSpan(
                       children: [
                         TextSpan(
-                          text: '${homestay.pricePerNight.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ',
+                          text:
+                              '${homestay.pricePerNight.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ',
                           style: const TextStyle(
                             color: Color(0xFFE07A5F),
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
                         ),
-                        const TextSpan(text: '/đêm', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        const TextSpan(
+                          text: '/đêm',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
                       ],
                     ),
                   ),
@@ -602,391 +610,581 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   // --- 2. TAB YÊU THÍCH (FAVORITES TAB) ---
   Widget _buildFavoritesTab() {
-    return FutureBuilder<List<Homestay>>(
-      future: _apiService.getHomestays(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-        }
-        
-        final allHomestays = snapshot.data ?? [];
-        final favHomestays = allHomestays.where((h) => _favoriteHomestayIds.contains(h.id)).toList();
-
-        return Scaffold(
-          backgroundColor: const Color(0xFFFDFAE7),
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: const Text(
-              'Danh sách yêu thích',
-              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold),
-            ),
-            centerTitle: true,
+    return ref
+        .watch(customerHomeViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
           ),
-          body: favHomestays.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.favorite_border, size: 80, color: Colors.grey.shade300),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Chưa có homestay yêu thích nào.',
-                        style: TextStyle(color: Colors.grey, fontSize: 15),
-                      ),
-                    ],
+          error: (error, _) => Center(child: Text('Lỗi tải dữ liệu: $error')),
+          data: (homeState) {
+            final allHomestays = homeState.homestays;
+            final favHomestays = allHomestays
+                .where((h) => _favoriteHomestayIds.contains(h.id))
+                .toList();
+
+            return Scaffold(
+              backgroundColor: const Color(0xFFFDFAE7),
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                title: const Text(
+                  'Danh sách yêu thích',
+                  style: TextStyle(
+                    color: Color(0xFF6D4C41),
+                    fontWeight: FontWeight.bold,
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: favHomestays.length,
-                  itemBuilder: (context, index) {
-                    return _buildHomestayCard(favHomestays[index]);
-                  },
                 ),
+                centerTitle: true,
+              ),
+              body: favHomestays.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 80,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Chưa có homestay yêu thích nào.',
+                            style: TextStyle(color: Colors.grey, fontSize: 15),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: favHomestays.length,
+                      itemBuilder: (context, index) {
+                        return _buildHomestayCard(favHomestays[index]);
+                      },
+                    ),
+            );
+          },
         );
-      },
-    );
   }
 
   // --- 3. TAB CHUYẾN ĐI (BOOKINGS TAB) ---
   Widget _buildBookingsTab() {
-    return FutureBuilder<List<dynamic>>(
-      future: _apiService.getMyBookings(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-        }
-        
-        final bookings = snapshot.data ?? [];
-
-        return Scaffold(
-          backgroundColor: const Color(0xFFFDFAE7),
-          appBar: AppBar(
-            backgroundColor: Colors.white,
-            elevation: 0,
-            title: const Text(
-              'Chuyến đi của tôi',
-              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-            centerTitle: true,
+    return ref
+        .watch(customerHomeViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
           ),
-          body: bookings.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.event_note_outlined, size: 80, color: Colors.grey.shade300),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Chưa có lịch sử đặt phòng nào',
-                        style: TextStyle(color: Colors.grey, fontSize: 15),
-                      ),
-                    ],
+          error: (error, _) => Center(child: Text('Lỗi tải dữ liệu: $error')),
+          data: (homeState) {
+            final bookings = homeState.bookings;
+
+            return Scaffold(
+              backgroundColor: const Color(0xFFFDFAE7),
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                title: const Text(
+                  'Chuyến đi của tôi',
+                  style: TextStyle(
+                    color: Color(0xFF6D4C41),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(20),
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    final homestay = booking['homestays'];
-                    final checkIn = DateTime.parse(booking['check_in']);
-                    final checkOut = DateTime.parse(booking['check_out']);
-                    final double totalPrice = (booking['total_price'] ?? 0.0).toDouble();
-
-                    // Xác định ảnh homestay từ liên kết
-                    String imageUrl = 'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
-                    if (homestay != null && homestay['homestay_images'] != null && (homestay['homestay_images'] as List).isNotEmpty) {
-                      imageUrl = homestay['homestay_images'][0]['url'];
-                    }
-                    Color statusColor = Colors.orange;
-                    String statusText = 'Đang xử lý';
-                    
-                    if (booking['status'] == 'confirmed') {
-                      statusColor = Colors.green;
-                      statusText = 'Đã xác nhận';
-                    } else if (booking['status'] == 'cancelled') {
-                      statusColor = Colors.red;
-                      statusText = 'Đã hủy';
-                    } else if (booking['status'] == 'cancel_pending') {
-                      statusColor = Colors.deepOrange;
-                      statusText = 'Chờ hoàn tiền';
-                    } else if (booking['status'] == 'refunded') {
-                      statusColor = Colors.blue;
-                      statusText = 'Đã hoàn tiền';
-                    }
-
-                    final String checkInStr = '${checkIn.day}/${checkIn.month}/${checkIn.year}';
-                    final String checkOutStr = '${checkOut.day}/${checkOut.month}/${checkOut.year}';
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                ),
+                centerTitle: true,
+              ),
+              body: bookings.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_note_outlined,
+                            size: 80,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Chưa có lịch sử đặt phòng nào',
+                            style: TextStyle(color: Colors.grey, fontSize: 15),
+                          ),
                         ],
                       ),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.pushNamed(
-                            context, 
-                            '/customer-booking-detail',
-                            arguments: booking,
-                          ).then((_) {
-                            setState(() {});
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(24),
-                        child: Column(
-                          children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                              child: Stack(
-                                children: [
-                                  Image.network(
-                                    imageUrl,
-                                    height: 140,
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(20),
+                      itemCount: bookings.length,
+                      itemBuilder: (context, index) {
+                        final booking = bookings[index];
+                        final homestay = booking['homestays'];
+                        final checkIn = DateTime.parse(booking['check_in']);
+                        final checkOut = DateTime.parse(booking['check_out']);
+                        final double totalPrice =
+                            (booking['total_price'] ?? 0.0).toDouble();
+
+                        // Xác định ảnh homestay từ liên kết
+                        String imageUrl =
+                            'https://images.unsplash.com/photo-1510798831971-661eb04b3739';
+                        if (homestay != null &&
+                            homestay['homestay_images'] != null &&
+                            (homestay['homestay_images'] as List).isNotEmpty) {
+                          imageUrl = homestay['homestay_images'][0]['url'];
+                        }
+                        Color statusColor = Colors.orange;
+                        String statusText = 'Đang xử lý';
+
+                        if (booking['status'] == 'payment_pending') {
+                          statusColor = Colors.orange;
+                          statusText = 'Chờ Admin xác minh';
+                        } else if (booking['status'] == 'pending') {
+                          statusColor = Colors.blue;
+                          statusText = 'Chờ xác nhận';
+                        } else if (booking['status'] == 'confirmed') {
+                          statusColor = Colors.green;
+                          statusText = 'Đã xác nhận';
+                        } else if (booking['status'] == 'cancelled') {
+                          statusColor = Colors.red;
+                          statusText = 'Đã hủy';
+                        } else if (booking['status'] == 'cancel_pending') {
+                          statusColor = Colors.deepOrange;
+                          statusText = 'Chờ hoàn tiền';
+                        } else if (booking['status'] == 'refunded') {
+                          statusColor = Colors.blue;
+                          statusText = 'Đã hoàn tiền';
+                        }
+                        final String checkInStr =
+                            '${checkIn.day}/${checkIn.month}/${checkIn.year}';
+                        final String checkOutStr =
+                            '${checkOut.day}/${checkOut.month}/${checkOut.year}';
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: InkWell(
+                            onTap: () async {
+                              final changed = await Navigator.pushNamed(
+                                context,
+                                '/customer-booking-detail',
+                                arguments: booking,
+                              );
+                              if (changed == true) {
+                                await ref
+                                    .read(
+                                      customerHomeViewModelProvider.notifier,
+                                    )
+                                    .refresh();
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(24),
+                            child: Column(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(24),
                                   ),
-                                Positioned(
-                                  top: 12,
-                                  right: 12,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.9),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      statusText,
-                                      style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
-                                    ),
+                                  child: Stack(
+                                    children: [
+                                      Image.network(
+                                        imageUrl,
+                                        height: 140,
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      Positioned(
+                                        top: 12,
+                                        right: 12,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(
+                                              0.9,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            statusText,
+                                            style: TextStyle(
+                                              color: statusColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            homestay?['name'] ??
+                                                'The Terracotta Nest',
+                                            style: const TextStyle(
+                                              fontSize: 17,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF424242),
+                                            ),
+                                          ),
+                                          Text(
+                                            '${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ',
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFFE07A5F),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on_outlined,
+                                            size: 14,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${homestay?['address'] ?? ''}, ${homestay?['city'] ?? ''}',
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const Divider(height: 24),
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 14,
+                                            color: Color(0xFF6D4C41),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            '$checkInStr - $checkOutStr',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 13,
+                                              color: Color(0xFF6D4C41),
+                                            ),
+                                          ),
+                                          const Spacer(),
+                                          if (booking['status'] == 'confirmed')
+                                            TextButton(
+                                              onPressed: () async {
+                                                final changed =
+                                                    await Navigator.push<bool>(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            CancelBookingPage(
+                                                              booking:
+                                                                  Map<
+                                                                    String,
+                                                                    dynamic
+                                                                  >.from(
+                                                                    booking
+                                                                        as Map,
+                                                                  ),
+                                                            ),
+                                                      ),
+                                                    );
+                                                if (changed == true) {
+                                                  ref
+                                                      .read(
+                                                        customerHomeViewModelProvider
+                                                            .notifier,
+                                                      )
+                                                      .refresh();
+                                                }
+                                              },
+                                              style: TextButton.styleFrom(
+                                                padding: EdgeInsets.zero,
+                                                minimumSize: Size.zero,
+                                              ),
+                                              child: const Text(
+                                                'Hủy phòng',
+                                                style: TextStyle(
+                                                  color: Colors.red,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      homestay?['name'] ?? 'The Terracotta Nest',
-                                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
-                                    ),
-                                    Text(
-                                      '${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}đ',
-                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFFE07A5F)),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${homestay?['address'] ?? ''}, ${homestay?['city'] ?? ''}',
-                                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                                    ),
-                                  ],
-                                ),
-                                const Divider(height: 24),
-                                Row(
-                                  children: [
-                                    const Icon(Icons.calendar_today_outlined, size: 14, color: Color(0xFF6D4C41)),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '$checkInStr - $checkOutStr',
-                                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13, color: Color(0xFF6D4C41)),
-                                    ),
-                                    const Spacer(),
-                                    if (booking['status'] == 'confirmed')
-                                      TextButton(
-                                        onPressed: () {
-                                          _apiService.updateBookingStatus(booking['id'], 'cancelled').then((_) {
-                                            setState(() {});
-                                          });
-                                        },
-                                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero),
-                                        child: const Text('Hủy phòng', style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.bold)),
+                        );
+                      },
+                    ),
+            );
+          },
+        );
+  }
+
+  // --- 4. TAB HỒ SƠ (PROFILE TAB) ---
+  Widget _buildProfileTab() {
+    return ref
+        .watch(customerHomeViewModelProvider)
+        .when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+          ),
+          error: (error, _) => Center(child: Text('Lỗi tải dữ liệu: $error')),
+          data: (homeState) {
+            final profile = homeState.profile;
+            final currentUser = ref.read(authRepositoryProvider).currentUser;
+
+            final String rawName = profile?['full_name'] ?? '';
+            final String fullName = rawName.isEmpty
+                ? (currentUser?.email?.split('@').first ?? 'Người dùng')
+                : rawName;
+
+            final String rawEmail = profile?['email'] ?? '';
+            final String email = rawEmail.isEmpty
+                ? (currentUser?.email ?? 'Chưa cập nhật email')
+                : rawEmail;
+
+            final String rawPhone = profile?['phone'] ?? '';
+            final String phone = rawPhone.isEmpty
+                ? 'Chưa cập nhật SĐT'
+                : rawPhone;
+
+            final String? avatarUrl = profile?['avatar_url'];
+
+            return Scaffold(
+              backgroundColor: const Color(0xFFFDFAE7),
+              appBar: AppBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                title: const Text(
+                  'Hồ sơ cá nhân',
+                  style: TextStyle(
+                    color: Color(0xFF6D4C41),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                centerTitle: true,
+              ),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.03),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundImage:
+                                    avatarUrl != null && avatarUrl.isNotEmpty
+                                    ? NetworkImage(avatarUrl)
+                                    : const NetworkImage(
+                                        'https://i.pravatar.cc/150?u=alexandria',
                                       ),
-                                  ],
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE07A5F),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            fullName,
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF424242),
+                            ),
+                          ),
+                          Text(
+                            email,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE07A5F).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.verified,
+                                  color: Color(0xFFE07A5F),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  profile?['role'] == 'customer'
+                                      ? 'Khách hàng'
+                                      : (profile?['role'] == 'host'
+                                            ? 'Chủ nhà'
+                                            : 'Tác giả'),
+                                  style: const TextStyle(
+                                    color: Color(0xFFE07A5F),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          OutlinedButton.icon(
+                            onPressed: () => _openEditProfile(fullName, phone),
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: Color(0xFF6D4C41),
+                            ),
+                            label: const Text(
+                              'Chỉnh sửa hồ sơ',
+                              style: TextStyle(
+                                color: Color(0xFF6D4C41),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF6D4C41)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  );
-                  },
-                ),
-        );
-      },
-    );
-  }
-
-  // --- 4. TAB HỒ SƠ (PROFILE TAB) ---
-  Widget _buildProfileTab() {
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: _apiService.getMyProfile(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)));
-        }
-
-        final profile = snapshot.data;
-        final currentUser = Supabase.instance.client.auth.currentUser;
-        
-        final String rawName = profile?['full_name'] ?? '';
-        final String fullName = rawName.isEmpty ? (currentUser?.email?.split('@').first ?? 'Người dùng') : rawName;
-        
-        final String rawEmail = profile?['email'] ?? '';
-        final String email = rawEmail.isEmpty ? (currentUser?.email ?? 'Chưa cập nhật email') : rawEmail;
-        
-        final String rawPhone = profile?['phone'] ?? '';
-        final String phone = rawPhone.isEmpty ? 'Chưa cập nhật SĐT' : rawPhone;
-        
-        final String? avatarUrl = profile?['avatar_url'];
-
-        return Scaffold(
-          backgroundColor: const Color(0xFFFDFAE7),
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: const Text(
-              'Hồ sơ cá nhân',
-              style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold),
-            ),
-            centerTitle: true,
-          ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Stack(
+                    const SizedBox(height: 24),
+                    // Các thông tin chi tiết liên hệ
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                                ? NetworkImage(avatarUrl)
-                                : const NetworkImage('https://i.pravatar.cc/150?u=alexandria'),
+                          _buildContactRow(
+                            Icons.phone_iphone,
+                            'Số điện thoại',
+                            phone,
                           ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: const BoxDecoration(color: Color(0xFFE07A5F), shape: BoxShape.circle),
-                              child: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
-                            ),
+                          const Divider(height: 24),
+                          _buildContactRow(
+                            Icons.email_outlined,
+                            'Email liên hệ',
+                            email,
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        fullName,
-                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF424242)),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final navigator = Navigator.of(context);
+                        await ref.read(authRepositoryProvider).signOut();
+                        navigator.pushNamedAndRemoveUntil(
+                          '/login',
+                          (route) => false,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.logout,
+                        color: Colors.white,
+                        size: 20,
                       ),
-                      Text(
-                        email,
-                        style: const TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE07A5F).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.verified, color: Color(0xFFE07A5F), size: 16),
-                            const SizedBox(width: 8),
-                            Text(
-                              profile?['role'] == 'customer'
-                                  ? 'Khách hàng'
-                                  : (profile?['role'] == 'host' ? 'Chủ nhà' : 'Tác giả'),
-                              style: const TextStyle(color: Color(0xFFE07A5F), fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                          ],
+                      label: const Text(
+                        'Đăng xuất',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () => _openEditProfile(fullName, phone),
-                        icon: const Icon(Icons.edit_outlined, size: 16, color: Color(0xFF6D4C41)),
-                        label: const Text('Chỉnh sửa hồ sơ', style: TextStyle(color: Color(0xFF6D4C41), fontWeight: FontWeight.bold)),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF6D4C41)),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6D4C41),
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
                         ),
+                        elevation: 2,
+                        shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                // Các thông tin chi tiết liên hệ
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    children: [
-                      _buildContactRow(Icons.phone_iphone, 'Số điện thoại', phone),
-                      const Divider(height: 24),
-                      _buildContactRow(Icons.email_outlined, 'Email liên hệ', email),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final navigator = Navigator.of(context);
-                    await Supabase.instance.client.auth.signOut();
-                    navigator.pushNamedAndRemoveUntil('/login', (route) => false);
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.white, size: 20),
-                  label: const Text('Đăng xuất', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6D4C41),
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 2,
-                    shadowColor: const Color(0xFF6D4C41).withOpacity(0.3),
-                  ),
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
-      },
-    );
   }
 
   Widget _buildContactRow(IconData icon, String label, String val) {
@@ -997,9 +1195,19 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
             const SizedBox(height: 2),
-            Text(val, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF424242))),
+            Text(
+              val,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFF424242),
+              ),
+            ),
           ],
         ),
       ],
@@ -1016,9 +1224,18 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
       onTap: _onTabTapped,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Khám phá'),
-        BottomNavigationBarItem(icon: Icon(Icons.favorite_border), label: 'Yêu thích'),
-        BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Đặt chỗ'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Hồ sơ'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.favorite_border),
+          label: 'Yêu thích',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.receipt_long),
+          label: 'Đặt chỗ',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          label: 'Hồ sơ',
+        ),
       ],
     );
   }

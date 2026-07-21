@@ -1,44 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/api_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/repositories/repository_providers.dart';
 import '../../models/host_application_model.dart';
+import '../../features/host/viewmodels/host_application_view_model.dart';
 
 /// Màn hình hiển thị trạng thái đơn đăng ký host đang chờ duyệt
-class HostPendingScreen extends StatefulWidget {
+class HostPendingScreen extends ConsumerStatefulWidget {
   const HostPendingScreen({super.key});
 
   @override
-  State<HostPendingScreen> createState() => _HostPendingScreenState();
+  ConsumerState<HostPendingScreen> createState() => _HostPendingScreenState();
 }
 
-class _HostPendingScreenState extends State<HostPendingScreen> {
-  final ApiService _apiService = ApiService();
-  HostApplication? _application;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadApplication();
-  }
-
-  Future<void> _loadApplication() async {
-    setState(() => _isLoading = true);
-    try {
-      final app = await _apiService.getMyHostApplication();
-      if (mounted) {
-        setState(() {
-          _application = app;
-          _isLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+class _HostPendingScreenState extends ConsumerState<HostPendingScreen> {
+  HostApplication? get _application =>
+      ref.read(hostApplicationViewModelProvider).value;
+  bool get _isLoading => ref.read(hostApplicationViewModelProvider).isLoading;
 
   void _handleLogout() async {
-    await Supabase.instance.client.auth.signOut();
+    await ref.read(authRepositoryProvider).signOut();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
@@ -50,27 +30,31 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
   void _handleBecomeCustomer() async {
     // Cho phép người dùng chuyển sang dùng như customer
     try {
-      await Supabase.instance.client
-          .from('profiles')
-          .update({'role': 'customer'})
-          .eq('id', Supabase.instance.client.auth.currentUser!.id);
+      await ref.read(profileRepositoryProvider).updateRole('customer');
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/customer-home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/customer-home',
+        (route) => false,
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(hostApplicationViewModelProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFFDFAE7),
       body: SafeArea(
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFE07A5F)))
+            ? const Center(
+                child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
+              )
             : _buildContent(),
       ),
     );
@@ -96,7 +80,11 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
           const SizedBox(height: 16),
 
           // Mô tả / ghi chú admin
-          _buildStatusDescription(app: app, isPending: isPending, isRejected: isRejected),
+          _buildStatusDescription(
+            app: app,
+            isPending: isPending,
+            isRejected: isRejected,
+          ),
           const SizedBox(height: 32),
 
           // Thông tin đơn (nếu có)
@@ -148,7 +136,10 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
     );
   }
 
-  Widget _buildStatusTitle({required bool isPending, required bool isRejected}) {
+  Widget _buildStatusTitle({
+    required bool isPending,
+    required bool isRejected,
+  }) {
     String title;
     if (isPending) {
       title = 'Đơn đang chờ xét duyệt';
@@ -176,21 +167,20 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
   }) {
     String desc;
     if (isPending) {
-      desc = 'Chúng tôi đã nhận được đơn đăng ký của bạn. Admin sẽ xem xét và phản hồi trong vòng 1-3 ngày làm việc.';
+      desc =
+          'Chúng tôi đã nhận được đơn đăng ký của bạn. Admin sẽ xem xét và phản hồi trong vòng 1-3 ngày làm việc.';
     } else if (isRejected) {
-      desc = 'Rất tiếc, đơn đăng ký của bạn chưa được chấp thuận lần này. Bạn có thể gửi lại đơn sau khi điều chỉnh thông tin.';
+      desc =
+          'Rất tiếc, đơn đăng ký của bạn chưa được chấp thuận lần này. Bạn có thể gửi lại đơn sau khi điều chỉnh thông tin.';
     } else {
-      desc = 'Chúc mừng! Bạn đã được phê duyệt làm Chủ nhà. Hãy đăng nhập lại để bắt đầu quản lý homestay của bạn.';
+      desc =
+          'Chúc mừng! Bạn đã được phê duyệt làm Chủ nhà. Hãy đăng nhập lại để bắt đầu quản lý homestay của bạn.';
     }
 
     return Text(
       desc,
       textAlign: TextAlign.center,
-      style: TextStyle(
-        fontSize: 14,
-        color: Colors.grey.shade600,
-        height: 1.6,
-      ),
+      style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.6),
     );
   }
 
@@ -211,8 +201,11 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _infoRow(Icons.calendar_today_outlined, 'Ngày gửi đơn',
-              _formatDate(app.createdAt)),
+          _infoRow(
+            Icons.calendar_today_outlined,
+            'Ngày gửi đơn',
+            _formatDate(app.createdAt),
+          ),
           const Divider(height: 20),
           _infoRow(Icons.info_outline, 'Trạng thái', app.statusLabel),
           if (app.isRejected && app.adminNote != null) ...[
@@ -234,17 +227,23 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                      fontWeight: FontWeight.w500)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF424242),
-                      fontWeight: FontWeight.w600)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF424242),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -252,7 +251,10 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
     );
   }
 
-  Widget _buildActionButtons({required bool isPending, required bool isRejected}) {
+  Widget _buildActionButtons({
+    required bool isPending,
+    required bool isRejected,
+  }) {
     final isApproved = _application?.isApproved ?? false;
 
     return Column(
@@ -260,12 +262,18 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
         if (isApproved)
           ElevatedButton(
             onPressed: () {
-              Navigator.pushNamedAndRemoveUntil(context, '/host-dashboard', (route) => false);
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/host-dashboard',
+                (route) => false,
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF10B981),
               minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               elevation: 2,
             ),
             child: const Row(
@@ -276,7 +284,10 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
                 Text(
                   'Truy cập giao diện Chủ nhà',
                   style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
@@ -289,12 +300,17 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE07A5F),
               minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
             ),
             child: const Text(
               'Gửi lại đơn đăng ký',
               style: TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Colors.white,
+              ),
             ),
           ),
         if (isRejected) const SizedBox(height: 12),
@@ -305,15 +321,18 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
             onPressed: _handleBecomeCustomer,
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               side: const BorderSide(color: Color(0xFF6D4C41), width: 1.5),
             ),
             child: const Text(
               'Tiếp tục với vai trò Khách hàng',
               style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: Color(0xFF6D4C41)),
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: Color(0xFF6D4C41),
+              ),
             ),
           ),
         if (!isApproved) const SizedBox(height: 12),
@@ -324,9 +343,10 @@ class _HostPendingScreenState extends State<HostPendingScreen> {
           child: Text(
             'Đăng xuất',
             style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-                decoration: TextDecoration.underline),
+              fontSize: 14,
+              color: Colors.grey.shade500,
+              decoration: TextDecoration.underline,
+            ),
           ),
         ),
       ],

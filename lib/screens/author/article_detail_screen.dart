@@ -6,8 +6,10 @@ class ArticleDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Retrieve article arguments passed through navigation
-    final Map<String, dynamic> article = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ?? {};
-    
+    final Map<String, dynamic> article =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
+        {};
+
     const Color purpleColor = Color(0xFF8E24AA);
     const Color primaryBrown = Color(0xFF6D4C41);
 
@@ -41,10 +43,7 @@ class ArticleDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
-                    article['image'],
-                    fit: BoxFit.cover,
-                  ),
+                  Image.network(article['image'], fit: BoxFit.cover),
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -68,7 +67,10 @@ class ArticleDetailScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: purpleColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
@@ -84,7 +86,10 @@ class ArticleDetailScreen extends StatelessWidget {
                       ),
                       Text(
                         article['date'],
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -104,9 +109,10 @@ class ArticleDetailScreen extends StatelessWidget {
                   const Divider(),
                   const SizedBox(height: 16),
                   Text(
-                    article['excerpt'] + "\n\n" + 
-                    "Khuôn viên của homestay vô cùng thoáng đãng với nhiều cây xanh và hoa. Sáng sớm, mình có thể ngồi ngoài ban công thưởng thức ly cafe ấm và ngắm nhìn sương mù lơ lửng trên thung lũng. Không gian tĩnh mịch giúp tâm hồn được thư thái sau chuỗi ngày làm việc căng thẳng ở thành phố.\n\n" +
-                    "Phòng nghỉ được thiết kế rất tỉ mỉ, giường nệm êm ái và thơm tho. Phòng tắm sạch sẽ, đầy đủ tiện nghi cần thiết. Anh chị chủ nhà cực kỳ chu đáo và mến khách, luôn nhiệt tình chỉ đường và gợi ý các quán ăn ngon chuẩn vị bản địa. Chắc chắn mình sẽ quay lại đây vào một ngày không xa!",
+                    article['excerpt'] +
+                        "\n\n" +
+                        "Khuôn viên của homestay vô cùng thoáng đãng với nhiều cây xanh và hoa. Sáng sớm, mình có thể ngồi ngoài ban công thưởng thức ly cafe ấm và ngắm nhìn sương mù lơ lửng trên thung lũng. Không gian tĩnh mịch giúp tâm hồn được thư thái sau chuỗi ngày làm việc căng thẳng ở thành phố.\n\n" +
+                        "Phòng nghỉ được thiết kế rất tỉ mỉ, giường nệm êm ái và thơm tho. Phòng tắm sạch sẽ, đầy đủ tiện nghi cần thiết. Anh chị chủ nhà cực kỳ chu đáo và mến khách, luôn nhiệt tình chỉ đường và gợi ý các quán ăn ngon chuẩn vị bản địa. Chắc chắn mình sẽ quay lại đây vào một ngày không xa!",
                     style: const TextStyle(
                       fontSize: 15,
                       color: Color(0xFF424242),
@@ -119,7 +125,7 @@ class ArticleDetailScreen extends StatelessWidget {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -130,7 +136,9 @@ class ArticleDetailScreen extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundImage: NetworkImage('https://i.pravatar.cc/150?u=author_emma'),
+          backgroundImage: NetworkImage(
+            'https://i.pravatar.cc/150?u=author_emma',
+          ),
         ),
         SizedBox(width: 12),
         Column(
@@ -138,7 +146,11 @@ class ArticleDetailScreen extends StatelessWidget {
           children: [
             Text(
               'Emma Watson',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF424242)),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Color(0xFF424242),
+              ),
             ),
             SizedBox(height: 2),
             Text(
@@ -195,7 +207,11 @@ class ArticleDetailScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF424242)),
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF424242),
+              ),
             ),
           ],
         ),
@@ -218,7 +234,10 @@ class ArticleDetailScreen extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.edit_outlined, color: Colors.blue),
-                  title: const Text('Sửa bài viết', style: TextStyle(fontWeight: FontWeight.bold)),
+                  title: const Text(
+                    'Sửa bài viết',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     // Open edit flow
@@ -226,7 +245,13 @@ class ArticleDetailScreen extends StatelessWidget {
                 ),
                 ListTile(
                   leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text('Xóa bài viết', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                  title: const Text(
+                    'Xóa bài viết',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _confirmDelete(context, article);
@@ -245,7 +270,9 @@ class ArticleDetailScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Xác nhận xóa?'),
-        content: Text('Bạn có chắc chắn muốn xóa bài viết "${article['title']}"? Thao tác này không thể hoàn tác.'),
+        content: Text(
+          'Bạn có chắc chắn muốn xóa bài viết "${article['title']}"? Thao tác này không thể hoàn tác.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -258,7 +285,13 @@ class ArticleDetailScreen extends StatelessWidget {
               print("Bài viết đã được xóa thành công!");
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Xóa', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Xóa',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
