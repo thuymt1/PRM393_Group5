@@ -8,6 +8,7 @@ import 'booking_repository.dart';
 import 'article_repository.dart';
 import 'admin_repository.dart';
 import 'notification_repository.dart';
+import 'review_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>(
   (ref) => SupabaseAuthRepository(ref.watch(supabaseClientProvider)),
@@ -39,7 +40,12 @@ final adminRepositoryProvider = Provider<AdminRepository>(
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
   (ref) => AppNotificationRepository(
+    ref.watch(supabaseClientProvider),
     ref.watch(profileRepositoryProvider),
     ref.watch(bookingRepositoryProvider),
   ),
+);
+
+final reviewRepositoryProvider = Provider<ReviewRepository>(
+  (ref) => SupabaseReviewRepository(ref.watch(supabaseClientProvider)),
 );

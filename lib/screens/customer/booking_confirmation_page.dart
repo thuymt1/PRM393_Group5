@@ -8,14 +8,59 @@ class BookingConfirmationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Nhận thông tin đặt phòng truyền từ màn hình trước
-    final Map<String, dynamic> args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final Homestay homestay = args['homestay'] as Homestay;
-    final DateTime checkIn = args['checkIn'] as DateTime;
-    final DateTime checkOut = args['checkOut'] as DateTime;
-    final int guests = args['guests'] as int;
-    final double totalPrice = args['totalPrice'] as double;
+    final rawArgs = ModalRoute.of(context)?.settings.arguments;
+    if (rawArgs == null || rawArgs is! Map) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFDFAE7),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            'Xác nhận đặt phòng',
+            style: TextStyle(
+              color: Color(0xFF6D4C41),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: Text(
+            'Không tìm thấy thông tin đặt phòng.',
+            style: TextStyle(color: Colors.grey, fontSize: 15),
+          ),
+        ),
+      );
+    }
+
+    final Map<String, dynamic> args = Map<String, dynamic>.from(rawArgs as Map);
+    final Homestay? homestay = args['homestay'] as Homestay?;
+    if (homestay == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFFDFAE7),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF6D4C41)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text('Xác nhận đặt phòng'),
+          centerTitle: true,
+        ),
+        body: const Center(child: Text('Thông tin homestay không hợp lệ.')),
+      );
+    }
+    final DateTime checkIn = (args['checkIn'] as DateTime?) ?? DateTime.now();
+    final DateTime checkOut = (args['checkOut'] as DateTime?) ??
+        DateTime.now().add(const Duration(days: 1));
+    final int guests = (args['guests'] as int?) ?? 1;
+    final double totalPrice =
+        (args['totalPrice'] as num?)?.toDouble() ?? homestay.pricePerNight;
 
     // Lấy thông tin user hiện tại từ Supabase Auth làm thông tin hiển thị cơ bản
     final user = ref.read(authRepositoryProvider).currentUser;

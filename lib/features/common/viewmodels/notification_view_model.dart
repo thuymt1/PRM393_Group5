@@ -23,12 +23,14 @@ class NotificationViewModel extends AsyncNotifier<List<Map<String, dynamic>>> {
     state = await AsyncValue.guard(_load);
   }
 
-  void markAllRead() {
+  Future<void> markAllRead() async {
     final current = state.value;
-    if (current == null) return;
-    state = AsyncData([
-      for (final item in current) {...item, 'is_unread': false},
-    ]);
+    if (current != null) {
+      state = AsyncData([
+        for (final item in current) {...item, 'is_unread': false},
+      ]);
+    }
+    await ref.read(notificationRepositoryProvider).markAllRead();
   }
 }
 

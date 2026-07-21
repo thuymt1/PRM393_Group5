@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -76,4 +77,7 @@ class _FakeProfileRepository implements ProfileRepository {
       throw UnimplementedError();
   @override
   Future<void> updateRole(String role) async => updatedRole = role;
+
+  @override
+  Future<String> uploadAvatar({required Uint8List bytes, required String ext}) async => '';
 }

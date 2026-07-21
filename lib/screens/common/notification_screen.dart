@@ -64,139 +64,71 @@ class _NotificationScreenState extends ConsumerState<NotificationScreen> {
           ? const Center(
               child: CircularProgressIndicator(color: Color(0xFFE07A5F)),
             )
-          : Column(
-              children: [
-                _buildFilterTabs(), // Khối thanh danh mục bộ lọc nhanh dạng hàng ngang (Tất cả, Giao dịch...)
-                Expanded(
-                  child: _notifications.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'Chưa có thông báo nào.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.all(
-                            16,
-                          ), // Biên đệm 16 đơn vị bao quanh vùng danh sách
-                          itemCount: _notifications.length,
-                          separatorBuilder: (context, index) => const SizedBox(
-                            height: 12,
-                          ), // Khoảng trống cao 12 đơn vị giữa các item
-                          itemBuilder: (context, index) {
-                            final note = _notifications[index];
+          : _notifications.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Chưa có thông báo nào.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _notifications.length,
+                  separatorBuilder: (context, index) => const SizedBox(
+                    height: 12,
+                  ),
+                  itemBuilder: (context, index) {
+                    final note = _notifications[index];
 
-                            // Xác định màu sắc và biểu tượng dựa trên loại thông báo
-                            IconData icon = Icons.notifications;
-                            Color iconColor = Colors.grey;
+                    // Xác định màu sắc và biểu tượng dựa trên loại thông báo
+                    IconData icon = Icons.notifications;
+                    Color iconColor = Colors.grey;
 
-                            if (note['type'] == 'payment_pending') {
-                              icon = Icons.payment;
-                              iconColor = Colors.orange;
-                            } else if (note['type'] == 'payment_confirmed') {
-                              icon = Icons.check_circle;
-                              iconColor = Colors.green;
-                            } else if (note['type'] == 'payment_rejected') {
-                              icon = Icons.cancel;
-                              iconColor = Colors.red;
-                            } else if (note['type'] == 'booking_cancelled') {
-                              icon = Icons.event_busy;
-                              iconColor = Colors.red;
-                            } else if (note['type'] ==
-                                'refund_awaiting_customer') {
-                              icon = Icons.mark_email_unread_outlined;
-                              iconColor = Colors.blue;
-                            } else if (note['type'].toString().startsWith(
-                              'refund_',
-                            )) {
-                              icon = Icons.currency_exchange;
-                              iconColor = Colors.orange;
-                            }
+                    if (note['type'] == 'payment_pending') {
+                      icon = Icons.payment;
+                      iconColor = Colors.orange;
+                    } else if (note['type'] == 'payment_confirmed') {
+                      icon = Icons.check_circle;
+                      iconColor = Colors.green;
+                    } else if (note['type'] == 'payment_rejected') {
+                      icon = Icons.cancel;
+                      iconColor = Colors.red;
+                    } else if (note['type'] == 'booking_cancelled') {
+                      icon = Icons.event_busy;
+                      iconColor = Colors.red;
+                    } else if (note['type'] == 'refund_awaiting_customer') {
+                      icon = Icons.mark_email_unread_outlined;
+                      iconColor = Colors.blue;
+                    } else if (note['type'].toString().startsWith('refund_')) {
+                      icon = Icons.currency_exchange;
+                      iconColor = Colors.orange;
+                    }
 
-                            // Tính thời gian giả lập
-                            final DateTime time = DateTime.parse(note['time']);
-                            final Duration diff = DateTime.now().difference(
-                              time,
-                            );
-                            String timeStr =
-                                '${time.day}/${time.month}/${time.year}';
-                            if (diff.inMinutes < 60) {
-                              timeStr = '${diff.inMinutes} phút trước';
-                            } else if (diff.inHours < 24) {
-                              timeStr = '${diff.inHours} giờ trước';
-                            } else if (diff.inDays < 7) {
-                              timeStr = '${diff.inDays} ngày trước';
-                            }
+                    // Tính thời gian giả lập
+                    final DateTime time =
+                        DateTime.tryParse(note['time']?.toString() ?? '') ??
+                            DateTime.now();
+                    final Duration diff = DateTime.now().difference(time);
+                    String timeStr =
+                        '${time.day}/${time.month}/${time.year}';
+                    if (diff.inMinutes < 60) {
+                      timeStr = '${diff.inMinutes} phút trước';
+                    } else if (diff.inHours < 24) {
+                      timeStr = '${diff.inHours} giờ trước';
+                    } else if (diff.inDays < 7) {
+                      timeStr = '${diff.inDays} ngày trước';
+                    }
 
-                            return _buildNotificationItem(
-                              title: note['title'],
-                              desc: note['desc'],
-                              time: timeStr,
-                              icon: icon,
-                              iconColor: iconColor,
-                              isUnread: note['is_unread'] ?? false,
-                            );
-                          },
-                        ),
+                    return _buildNotificationItem(
+                      title: note['title'] ?? 'Thông báo',
+                      desc: note['desc'] ?? note['message'] ?? '',
+                      time: timeStr,
+                      icon: icon,
+                      iconColor: iconColor,
+                      isUnread: note['is_unread'] ?? false,
+                    );
+                  },
                 ),
-              ],
-            ),
-    );
-  }
-
-  // Khối giao diện tạo thanh danh mục lọc trạng thái nhanh hàng ngang (Horizontal Scroll)
-  Widget _buildFilterTabs() {
-    return Container(
-      color: Colors.white, // Tiệp nền trắng liên mạch liền kề phía dưới AppBar
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: SingleChildScrollView(
-        scrollDirection:
-            Axis.horizontal, // Kích hoạt tính năng cuộn ngang danh mục bộ lọc
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            _filterChip(
-              'Tất cả',
-              true,
-            ), // Thẻ mặc định giả định đang đứng hoạt động tích cực
-            _filterChip('Giao dịch', false),
-            _filterChip('Đặt phòng', false),
-            _filterChip('Khuyến mãi', false),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Hàm thiết kế dùng chung cấu trúc nhãn viên thuốc lựa chọn tiêu chí phân loại nhanh (Chip)
-  Widget _filterChip(String label, bool isSelected) {
-    return Container(
-      margin: const EdgeInsets.only(
-        right: 12,
-      ), // Khoảng cách hở đệm giữa các viên thuốc kề nhau
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        // Biến đổi màu nền sang sắc cam thương hiệu nếu thẻ từ khóa đó được chọn
-        color: isSelected ? const Color(0xFFE07A5F) : Colors.white,
-        borderRadius: BorderRadius.circular(
-          20,
-        ), // Bo tròn dáng viên thuốc mềm mại 20 đơn vị
-        border: Border.all(
-          color: isSelected ? Colors.transparent : Colors.grey.shade300,
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected
-              ? Colors.white
-              : Colors
-                    .grey
-                    .shade700, // Đổi màu sắc văn bản tương phản theo nền thẻ
-          fontSize: 13,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-      ),
     );
   }
 
