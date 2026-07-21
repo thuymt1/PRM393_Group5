@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import '../../data/repositories/repository_providers.dart';
+import '../../features/host/viewmodels/host_dashboard_view_model.dart';
 
 class _CurrencyInputFormatter extends TextInputFormatter {
   @override
@@ -714,6 +715,7 @@ class _AddHomestayPriceRulesScreenState
           .uploadImage(imageBytes, imageName);
 
       await ref.read(homestayRepositoryProvider).create(homestayData, imageUrl);
+      ref.invalidate(hostDashboardViewModelProvider);
 
       if (!mounted) return;
       _showSuccessDialog();
